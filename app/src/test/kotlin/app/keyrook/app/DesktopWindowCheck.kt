@@ -4,6 +4,7 @@ package app.keyrook.app
 
 import java.awt.Frame
 import java.awt.GraphicsEnvironment
+import java.awt.KeyboardFocusManager
 import java.awt.Toolkit
 import java.awt.event.WindowEvent
 import javax.swing.JDialog
@@ -33,18 +34,22 @@ object DesktopWindowCheck {
                     check(SwingUtilities.isEventDispatchThread())
                     locks++; active = false
                 }, InactivityDeadline())
-                frame.dispatchEvent(WindowEvent(frame, WindowEvent.WINDOW_DEACTIVATED, dialog))
+                // Native peers stay hidden, so no window is globally active. Redispatch routes
+                // controlled events through Toolkit listeners without fabricating OS activation.
+                fun dispatch(event: WindowEvent) = KeyboardFocusManager.getCurrentKeyboardFocusManager()
+                    .redispatchEvent(event.window, event)
+                dispatch(WindowEvent(frame, WindowEvent.WINDOW_DEACTIVATED, dialog))
                 check(locks == 0) { "An application dialog must not lock its owning vault" }
-                dialog.dispatchEvent(WindowEvent(dialog, WindowEvent.WINDOW_DEACTIVATED, frame))
+                dispatch(WindowEvent(dialog, WindowEvent.WINDOW_DEACTIVATED, frame))
                 check(locks == 0)
-                frame.dispatchEvent(WindowEvent(frame, WindowEvent.WINDOW_DEACTIVATED))
+                dispatch(WindowEvent(frame, WindowEvent.WINDOW_DEACTIVATED))
                 check(locks == 1) { "Leaving application windows must lock" }
                 active = true
-                frame.dispatchEvent(WindowEvent(frame, WindowEvent.WINDOW_ICONIFIED))
+                dispatch(WindowEvent(frame, WindowEvent.WINDOW_ICONIFIED))
                 check(locks == 2) { "Minimizing must lock" }
                 monitor.close()
                 active = true
-                frame.dispatchEvent(WindowEvent(frame, WindowEvent.WINDOW_ICONIFIED))
+                dispatch(WindowEvent(frame, WindowEvent.WINDOW_ICONIFIED))
                 check(locks == 2) { "A closed monitor must not receive events" }
                 check(toolkit.awtEventListeners.size == before)
             } finally {
