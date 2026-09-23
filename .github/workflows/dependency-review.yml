@@ -36,7 +36,8 @@ jobs:
             pkg:maven/org.junit.platform/junit-platform-commons@1.13.4,
             pkg:maven/org.junit.platform/junit-platform-engine@1.13.4,
             pkg:maven/org.junit.platform/junit-platform-launcher@1.13.4,
-            pkg:githubactions/gradle/actions@9c971963bec38e04b3d30dcc455b5382be2fdbfb
+            pkg:githubactions/gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb,
+            pkg:githubactions/gradle/actions/dependency-submission@9c971963bec38e04b3d30dcc455b5382be2fdbfb
           retry-on-snapshot-warnings: true
           retry-on-snapshot-warnings-timeout: 900
           comment-summary-in-pr: never
@@ -52,8 +53,14 @@ jobs:
           async function verify() {
             const invalid = JSON.parse(process.env.INVALID_LICENSES);
             for (const category of ['unlicensed', 'unresolved', 'forbidden']) {
-              if (!Array.isArray(invalid[category]) || invalid[category].length !== 0) {
-                throw new Error('Every dependency needs a reviewed, compatible license.');
+              if (!Array.isArray(invalid[category])) {
+                throw new Error(`Invalid license review output: missing ${category} list.`);
+              }
+              if (invalid[category].length !== 0) {
+                const packages = invalid[category].map(change => ({
+                  package: change.package_url, manifest: change.manifest, license: change.license
+                }));
+                throw new Error(`Dependencies need reviewed, compatible licenses (${category}): ${JSON.stringify(packages)}`);
               }
             }
             const {GITHUB_API_URL, GITHUB_REPOSITORY, BASE_SHA, HEAD_SHA, GH_TOKEN} = process.env;

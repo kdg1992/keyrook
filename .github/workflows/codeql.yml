@@ -43,6 +43,8 @@ jobs:
         with:
           languages: java-kotlin
           build-mode: manual
+          # Kotlin 2.4.20 requires the extractor shipped with CodeQL 2.27.1.
+          tools: https://github.com/github/codeql-action/releases/download/codeql-bundle-v2.27.1/codeql-bundle-linux64.tar.zst
       - name: Compile for analysis
         shell: bash
         run: bash ./gradlew clean classes testClasses --no-daemon --no-build-cache --console=plain -Pkotlin.compiler.execution.strategy=in-process

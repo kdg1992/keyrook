@@ -8,6 +8,8 @@ The `CI` workflow runs on pull requests, pushes to `main` and manual dispatch. I
 
 `pr-title` checks Conventional Commits using the title as data, never as shell code. Editing a title reruns the check. Tests are not disabled to accommodate CI failures. Reports are uploaded on failure and expire after seven days.
 
+CodeQL uses the stable 2.27.1 bundle explicitly because the action's default 2.27.0 extractor does not support Kotlin 2.4.20. Review this bundle pin alongside Kotlin and CodeQL action updates.
+
 ## Dependency graph and review
 
 `dependency-submission.yml` resolves all Gradle dependencies on `main` without a full build and submits the graph. Runtime classpaths are marked as runtime; test and build-tool dependencies remain in the graph as development dependencies.
