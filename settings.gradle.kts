@@ -3,7 +3,10 @@
 pluginManagement { repositories { gradlePluginPortal(); mavenCentral() } }
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories { mavenCentral() }
+    repositories {
+        mavenCentral()
+        google { content { includeGroupByRegex("androidx\\..*") } }
+    }
 }
 rootProject.name = "keyrook"
-include(":core")
+include(":core", ":app")

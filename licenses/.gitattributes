@@ -1,0 +1,4 @@
+# Preserve downloaded upstream notice bytes for their provenance checksums.
+native-evidence/** -text
+native-evidence/**/*.json text eol=lf
+native-evidence/README.md text eol=lf

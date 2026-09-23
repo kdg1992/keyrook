@@ -3,6 +3,7 @@
 package app.keyrook.core.service
 
 import app.keyrook.core.crypto.Credentials
+import app.keyrook.core.backup.BackupService
 import app.keyrook.core.crypto.KdfParameters
 import app.keyrook.core.format.VaultCodec
 import app.keyrook.core.model.Vault
@@ -19,7 +20,11 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
     private var stamp: FileStamp? = null
     private var parameters = KdfParameters()
     private var currentState = SessionState.LOCKED
+    private var backups: BackupService? = null
     val state: SessionState @Synchronized get() = currentState
+
+    /** A configured backup must succeed before an existing vault is replaced. */
+    @Synchronized fun configureBackups(service: BackupService?) { backups = service }
 
     @Synchronized fun create(path: Path, vault: Vault, credentials: Credentials,
                              parameters: KdfParameters = KdfParameters(), allowExpensive: Boolean = false): SaveResult {
@@ -70,6 +75,7 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
                        parameters: KdfParameters, allowExpensive: Boolean): SaveResult {
         currentState = SessionState.SAVING
         try {
+            backups?.create(path!!, credentials!!, stamp, allowExpensive)
             val result = store.save(path!!, next, nextCredentials, stamp, parameters, allowExpensive)
             document!!.close()
             document = next
@@ -102,7 +108,7 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
         try { source.copy() } catch (e: Exception) { ownedDocument.close(); throw e }
     @Synchronized fun lock() {
         document?.close(); credentials?.close()
-        document = null; credentials = null; path = null; stamp = null
+        document = null; credentials = null; path = null; stamp = null; backups = null
         currentState = SessionState.LOCKED
     }
     override fun close() = lock()
