@@ -54,10 +54,16 @@ jobs:
         with:
           ref: ${{ needs.release-please.outputs.tag_name || github.sha }}
           persist-credentials: false
+      - name: Download verified packaging JDK
+        id: packaging-jdk
+        run: node scripts/collect-jdk-archive.mjs runtime
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
-          distribution: temurin
-          java-version: '25.0.4.1+1'
+          distribution: jdkfile
+          # Cache label only; the exact Temurin 25.0.4.1+1 archive is hash-pinned above.
+          java-version: '25.0.4'
+          jdkFile: ${{ steps.packaging-jdk.outputs.archive-path }}
+          force-download: true
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-provider: basic
@@ -168,7 +174,7 @@ jobs:
           ref: ${{ needs.release-please.outputs.tag_name }}
           persist-credentials: false
       - name: Collect matching JDK source archive
-        run: node scripts/collect-jdk-source.mjs
+        run: node scripts/collect-jdk-archive.mjs
       - name: Download and verify all platform outputs
         shell: bash
         env:
