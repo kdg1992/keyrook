@@ -1,0 +1,107 @@
+# SPDX-FileCopyrightText: 2026 Kim Daniel Geisthardt
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Recover release pull request
+
+on:
+  workflow_dispatch:
+    inputs:
+      pull_request:
+        description: Merged, pending release PR to replace without publishing
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Validate unpublished release and current main
+        id: candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_PR: ${{ inputs.pull_request }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const number = process.env.RELEASE_PR;
+          if (!/^[1-9][0-9]*$/.test(number)) throw Error('Invalid pull request number');
+          const root = `${process.env.GITHUB_API_URL}/repos/${process.env.GITHUB_REPOSITORY}`;
+          async function get(path, missing = false) {
+            const response = await fetch(`${root}/${path}`, {
+              headers: {authorization: `Bearer ${process.env.GH_TOKEN}`, accept: 'application/vnd.github+json'}
+            });
+            if (missing && response.status === 404) return null;
+            if (!response.ok) throw Error(`GitHub read failed: ${response.status}`);
+            return response.json();
+          }
+          async function file(path) {
+            const data = await get(`contents/${path}?ref=${process.env.GITHUB_SHA}`);
+            if (data.encoding !== 'base64') throw Error('Unsupported file encoding');
+            return Buffer.from(data.content, 'base64').toString('utf8');
+          }
+          (async () => {
+            const main = await get('git/ref/heads/main');
+            if (main.object.sha !== process.env.GITHUB_SHA) throw Error('Main advanced; start a fresh recovery run');
+            const version = (await file('version.txt')).trim();
+            if (!/^0\.[0-9]+\.[0-9]+$/.test(version)) throw Error('Recovery requires an existing pre-1.0 version');
+            const manifest = JSON.parse(await file('.release-please-manifest.json'));
+            const config = JSON.parse(await file('release-please-config.json'));
+            if (Object.keys(manifest).length !== 1 || manifest['.'] !== version ||
+                Object.keys(config.packages).length !== 1 || config.packages['.']['release-type'] !== 'simple' ||
+                config.packages['.'].component ||
+                config.packages['.']['include-component-in-tag'] !== false ||
+                config.packages['.']['include-v-in-tag'] !== true) throw Error('Unsupported release configuration');
+            const pr = await get(`pulls/${number}`);
+            if (!pr.merged || pr.base.ref !== 'main' || pr.head.repo?.full_name !== process.env.GITHUB_REPOSITORY ||
+                !['release-please--branches--main', 'release-please--branches--main--components--keyrook'].includes(pr.head.ref) ||
+                pr.title !== `chore(main): release ${version}` ||
+                !pr.labels.some(label => label.name === 'autorelease: pending')) throw Error('Not the pending release for this version');
+            if (await get(`git/ref/tags/v${version}`, true) || await get(`releases/tags/v${version}`, true)) {
+              throw Error('Version already tagged or released; recovery must not replace it');
+            }
+            for (const branch of ['release-please--branches--main', 'release-please--branches--main--components--keyrook']) {
+              const open = await get('pulls?state=open&head=' + encodeURIComponent(`${pr.head.repo.owner.login}:${branch}`));
+              if (open.length) throw Error('A replacement release PR is already open');
+            }
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `version=${version}\nnumber=${number}\n`);
+          })().catch(error => { console.error(error.message); process.exitCode = 1; });
+          NODE
+      - name: Remove superseded release from the pending queue
+        id: dequeue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_PR: ${{ steps.candidate.outputs.number }}
+        run: gh api --method DELETE "repos/$GH_REPO/issues/$RELEASE_PR/labels/autorelease%3A%20pending"
+      - name: Generate replacement release PR at the same version
+        id: replacement
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          target-branch: main
+          release-type: simple
+          release-as: ${{ steps.candidate.outputs.version }}
+          include-component-in-tag: false
+          skip-github-release: true
+      - name: Require a replacement pull request
+        env:
+          PRS_CREATED: ${{ steps.replacement.outputs.prs_created }}
+        run: test "$PRS_CREATED" = true
+      - name: Restore the pending label if recovery failed
+        if: always() && steps.dequeue.outcome == 'success' && (failure() || cancelled())
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_PR: ${{ steps.candidate.outputs.number }}
+        run: |
+          gh api --method POST "repos/$GH_REPO/issues/$RELEASE_PR/labels" -f 'labels[]=autorelease: pending'
