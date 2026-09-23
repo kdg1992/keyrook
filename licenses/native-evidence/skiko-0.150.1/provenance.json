@@ -1,0 +1,122 @@
+{
+    "status":  "partial-source-notices-not-a-reviewed-binary-inventory",
+    "skikoVersion":  "0.150.1",
+    "skiaCommit":  "1f14f1166a847cb0e148f981600bf1e3e6ca6e46",
+    "files":  [
+                  {
+                      "file":  "skiko-LICENSE.txt",
+                      "source":  "https://raw.githubusercontent.com/JetBrains/skiko/3956e988e6e93eaf1ee985d725049443e7845807/LICENSE",
+                      "sha256":  "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+                      "bytes":  11357
+                  },
+                  {
+                      "file":  "skiko-NOTICE.txt",
+                      "source":  "https://raw.githubusercontent.com/JetBrains/skiko/3956e988e6e93eaf1ee985d725049443e7845807/NOTICE",
+                      "sha256":  "35dd077c24768b53625101cfcc0ad853ae7e2abc08bd2a111a0267760d1406d8",
+                      "bytes":  197
+                  },
+                  {
+                      "file":  "skia-LICENSE.txt",
+                      "source":  "https://raw.githubusercontent.com/JetBrains/skia/1f14f1166a847cb0e148f981600bf1e3e6ca6e46/LICENSE",
+                      "sha256":  "5f787c1dee3c56547f09ccc2906ab5f5293c4d8dd6c8654e573216c38e908dbd",
+                      "bytes":  1507
+                  },
+                  {
+                      "file":  "expat-COPYING.txt",
+                      "source":  "https://chromium.googlesource.com/external/github.com/libexpat/libexpat/+/6154446fccefbf3ca644894f598969113b0c7bcd/COPYING?format=TEXT",
+                      "sha256":  "31b15de82aa19a845156169a17a5488bf597e561b2c318d159ed583139b25e87",
+                      "bytes":  1144
+                  },
+                  {
+                      "file":  "harfbuzz-COPYING.txt",
+                      "source":  "https://chromium.googlesource.com/external/github.com/harfbuzz/harfbuzz/+/9cb1fee51069b206effb4736e443b038d230789d/COPYING?format=TEXT",
+                      "sha256":  "ba8f810f2455c2f08e2d56bb49b72f37fcf68f1f4fade38977cfd7372050ad64",
+                      "bytes":  1971
+                  },
+                  {
+                      "file":  "icu-LICENSE.txt",
+                      "source":  "https://chromium.googlesource.com/chromium/deps/icu/+/364118a1d9da24bb5b770ac3d762ac144d6da5a4/LICENSE?format=TEXT",
+                      "sha256":  "17510cf7a58b4879b887ec05a45d72cf1b73544dd9ec7e72f20110ed104229ee",
+                      "bytes":  25185
+                  },
+                  {
+                      "file":  "libjpeg-turbo-LICENSE.md",
+                      "source":  "https://chromium.googlesource.com/chromium/deps/libjpeg_turbo/+/e14cbfaa85529d47f9f55b0f104a579c1061f9ad/LICENSE.md?format=TEXT",
+                      "sha256":  "96f5b328adbb78eeaaec6980d73fd558cb1e4d62560ed615646bc3cf5e532430",
+                      "bytes":  5620
+                  },
+                  {
+                      "file":  "libjpeg-turbo-README.ijg",
+                      "source":  "https://chromium.googlesource.com/chromium/deps/libjpeg_turbo/+/e14cbfaa85529d47f9f55b0f104a579c1061f9ad/README.ijg?format=TEXT",
+                      "sha256":  "75815e3bf6484201a3c3d17a1bbf10f2e8e3237f84df10a2357ea896db2a81d6",
+                      "bytes":  12799
+                  },
+                  {
+                      "file":  "libpng-LICENSE.txt",
+                      "source":  "https://skia.googlesource.com/third_party/libpng/+/d5515b5b8be3901aac04e5bd8bd5c89f287bcd33/LICENSE?format=TEXT",
+                      "sha256":  "bdb0a645ea18c60507d0368379b1ac5474b92255fcc2d115e07486a7672ba526",
+                      "bytes":  5345
+                  },
+                  {
+                      "file":  "libwebp-COPYING.txt",
+                      "source":  "https://chromium.googlesource.com/webm/libwebp/+/845d5476a866141ba35ac133f856fa62f0b7445f/COPYING?format=TEXT",
+                      "sha256":  "5aec868f669e384a22372a4e8a1a6cd7d44c64cd451f960ca69cc170d1e13acf",
+                      "bytes":  1496
+                  },
+                  {
+                      "file":  "libwebp-PATENTS.txt",
+                      "source":  "https://chromium.googlesource.com/webm/libwebp/+/845d5476a866141ba35ac133f856fa62f0b7445f/PATENTS?format=TEXT",
+                      "sha256":  "cc3273e0694ea5896145e0677699b53471b03ea43021ddc50e7923fbb9f5023c",
+                      "bytes":  1436
+                  },
+                  {
+                      "file":  "zlib-LICENSE.txt",
+                      "source":  "https://chromium.googlesource.com/chromium/src/third_party/zlib/+/646b7f569718921d7d4b5b8e22572ff6c76f2596/LICENSE?format=TEXT",
+                      "sha256":  "e1cfcc55c325b3f78cf55df9664abaa066e2271dffe8213347d9fccdfbac8f2c",
+                      "bytes":  910
+                  },
+                  {
+                      "file":  "d3d12allocator-LICENSE.txt",
+                      "source":  "https://skia.googlesource.com/external/github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator/+/169895d529dfce00390a20e69c2f516066fe7a3b/LICENSE.txt?format=TEXT",
+                      "sha256":  "e078ee4f8c5ed0673f4d93b5318557eb8b4e0d7dbccef2ab45c763c7693f0f37",
+                      "bytes":  1099
+                  },
+                  {
+                      "file":  "piex-LICENSE.txt",
+                      "source":  "https://android.googlesource.com/platform/external/piex/+/bb217acdca1cc0c16b704669dd6f91a1b509c406/LICENSE?format=TEXT",
+                      "sha256":  "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+                      "bytes":  11357
+                  },
+                  {
+                      "file":  "dng-sdk-LICENSE.txt",
+                      "source":  "https://android.googlesource.com/platform/external/dng_sdk/+/dbe0a676450d9b8c71bf00688bb306409b779e90/LICENSE?format=TEXT",
+                      "sha256":  "012e875468ac2f9a2070ee25a950588afa2735b4b2d961f491e3d72c8f572306",
+                      "bytes":  5240
+                  },
+                  {
+                      "file":  "dng-sdk-LICENSE.source_code.txt",
+                      "source":  "https://android.googlesource.com/platform/external/dng_sdk/+/dbe0a676450d9b8c71bf00688bb306409b779e90/LICENSE.source_code?format=TEXT",
+                      "sha256":  "0c993758dd78dbb15ce6aae8aee79639b428d8ebeca6d416019939dc90fdc08f",
+                      "bytes":  5157
+                  },
+                  {
+                      "file":  "dng-sdk-LICENSE.technology.txt",
+                      "source":  "https://android.googlesource.com/platform/external/dng_sdk/+/dbe0a676450d9b8c71bf00688bb306409b779e90/LICENSE.technology?format=TEXT",
+                      "sha256":  "4731d85e841e1d8b5dbf7e0ba07e0b524c012f9371db3508551f996cb40c8fe6",
+                      "bytes":  82
+                  },
+                  {
+                      "file":  "dng-sdk-NOTICE.txt",
+                      "source":  "https://android.googlesource.com/platform/external/dng_sdk/+/dbe0a676450d9b8c71bf00688bb306409b779e90/NOTICE?format=TEXT",
+                      "sha256":  "b60660d2a5a3ee1a49366400e7e9b01c1872356d6f08942f095d356a44deb5f6",
+                      "bytes":  5422
+                  },
+                  {
+                      "file":  "dng-sdk-PATENTS.txt",
+                      "source":  "https://android.googlesource.com/platform/external/dng_sdk/+/dbe0a676450d9b8c71bf00688bb306409b779e90/PATENTS?format=TEXT",
+                      "sha256":  "bd958835863f42d8479457503a7ed716424d35b6e76ef76db06b72b109696ec4",
+                      "bytes":  3496
+                  }
+              ],
+    "skikoCommit":  "3956e988e6e93eaf1ee985d725049443e7845807"
+}

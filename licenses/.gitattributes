@@ -1,0 +1,2 @@
+# Preserve downloaded upstream notice bytes for their provenance checksums.
+native-evidence/** -text

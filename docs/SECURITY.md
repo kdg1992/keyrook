@@ -1,12 +1,12 @@
 # Security properties and limitations
 
-Keyrook currently provides a JVM core library. It is a development build, not a hardened password-manager release. Desktop UI, automatic backups, automatic/OS locking, clipboard handling and failed-attempt delays are not yet implemented. Use synthetic data until those protections and platform tests are complete.
+Keyrook provides a JVM core and a Compose desktop application. It remains a development build, not an independently audited password-manager release. Use synthetic data until platform-specific behavior and recovery tests have been reviewed.
 
 ## Cryptography and trust boundaries
 
 Argon2id and AES-256-GCM use Bouncy Castle's established implementations. The complete binary header is authenticated. Passwords and optional 32-byte key-file contents enter Argon2 through separate standard inputs. The format and resource limits are specified in [FORMAT.md](FORMAT.md).
 
-Secrets cannot be recovered when required credentials are lost. Keep the key file separate from vault backups; placing both together removes their separation. Short master passwords remain vulnerable to offline guessing. The current API enforces a length bound, not a strength policy. Future login delays can only slow attempts through the application, not attacks on copied files.
+Secrets cannot be recovered when required credentials are lost. Keep the key file separate from vault backups; placing both together removes their separation. Short master passwords remain vulnerable to offline guessing. The current API enforces a length bound, not a strength policy. Desktop login delays only slow attempts through that running application, not attacks on copied files.
 
 Successful decryption detects corruption and unauthorized modification. It does not detect substitution with an older authentic copy without an external trusted record. File names, size, file-system timestamps, cipher/KDF choices and key-file usage remain visible. Choose neutral file names if their names could disclose information.
 
@@ -36,7 +36,45 @@ Use a trusted local directory. The code refuses a symbolic-link vault leaf and c
 
 `VaultSession` serializes operations. It preserves the current document and credentials when a write fails, enters `ERROR`, and permits a retry or lock. Changing a password adopts the new credentials only after a successful commit. Old backups still require the old password and may retain old secrets. Opening a vault is permitted only while locked; a failed open leaves the session locked.
 
-Operations are synchronous and may be expensive. A desktop caller must invoke them off its UI thread. Automatic locking, cancellation policy for in-flight writes, unsaved edit handling and removal of UI-held snapshots belong to the application integration; manual session locking is already available.
+The desktop controller runs vault operations on a serial worker, keeping Argon2 and storage off the event thread. UI snapshots are independent and closed on replacement/lock. Locking immediately removes the document and unsaved editors from presentation state, closes its snapshot and clears the owned clipboard, even while work is running. It invalidates the operation generation and closes open application dialogs. Pending confirmations check their generation before proceeding. Late results are closed instead of reopening the vault or changing the locked screen. Session cleanup is queued behind outstanding work; an atomic write already started is allowed to finish rather than being interrupted. Consequently locking can complete presentation cleanup before the worker has erased its credentials. Process termination, sleep suspension and power loss can still stop a worker at any point.
+
+Inactivity locking defaults to five minutes and can be set to 1, 2, 5, 10, 15 or 30 minutes for the current application session. A monotonic timer observes keyboard and mouse activity in application windows. Minimizing or switching away from the application's windows also locks it; transitions to this JVM's own dialogs are exempt when the window system identifies the destination. AWT user-session deactivation, screen-sleep and system-sleep events trigger locking where the platform advertises support. These APIs do not provide a universal OS-lock notification: conservative window-deactivation locking and the inactivity deadline provide additional coverage. Behavior under each target desktop/window manager still requires end-to-end verification; no privileged native hooks are installed.
+
+Failed unlock attempts impose delays of 1, 2, 4, 8, 16, 32 and then at most 60 seconds. Delays use monotonic time, remain in force when locking or retrying, and reset after a successful unlock. Rejected retries do not derive a key and their submitted password arrays are still erased. This state is process-local and resets when the application restarts. It cannot defend against a modified application or offline password guessing.
+
+Compose and Swing text controls retain immutable strings, including temporary passwords and edited fields. These cannot be reliably erased; owned input arrays and `Secret` instances are cleared. Explicit field copying clears the owned clipboard after 20 seconds by default and on lock. The expiry can be set to 5, 10, 20, 30, 60 or 120 seconds for this application session; changing it clears a currently owned value. Clipboard access can be delayed by another application; clearing retries. Later clipboard owners are not intentionally cleared. OS clipboard history and clipboard managers can retain copies that Keyrook cannot remove.
+
+## Local warning list
+
+The warning list examines active entries only: expiry before today, expiry within
+30 days, passwords shorter than 14 characters or containing fewer than four
+distinct characters, and passwords reused across different entries. These are
+limited heuristics, not an entropy estimate or a breached-password database.
+Custom fields are recognized by the names password, passwort and passphrase.
+Reuse comparisons use HMAC-SHA-256 with a fresh random key for each inspection.
+The key and comparison buffers are cleared afterward; only entry IDs and warning
+categories are returned. Nothing is persisted or sent over a network.
+Provider-internal key copies remain subject to the JVM memory limits above.
+
+## Backups and transfer
+
+An optional session-local backup folder preserves the authenticated ciphertext of the previous saved revision before each update or password change. Backup failure prevents the vault replacement. Rotation keeps the latest configured versions plus daily representatives; only files matching this vault's exact managed naming pattern are eligible. Backups are ciphertext, not plaintext exports. Their names reveal a random vault ID, revision and time. Choose a trusted, existing directory; symlink paths are rejected. The backup setting is cleared on lock.
+
+A password change does not re-encrypt old backups: they still require their old password and key file. Backup preview authenticates contents before revealing entry counts; the displayed filesystem date is not authenticated. Restoration checks the preview digest again, refuses existing targets and creates a new vault file at revision zero. It never overwrites the open vault. Neither a valid backup nor its preview proves freshness against replay of an older authentic file.
+
+Plaintext JSON/CSV export requires two separate UI confirmations. New export files receive private POSIX/Windows permissions before writing, refuse replacement and clear owned buffers on completion/failure. Filesystems without usable private permissions are refused. Files left after process termination, OS caches, backups and later copies cannot be reliably erased. Keyrook JSON/CSV preserves the full model and history; CSV wraps that JSON in a quoted record, not a password spreadsheet. Imported external formats are bounded and validated before an explicit merge confirmation; conflicting IDs reject the merge. XML rejects DTDs/external entities. Unsupported attachments, passkeys and protected plugin data are refused rather than silently dropped. See [DESKTOP.md](DESKTOP.md).
+
+## SSH keys
+
+Apache MINA SSHD writes encrypted OpenSSH keys with AES-256-CTR and bcrypt (64 rounds). Ed25519 and RSA-4096 use established providers; the application does not implement key algorithms or cryptographic formats. Imports verify that the public/private pair matches using a signature challenge. OpenSSH is a standard encrypted format with check values, not authenticated vault encryption; store private keys inside the authenticated vault. Generated private material and its passphrase are masked by default.
+
+SSH inputs are limited to 64 KiB with bounded line lengths. OpenSSH bcrypt and supported encrypted-PKCS#8 PBKDF2 parameters are capped before derivation. Provider-owned private keys and MINA's immutable passphrase strings cannot be fully erased. The application never logs parser exceptions and does not install a logging provider. PuTTY PPK is rejected because the selected upstream parser does not verify its Private-MAC. Convert it with a trusted external tool before importing OpenSSH.
+
+SSH/SFTP connection commands are copied as text only. Host and username operands use a strict character/length policy, ports are bounded, and operands are quoted for PowerShell/POSIX shells. IPv6 validation parses literals without DNS or interface resolution. Passwords, key material, directory paths and arbitrary remote commands are never appended. A copied command still invokes the user's own OpenSSH configuration if they execute it outside the application.
+
+Background searches own an independent session snapshot and close it on completion or cancellation. No persistent plaintext index is built. Secret field scans operate on temporary character arrays that are erased after use; current notes are searched by default, while hidden field values require an explicit option. Query text itself is an immutable UI string and may contain sensitive user input. Search results display entry metadata rather than matching secret excerpts. A search already running when locking occurs may retain its snapshot until the next cancellation check and cleanup.
+
+Before an imported RSA key is used for a signature challenge, its public and private moduli must match and have 4096 bits. Public exponents must match, be odd, and fit within 32 bits; private exponents and CRT operands must be positive and at most 4096 bits. These bounds limit work on attacker-controlled parameters before provider-backed signing and verification. They supplement the signature consistency check rather than replace it.
 
 ## Build and verification
 

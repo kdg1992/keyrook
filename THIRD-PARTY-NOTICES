@@ -15,23 +15,32 @@ kotlinx.serialization JSON and Core 1.11.0 — Apache-2.0
 JetBrains annotations 13.0 — Apache-2.0
   Copyright JetBrains s.r.o.
   https://github.com/JetBrains/java-annotations
-Bouncy Castle bcprov-jdk18on 1.86 — MIT (Bouncy Castle license)
+Bouncy Castle bcprov/bcpkix/bcutil-jdk18on 1.86 — MIT (Bouncy Castle license)
   Copyright (c) 2000-2026 The Legion of the Bouncy Castle Inc.
   https://www.bouncycastle.org/
+
+Apache MINA SSHD Common 2.18.0 — Apache-2.0 (embedded BCrypt: ISC)
+SLF4J API 1.7.36 — MIT; JCL bridge 1.7.36 — Apache-2.0
+  See licenses/SSH-Third-Party.md for copyright and license notices.
+Compose Multiplatform 1.12.1 and AndroidX runtime libraries — Apache-2.0
+Skiko 0.150.1 — Apache-2.0; Skia — BSD-3-Clause
+  These labels do not cover all linked native components. In particular, the
+  macOS build includes DNG SDK licensing terms requiring further review.
+  See licenses/Desktop-Third-Party.md for resolved component versions and notices.
 
 License texts: licenses/Apache-2.0.txt and licenses/Bouncy-Castle.md.
 Original dependency JAR notices remain applicable and must accompany redistribution.
 
 Build and test tools (not application runtime dependencies)
 ---------------------------------------------------------
-Gradle and its generated wrapper 9.7.0 — Apache-2.0
+Gradle and its generated wrapper 9.7.1 — Apache-2.0
   https://github.com/gradle/gradle
 Kotlin compiler/plugins/build tools 2.4.20 — Apache-2.0
 Kotlin reflect 1.6.10 (compiler) / 2.2.21 (tests) — Apache-2.0
 kotlinx.coroutines 1.8.0 (compiler) / 1.10.2 (tests) — Apache-2.0
   https://github.com/Kotlin/kotlinx.coroutines
-JUnit Jupiter 5.13.4, JUnit Platform 1.13.4 — EPL-2.0
-  https://github.com/junit-team/junit-framework/blob/r5.13.4/LICENSE.md
+JUnit Jupiter and JUnit Platform 6.1.3 — EPL-2.0
+  https://github.com/junit-team/junit-framework/blob/r6.1.3/LICENSE.md
   Separate test tooling only; not included in the application or core JAR.
 Kotest Assertions Core/Shared and Common 6.2.5 — Apache-2.0
   https://github.com/kotest/kotest
@@ -44,9 +53,11 @@ java-diff-utils 4.16 — Apache-2.0
   https://github.com/java-diff-utils/java-diff-utils
 
 The complete resolved core dependency versions are in core/gradle.lockfile.
-No Java runtime or native UI components are bundled in this core-only build.
-Distribution packages will need the notices of their actual bundled runtime
-and native libraries as well as these library notices.
+Desktop dependency versions are locked per platform in app/gradle/dependency-locks/.
+The desktop development runtime loads platform-native Skiko libraries. No installer
+or Java runtime distribution is provided. Installer releases require the complete
+bundled JDK and native codec/font/Unicode notice inventory described in
+licenses/Desktop-Third-Party.md in addition to these notices.
 
 Test-vector sources
 -------------------

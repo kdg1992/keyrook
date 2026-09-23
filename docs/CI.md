@@ -2,7 +2,9 @@
 
 ## Verification
 
-Run `./gradlew check` with JDK 25 (`.\gradlew.bat check` on Windows). The root task runs all core tests, source-header/whitespace lint and a runtime dependency check that keeps JUnit and other test tools out of the application. This lightweight lint is not a full Kotlin style or semantic analyzer; CodeQL provides separate security analysis.
+Run `./gradlew check` with JDK 25 (`.\gradlew.bat check` on Windows). The root task runs core and desktop tests, an offscreen Compose render, source-header/whitespace lint and runtime dependency checks that keep test tools out of the application. The desktop test JVM explicitly enables native access for Skiko and uses headless software rendering. This lightweight lint is not a full Kotlin style or semantic analyzer; CodeQL provides separate security analysis.
+
+Desktop native dependency locks are stored separately for Windows x64 and Linux/macOS x64/ARM64 under `app/gradle/dependency-locks/`. Normal builds select the host platform. To review another target's dependency graph without executing its natives, run `./gradlew :app:dependencies -Pkeyrook.target=linux-x64 --write-locks` (substitute the target). This is dependency resolution, not a cross-platform runtime test.
 
 The `CI` workflow runs on pull requests, pushes to `main` and manual dispatch. Its stable build checks are `build-linux`, `build-windows` and `build-macos`. Each full build validates the Gradle wrapper and uses Temurin 25. Only changes entirely confined to Markdown, excluding `CHANGELOG.md`, skip expensive Windows/macOS steps. Those jobs still complete successfully; Linux runs verification. Renames are treated as deletion plus addition so a source-file deletion cannot be hidden by renaming it to Markdown. Failed path classification fails all three build checks.
 
@@ -39,9 +41,11 @@ All workflow files are ready for these separate changes; do not publish the secu
 
 Release PRs are merged only after explicit release approval and green checks. The workflow uses only `GITHUB_TOKEN`; it does not need a personal token. **PRs created or updated by that token do not automatically trigger other workflows.** After each Release Please update, a maintainer must close and reopen the release PR using their own GitHub session to trigger the full PR verification suite. Do not accept results for an earlier commit or merge without those checks.
 
-Once an approved release PR is merged, Release Please creates its tag and GitHub release. A downstream job in the same workflow uploads the license texts, third-party notices and checksums using `release_created` and `tag_name`. It does not rely on another workflow being triggered by that tag.
+Once an approved release PR is merged, Release Please creates its tag and GitHub release. Three downstream jobs in the same workflow build Windows MSI, macOS DMG and Linux DEB/RPM packages using `release_created` and `tag_name`. They have read-only permissions. After all builds succeed, an isolated publishing job verifies each platform's checksums and uploads all four installer formats, legal notices and their archives, combined `SHA256SUMS.txt`, and unsigned-installation instructions. It does not rely on another workflow being triggered by the tag.
 
-The current deliverable is a core library, not a desktop installer. Manually dispatching `Release` only verifies/tests the core JAR and uploads it as a seven-day test artifact; it cannot create a release. Native `.msi`, `.dmg`, `.deb` and `.rpm` packaging must be added in downstream jobs in this same workflow when the desktop application exists, with a manual packaging run before the first installer release. That later release must include all installer hashes and explain that installers are unsigned. No signing certificates or paid services are configured.
+Manually dispatching `Release` runs the three-platform packaging matrix without creating a tag or release and retains successful verification outputs for seven days. Native jobs have a 40-minute limit. The actual runner architecture determines each package target. Packages are built only in GitHub Actions; local native builds are refused.
+
+**Installer creation and publication currently remain blocked by the incomplete native-library and bundled-JDK license inventory.** The mandatory `checkNativeDistributionLicenses` task requires reviewed per-platform notices and exact hashes for the resolved runtime artifacts and JDK legal files. It fails before jlink/jpackage when inventory records are absent or stale. No installer or first successful packaging run is claimed. See [Native packaging](PACKAGING.md) for the inventory format, unsigned-installation guidance and release failure handling. A complete manual run and installation tests must succeed before the first installer release is approved. No signing certificates or paid services are configured.
 
 ## Repository settings after the first green runs
 

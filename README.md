@@ -11,30 +11,40 @@ Keyrook – Offline, encrypted credential vault for hosting providers and sysadm
 
 ## Current implementation
 
-The JVM core implements typed vault records, Argon2id/AES-256-GCM encryption,
-optional key-file material, authenticated format v1, atomic local storage and
-manual session locking/password changes. Desktop UI, SSH key operations,
-backup automation, import/export and installers are not available yet.
-This is a development build; use test data.
+The desktop application creates and opens encrypted vaults, edits all eight
+entry types, searches and filters entries, manages customers/projects and
+supports trash, history and automatic locking. It includes password/passphrase
+generation, Ed25519/RSA-4096 keys, encrypted backups and import/export.
+Argon2id/AES-256-GCM, optional key files and authenticated format v1 remain
+the storage foundation.
+
+This is a development build; use test data. Inactivity locking, supported desktop
+session events, lock-on-focus-loss, failed-attempt delays and a local password/expiry
+warning list are implemented. PuTTY PPK import remains unsupported. Native installers
+are configured but blocked pending complete redistribution notices and platform
+verification. See [desktop usage](docs/DESKTOP.md) and [packaging status](docs/PACKAGING.md).
 
 ## Build and test
 
 Install a JDK 25 and point `JAVA_HOME` to it. Gradle uses the configured Java 25
-toolchain. The first build downloads pinned dependencies from Maven Central
-and the Gradle plugin portal.
+toolchain. The first build downloads pinned dependencies from Maven Central,
+Google Maven (AndroidX only) and the Gradle plugin portal.
 
 ```powershell
 # Windows, with JAVA_HOME already set to a JDK 25 installation:
-.\gradlew.bat :core:build
+.\gradlew.bat check
+.\gradlew.bat :app:run
 ```
 
 ```sh
 # macOS / Linux:
-sh ./gradlew :core:build
+sh ./gradlew check
+sh ./gradlew :app:run
 ```
 
-Test reports are generated at `core/build/reports/tests/test/index.html`.
-The resulting core JAR is a library, not an executable application.
+Test reports are generated under `core/build/reports/tests/test/` and
+`app/build/reports/tests/test/`. Desktop tests include an offscreen render.
+The core JAR remains a library; start the desktop application with `:app:run`.
 
 ## Core API
 

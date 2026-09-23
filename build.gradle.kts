@@ -4,6 +4,8 @@ plugins {
     base
     alias(libs.plugins.kotlin.jvm) apply false
     alias(libs.plugins.kotlin.serialization) apply false
+    alias(libs.plugins.compose.multiplatform) apply false
+    alias(libs.plugins.compose.compiler) apply false
 }
 
 val lintSources = files(
@@ -29,7 +31,7 @@ val lint = tasks.register("lint") {
         }
     }
 }
-tasks.named("check") { dependsOn(lint, ":core:check") }
+tasks.named("check") { dependsOn(lint, ":core:check", ":app:check") }
 val releaseVersion = providers.fileContents(layout.projectDirectory.file("version.txt")).asText.get().trim()
 check(Regex("[0-9]+\\.[0-9]+\\.[0-9]+").matches(releaseVersion)) { "Invalid version.txt" }
 allprojects {
