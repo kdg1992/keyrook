@@ -4,6 +4,11 @@ This directory contains verified upstream notice texts and artifact provenance.
 It is **not** a complete native redistribution inventory and does not satisfy the
 packaging approval gate. No `reviewed=true` record is provided here.
 
+[Verified CI evidence from 2026-09-23](ci-2026-09-23/README.md) now preserves
+the actual Windows x64, Linux x64 and macOS ARM64 runtime inventories, all JDK
+legal-file bytes, official platform SBOMs, and their verified archive provenance.
+It also records DNG-related strings in the selected macOS native binaries.
+
 ## Skiko 0.150.1
 
 The release resolves to commit
@@ -104,15 +109,19 @@ The workflow selects Temurin major version 25, so a later run can resolve a newe
 patch release. The official API resolved `jdk-25.0.4.1+1` during this review.
 [Temurin provenance](temurin-25.0.4.1+1/provenance.json) records its official
 source-archive URL, the publisher's archive SHA-256, source commit and build-recipe
-commit. The archive itself was not downloaded or independently rehashed. Root
+commit. The archive has now been downloaded and independently rehashed, matching
+the published checksum. Root
 LICENSE, ASSEMBLY_EXCEPTION and ADDITIONAL_LICENSE_INFO were retrieved at the
-recorded source commit and their actual file hashes are recorded.
+recorded source commit and their actual file hashes are recorded. Their bytes
+also match the downloaded source archive.
 
 The release provides platform-specific SBOMs, including
 [Windows x64](https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.4.1%2B1/OpenJDK25U-sbom_x64_windows_hotspot_25.0.4.1_1.json),
 [Linux x64](https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.4.1%2B1/OpenJDK25U-sbom_x64_linux_hotspot_25.0.4.1_1.json)
 and [macOS ARM64](https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.4.1%2B1/OpenJDK25U-sbom_aarch64_mac_hotspot_25.0.4.1_1.json).
-They must be matched to the actual CI JDK binary and retained legal files. Root
-GPL/Classpath documents alone do not cover all JDK third-party components.
-No per-platform `jdk.legal.sha256` or complete corresponding-source review is
-claimed. A locally installed Oracle JDK is not evidence for a Temurin package.
+The SBOMs and their metadata are now retained locally in this directory. Their
+versions match the CI inventories. All collected legal files and paths match
+the official platform JDK archives; the per-platform `jdk.legal.sha256` values
+are retained with the CI evidence. This is not a comparison of every installed
+executable, nor a complete redistribution approval. A locally installed Oracle
+JDK is not evidence for a Temurin package.

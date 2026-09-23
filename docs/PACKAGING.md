@@ -51,6 +51,13 @@ source records. It also identifies special licensing conditions in the DNG SDK
 found in the macOS and Linux native binaries. Its compatibility has not been established;
 this requires resolution in addition to finishing the artifact/JDK inventory.
 
+[The collected CI evidence](../licenses/native-evidence/ci-2026-09-23/README.md)
+now includes 52 external runtime artifacts per platform and the complete JDK
+legal directories from Windows x64, Linux x64 and macOS ARM64, matched against
+official Temurin archives. Vendor SBOMs and verified source-archive provenance
+are retained too. These are evidence records, not approved native inventories;
+the DNG question and complete native component review remain open.
+
 A DNG-free replacement requires rebuilding both Skia and the matching Skiko
 native libraries, disabling `skia_use_dng_sdk` and `skia_use_piex` and removing
 the corresponding Skiko link inputs. Removing a single link declaration is
