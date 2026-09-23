@@ -1,4 +1,12 @@
-# keyrook
+# Keyrook
+
+[![CI](https://github.com/kdg1992/keyrook/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/kdg1992/keyrook/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/kdg1992/keyrook/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/kdg1992/keyrook/actions/workflows/codeql.yml)
+[![Release](https://img.shields.io/github/v/release/kdg1992/keyrook?sort=semver)](https://github.com/kdg1992/keyrook/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/kdg1992/keyrook/total)](https://github.com/kdg1992/keyrook/releases)
+[![License: GPL-3.0](https://img.shields.io/github/license/kdg1992/keyrook)](LICENSE)
+![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)
+
 Keyrook – Offline, encrypted credential vault for hosting providers and sysadmins. Manage website, FTP, mail, hosting panel and server logins plus SSH keys with passphrases in one file. Cross-platform (Windows, macOS, Linux), with automatic encrypted backups.
 
 ## Current implementation
