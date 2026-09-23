@@ -10,8 +10,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import app.keyrook.core.crypto.Secret
 import app.keyrook.core.ssh.SshKeyMaterial
 import app.keyrook.core.ssh.SshKeyService
-import java.nio.file.Files
-import java.nio.file.StandardOpenOption
 import javax.swing.JFileChooser
 import javax.swing.SwingUtilities
 
@@ -25,32 +23,31 @@ internal fun SshImportExport(busy: Boolean, publicKey: String, onBusy: (Boolean)
     var error by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
     val alive = remember { java.util.concurrent.atomic.AtomicBoolean(true) }
+    val insert by rememberUpdatedState(imported)
     DisposableEffect(Unit) { onDispose { alive.set(false) } }
     Row {
-        TextButton(enabled = !busy, onClick = { expanded = !expanded }) { Text("OpenSSH / PEM importieren") }
+        TextButton(enabled = !busy, onClick = { expanded = !expanded }) { Text(UiText.text("import.ssh.open")) }
         TextButton(enabled = !busy && publicKey.isNotBlank(), onClick = {
             val chooser = JFileChooser()
-            if (chooser.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
+            if (chooser.showSaveDialog(null) == JFileChooser.APPROVE_OPTION && alive.get()) {
                 val path = chooser.selectedFile.toPath()
                 onBusy(true)
                 Thread({
                     val success = runCatching {
-                        require(!publicKey.contains('\n') && !publicKey.contains('\r'))
-                        require(publicKey.startsWith("ssh-ed25519 ") || publicKey.startsWith("ssh-rsa "))
-                        Files.writeString(path, publicKey + "\n", StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
+                        exportPublicSshKey(path, publicKey, alive::get)
                     }.isSuccess
-                    SwingUtilities.invokeLater { if (alive.get()) { onBusy(false); notice = if (success) "Öffentlicher Schlüssel exportiert." else "Export fehlgeschlagen; Ziel muss eine neue Datei sein." } }
+                    SwingUtilities.invokeLater { if (alive.get()) { onBusy(false); notice = if (success) UiText.text("import.ssh.exported") else UiText.text("import.ssh.exportFailed") } }
                 }, "ssh-export-worker").apply { isDaemon = true; start() }
             }
-        }) { Text("Öffentlichen Schlüssel exportieren") }
+        }) { Text(UiText.text("import.ssh.export")) }
     }
     if (notice.isNotEmpty()) Text(notice)
     if (expanded) {
-        Text("Privaten OpenSSH-/PEM-Schlüssel einfügen. PuTTY-PPK vorher in OpenSSH konvertieren.")
-        OutlinedTextField(encoded, { if (it.length <= 65536) encoded = it }, label = { Text("Privater Schlüssel") },
+        Text(UiText.text("import.ssh.help"))
+        OutlinedTextField(encoded, { if (it.length <= 65536) encoded = it }, label = { Text(UiText.text("import.ssh.private")) },
             enabled = !busy, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(oldPhrase, { if (it.length <= 1024) oldPhrase = it }, label = { Text("Bisherige Passphrase (falls verschlüsselt)") }, enabled = !busy, visualTransformation = PasswordVisualTransformation())
-        OutlinedTextField(newPhrase, { if (it.length <= 1024) newPhrase = it }, label = { Text("Neue Passphrase (mindestens 12 Zeichen)") }, enabled = !busy, visualTransformation = PasswordVisualTransformation())
+        OutlinedTextField(oldPhrase, { if (it.length <= 1024) oldPhrase = it }, label = { Text(UiText.text("import.ssh.previous")) }, enabled = !busy, visualTransformation = PasswordVisualTransformation())
+        OutlinedTextField(newPhrase, { if (it.length <= 1024) newPhrase = it }, label = { Text(UiText.text("import.ssh.replacement")) }, enabled = !busy, visualTransformation = PasswordVisualTransformation())
         Button(enabled = !busy && encoded.isNotBlank() && newPhrase.length in 12..1024, onClick = {
             val input = encoded.toCharArray()
             val previous = oldPhrase.toCharArray()
@@ -64,12 +61,14 @@ internal fun SshImportExport(busy: Boolean, publicKey: String, onBusy: (Boolean)
                 } finally { input.fill('\u0000'); previous.fill('\u0000') }
                 SwingUtilities.invokeLater {
                     try {
-                        result.getOrNull()?.use { key -> if (alive.get()) imported(key, String(replacement)) }
-                        if (alive.get()) { error = result.isFailure; onBusy(false); if (result.isSuccess) expanded = false }
-                    } finally { replacement.fill('\u0000') }
+                        deliverImportedSshKey(result.getOrNull(), replacement, alive::get, insert)
+                        if (alive.get()) { error = result.isFailure; if (result.isSuccess) expanded = false }
+                    } catch (_: Exception) {
+                        if (alive.get()) error = true
+                    } finally { replacement.fill('\u0000'); if (alive.get()) onBusy(false) }
                 }
             }, "ssh-import-worker").apply { isDaemon = true; start() }
-        }) { Text("Schlüssel prüfen und importieren") }
-        if (error) Text("Import fehlgeschlagen: Format, Passphrase oder Schlüssel prüfen.", color = MaterialTheme.colors.error)
+        }) { Text(UiText.text("import.ssh.validate")) }
+        if (error) Text(UiText.text("import.ssh.failed"), color = MaterialTheme.colors.error)
     }
 }

@@ -21,13 +21,51 @@ Editors initially focus the title. Repeating Escape in the discard confirmation 
 
 Choose an existing `.keyrook` file to open, or a new file to create. Creation requires the master password twice. The optional key file must contain exactly 32 bytes and must be available again when unlocking. Existing files are never replaced during creation.
 
+**Schlüsseldatei erzeugen** writes 32 cryptographically random bytes to a new
+file with private permissions. Keep a separate safe copy; losing this factor
+makes the vault unrecoverable. Generating a file does not change an existing
+vault. **Passwort / Schlüsseldatei ändern** explicitly confirms replacement of
+the selected factors: select the existing key file to retain it, another file
+to replace it, or leave the key field empty to remove it. Older backups still
+need their original factors.
+
+Argon2 memory, iterations and parallelism can be selected when creating a vault
+and changed through **Argon2-Einstellungen** after unlocking. Desktop limits
+are 65536–262144 KiB, 1–5 iterations and 1–16 lanes; memory must be divisible by
+four times the lane count. Changes re-encrypt atomically and create the configured
+backup first. Vaults with higher derivation costs still require explicit approval
+through the core API and cannot currently be opened in the desktop interface.
+
 Entries are saved immediately through authenticated, atomic vault storage. Fields can be masked independently. Web, transfer, email, hosting-panel, server, SSH, domain and custom records have their own editors. Customers/projects can be created and assigned. Entries can be duplicated, moved to the trash and restored. Editing retains up to 100 historical field snapshots. Search and filters narrow the visible list; history displays hidden fields masked. Canceling an edit discards that edit.
+
+Under **Kunden und Projekte**, existing customers and projects can be renamed.
+Changing a project's customer moves all its entries, including trash, to that
+customer in one save. Clearing only the project's customer preserves the entries'
+individual customer assignments. Removal requires confirmation and is available
+only when no entries (including trash) or projects still reference the item.
+
+Selecting a project with a customer also selects that customer for the entry.
+Web records can gain or remove a TOTP-secret field after import; removal asks
+for confirmation and the saved previous value remains in history. History shows
+its version timestamp and offers individual copy buttons while hidden fields
+remain masked. Clipboard expiry applies to those copies too.
 
 Full-text search includes current titles, tags, notes, field names and visible values, customer/project names and expiry dates. Space-separated terms must all match the same record, without case sensitivity. **Verborgene Felder durchsuchen** explicitly includes hidden current values; matching values are never exposed in result rows. History is excluded. Searches run in the background over an independently owned snapshot, are canceled when replaced or locked, and do not create a persistent plaintext index. Queries are limited to 256 characters.
 
-The password generator supports 12–256 characters and selectable character classes. Passphrase generation accepts a user-supplied reviewed wordlist with at least 1024 distinct letter-only words; the chosen word count must provide at least 60 bits of selection entropy. No small demonstration wordlist is bundled.
+Filter the list by type, customer, project, tag and expiry. Expiry options separate past dates, today through the next 30 days (inclusive), and records without an expiry date. Sort by title, latest modification or earliest expiry; undated records appear last in expiry order. Customer selection limits compatible projects. **Filter zurücksetzen** restores the active list, title order and default filters, and clears the search and hidden-field search option.
 
-SSH generation supports Ed25519 and RSA-4096 with a passphrase of at least 12 characters. Import accepts pasted OpenSSH or supported PEM private keys and re-encrypts them under the replacement passphrase. Public keys export as an `authorized_keys` line to a new file. PPK is not accepted; convert it to OpenSSH with a trusted tool first. No SSH connection is opened.
+The password generator supports 12–256 characters and selectable character classes. Passphrase generation accepts a user-supplied reviewed UTF-8 wordlist, optionally with a BOM, up to 6.5 MB. It must contain 1024–65536 distinct letter-only words of 2–32 characters, one per line; surrounding whitespace and blank lines are ignored. Choose hyphens or spaces between generated words. The chosen word count must provide at least 60 bits of selection entropy: at least six words for lists below 4096 words, otherwise at least five. Invalid lists and insufficient word counts have separate messages. No small demonstration wordlist is bundled.
+
+SSH generation supports Ed25519 and RSA-4096 with a passphrase of at least 12 characters. Import accepts pasted OpenSSH, supported PEM, and PuTTY PPK version 2/3 private keys and re-encrypts them under the replacement passphrase. PPK import verifies its MAC for both encrypted and unencrypted files before constructing the private key, then checks the public/private pair. Public keys export as a validated, canonical `authorized_keys` line to a new file; malformed key blobs, unsupported key sizes, options and additional lines are rejected. No SSH connection is opened.
+
+PPK import supports `none` and `aes256-cbc`, UTF-8 comments, and bounded Argon2d/i/id derivation for version 3. Other key types, PPK version 1 and excessive derivation costs are refused. For files outside these limits, an alternative is a separately installed, trusted PuTTYgen used interactively:
+
+1. Open PuTTYgen yourself and select **Load** to read the PPK, entering its passphrase when requested. Stop if loading or integrity verification fails.
+2. Check the displayed key type and SHA-256 fingerprint against your known key. Keep a nonempty passphrase in both passphrase fields.
+3. Choose **Conversions → Export OpenSSH key (force new file format)** and save to a new private location. This exports the private key; **Save public key** is a different operation.
+4. Paste the exported encrypted OpenSSH text into Keyrook's SSH import, supply its passphrase and a replacement passphrase of at least 12 characters, then import. Compare the resulting fingerprint with PuTTYgen before saving the entry.
+
+The [PuTTYgen manual](https://the.earth.li/~sgtatham/putty/0.85/htmldoc/Chapter8.html#puttygen-conversions) documents loading, passphrase handling and conversion. Keyrook does not install or launch PuTTYgen, send it secrets, or create conversion files. The exported key remains outside the vault under your control.
 
 Server editors can copy an SSH connection command; SFTP records can copy an SFTP command. These are text for PowerShell or POSIX shells, not Windows Command Prompt. Only the host, port and username are included: no password, private key, start directory or remote command. The application never executes the command. Hostnames must be ASCII DNS names (use punycode for international names) or unscoped IPv4/IPv6 literals; usernames accept up to 64 ASCII letters/digits, underscores, periods and hyphens, with a letter, digit or underscore first. Unsupported forms are refused rather than inserted into shell text. Review the copied destination and your OpenSSH configuration before running it separately. Syntax follows the [OpenSSH SSH](https://man.openbsd.org/ssh.1) and [SFTP](https://man.openbsd.org/sftp.1) manuals.
 
@@ -41,6 +79,8 @@ resolve or fetch the address while validating it.
 
 Select an existing **Backup-Ordner** after unlocking, then confirm how many recent versions (1–1000) and additional daily representatives (0–3660) to retain. The dialog starts with 30 versions and 30 daily representatives; zero disables daily retention. Both retention rules apply together. Canceling leaves the current backup configuration unchanged. The confirmed settings enable automatic backups for this session; future backups can remove older managed backups outside those limits. Each backup preserves the previous saved revision before it is replaced. Locking clears the configuration. A failed backup prevents the update; fix the folder access before retrying.
 
+**Sicherung jetzt** authenticates and copies the currently saved vault to the configured backup folder, applying the same retention rules without changing the vault revision. **Backupstatus** shows whether backups are enabled and the last successfully backed-up revision for the current configuration. **Backups deaktivieren** requires confirmation and clears the session configuration without deleting existing backup files. Canceling preserves the configuration; locking clears it and its status.
+
 **Backup wiederherstellen** requests the backup's own credentials and previews its authenticated entry count and revision. After confirmation, choose a new destination. The open vault is not overwritten; lock and open the restored file separately. Older backups retain older credentials after password changes.
 
 **Verschlüsselt exportieren** creates a new `.keyrook` file with explicitly chosen credentials, preserving the records and resetting its revision to zero. It is the preferred transfer format.
@@ -50,11 +90,16 @@ Select an existing **Backup-Ordner** after unlocking, then confirm how many rece
 Import parses and validates first, then asks for confirmation showing the entry count. It adds records to the current vault; duplicate IDs fail rather than overwrite records. Enable backups before importing into a valuable vault. Supported inputs:
 
 - Keyrook JSON: all entry types, references, metadata and history.
-- CSV: a header row and a user-selected mapping for title, URL, username, password and notes; empty optional mappings are allowed. KeePass-style column defaults are provided. Quoted commas, escaped quotes and multiline values are supported.
+- CSV: select the actual header names from dropdowns for title, URL, username, password and notes. The title column is required; optional fields can remain unassigned. Common German and English column names are suggested. Quoted commas, escaped quotes and multiline values are supported. Headers must be unique and nonblank, with at most 100 columns and 512 characters per name. A UTF-8 BOM is accepted. Keyrook's own CSV format is recognized automatically without a mapping dialog.
 - Bitwarden unencrypted JSON: login and secure-note items, custom fields, folders, multiple URLs, dates and password history. Cards, identities, organization records, attachments, passkeys and password-reprompt restrictions are not imported.
 - KeePass XML: exported plaintext strings, group paths, tags, ISO timestamps, expiry and history. Entries in the identified recycle bin, including nested groups, remain deleted; their last-modified time supplies the deletion timestamp because the export has no separate deletion date. KDBX, binary/attached data, protected values, custom plugin data and binary timestamps are not supported. DTDs, external entities and ambiguous recycle-bin/expiry metadata are refused.
 
 The source export's immutable parser strings cannot be reliably wiped from JVM memory. Imported Bitwarden/KeePass fields are stored as custom records to preserve additional values. Unsupported structures produce a generic failure instead of exposing data in errors.
+
+The CSV mapping dialog shows column names only, rendered as plain text. It does
+not preview row values. Canceling or locking while choosing a mapping aborts the
+import and clears the owned input buffer. Unassigned source columns are omitted;
+check the mapping before confirming the import.
 
 **Klartext exportieren** warns twice before writing. JSON is the full Keyrook model. Keyrook CSV uses a `keyrook-json` header and one quoted JSON record so every type, reference and history roundtrips without flattening losses. It is not intended for spreadsheet editing. Both include secrets and deleted/history records. Keep them private and use encrypted export when possible.
 
@@ -74,3 +119,7 @@ Use **Sicherheit** to choose the inactivity deadline (default five minutes) and 
 Failed unlock attempts produce increasing waiting periods, capped at 60 seconds. A countdown shows when the next attempt is available. Locking does not reset that delay; a successful unlock or application restart does. This is not protection against attacks on a copied vault file.
 
 Backup configuration is session-local and cleared on lock. Do not treat the clipboard timer as protection against OS clipboard history. Native packaging and platform-specific end-to-end verification are separate from the local offscreen UI test.
+
+Desktop text uses German and English resource catalogs. German remains the
+product language; a language selector is not yet exposed. User-supplied names,
+custom field identifiers and persisted data are not translated.

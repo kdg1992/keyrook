@@ -3,8 +3,8 @@
 package app.keyrook.app
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -29,20 +29,21 @@ internal fun HealthTools(vault: Vault, controller: VaultController, busy: Boolea
             }
             controller.session.snapshot()
         }
-    }) { Text("Warnliste") }
-    if (open) AlertDialog(onDismissRequest = { open = false }, title = { Text("Zugänge prüfen") }, text = {
-        Column(Modifier.heightIn(max = 450.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Lokale Hinweise: Ablauf innerhalb von 30 Tagen, kurze/einförmige und wiederverwendete Passwörter. Keine Garantie für Passwortstärke.")
-            if (findings.isEmpty()) Text("Keine Hinweise nach diesen Kriterien.")
-            for (finding in findings) {
-                Text(vault.entries.firstOrNull { it.id == finding.entryId }?.title.orEmpty(), style = MaterialTheme.typography.subtitle1)
+    }) { Text(UiText.text("health.list")) }
+    if (open) AlertDialog(onDismissRequest = { open = false }, title = { Text(UiText.text("health.title")) }, text = {
+        val titles = remember(vault) { vault.entries.associate { it.id to it.title } }
+        LazyColumn(Modifier.heightIn(max = 450.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            item { Text(UiText.text("health.hint")) }
+            if (findings.isEmpty()) item { Text(UiText.text("health.empty")) }
+            items(findings, key = { it.entryId }) { finding ->
+                Text(titles[finding.entryId].orEmpty(), style = MaterialTheme.typography.subtitle1)
                 Text(finding.issues.joinToString("; ") { issue -> when (issue) {
-                    HealthIssue.EXPIRED -> "abgelaufen"
-                    HealthIssue.EXPIRING_SOON -> "läuft bald ab"
-                    HealthIssue.SHORT_OR_REPETITIVE_PASSWORD -> "Passwort kurz oder einförmig"
-                    HealthIssue.REUSED_PASSWORD -> "Passwort mehrfach verwendet"
+                    HealthIssue.EXPIRED -> UiText.text("health.expired")
+                    HealthIssue.EXPIRING_SOON -> UiText.text("health.expiring")
+                    HealthIssue.SHORT_OR_REPETITIVE_PASSWORD -> UiText.text("health.weak")
+                    HealthIssue.REUSED_PASSWORD -> UiText.text("health.reused")
                 } })
             }
         }
-    }, confirmButton = { TextButton(onClick = { open = false }) { Text("Schließen") } })
+    }, confirmButton = { TextButton(onClick = { open = false }) { Text(UiText.text("health.close")) } })
 }

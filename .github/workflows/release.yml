@@ -85,6 +85,32 @@ jobs:
       - name: Test and build unsigned native installers
         shell: bash
         run: bash ./gradlew check :app:packageDistributionForCurrentOS --no-daemon --console=plain
+      - name: Verify packaged runtime and desktop rendering
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const {spawnSync} = require('node:child_process');
+          const relative = {
+            win32: 'Keyrook/Keyrook.exe',
+            darwin: 'Keyrook.app/Contents/MacOS/Keyrook',
+            linux: 'Keyrook/bin/Keyrook'
+          }[process.platform];
+          if (!relative) throw Error('Unsupported runtime-check platform');
+          const launcher = path.resolve('app/build/compose/binaries/main/app', relative);
+          if (!fs.lstatSync(launcher).isFile()) throw Error('Packaged launcher missing');
+          const report = path.resolve('build/packaged-runtime-check.txt');
+          if (fs.existsSync(report)) throw Error('Runtime-check report already exists');
+          const result = spawnSync(launcher, ['--self-test', report], {
+            timeout: 120000, windowsHide: true, stdio: 'pipe', maxBuffer: 1024 * 1024
+          });
+          if (result.error || result.status !== 0 || !fs.existsSync(report) ||
+              fs.readFileSync(report, 'utf8') !== 'Keyrook runtime check passed\n') {
+            throw Error('Packaged runtime check failed');
+          }
+          console.log('Packaged cryptography, SSH and desktop rendering verified');
+          NODE
       - name: Collect installers and bundled notices
         shell: bash
         env:

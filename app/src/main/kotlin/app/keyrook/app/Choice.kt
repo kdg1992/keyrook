@@ -12,10 +12,10 @@ internal fun Choice(label: String, value: String?, options: List<Pair<String, St
     var expanded by remember { mutableStateOf(false) }
     Box {
         TextButton(enabled = enabled, onClick = { expanded = true }) {
-            Text("$label: ${options.find { it.first == value }?.second ?: "–"}")
+            Text(UiText.text("choice.label", label, options.find { it.first == value }?.second ?: UiText.text("choice.none")))
         }
         DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
-            if (nullable) DropdownMenuItem(onClick = { changed(null); expanded = false }) { Text("–") }
+            if (nullable) DropdownMenuItem(onClick = { changed(null); expanded = false }) { Text(UiText.text("choice.none")) }
             options.forEach { (id, title) -> DropdownMenuItem(onClick = { changed(id); expanded = false }) { Text(title) } }
         }
     }

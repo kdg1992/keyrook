@@ -66,7 +66,7 @@ class VaultTransfer {
             try { importJson(content) } finally { content.fill(0) }
         } else {
             val header = rows[0]
-            require(header.toSet().size == header.size)
+            validateCsvHeader(header)
             val selected = mapping ?: CsvMapping("Title", "URL", "UserName", "Password", "Notes")
             listOfNotNull(selected.title, selected.url, selected.username, selected.password, selected.notes).forEach {
                 require(it in header)
@@ -80,6 +80,18 @@ class VaultTransfer {
                 }
             }
         }
+    }
+
+    /** Only column names are returned; data rows are not retained for the mapping dialog. */
+    fun csvColumns(bytes: ByteArray): List<String> = guarded {
+        val header = csv(bounded(bytes).toString(Charsets.UTF_8).removePrefix("\uFEFF"), headerOnly = true).first()
+        validateCsvHeader(header)
+        header.toList()
+    }
+
+    private fun validateCsvHeader(header: List<String>) {
+        require(header.isNotEmpty() && header.all { it.isNotBlank() && it.length <= 512 })
+        require(header.toSet().size == header.size)
     }
 
     /** Imports unencrypted Bitwarden login/secure-note exports; rejects other types rather than dropping data. */
@@ -336,7 +348,7 @@ class VaultTransfer {
     }
     private inline fun <T> guarded(block: () -> T): T = try { block() } catch (_: Exception) { throw InvalidImportException() }
 
-    private fun csv(text: String): List<List<String>> {
+    private fun csv(text: String, headerOnly: Boolean = false): List<List<String>> {
         val rows = mutableListOf<List<String>>()
         var row = mutableListOf<String>()
         val field = StringBuilder()
@@ -359,6 +371,7 @@ class VaultTransfer {
                 else -> { require(!closed); field.append(c) }
             }
             require(field.length <= VaultCodec.MAX_FILE_BYTES)
+            if (headerOnly && rows.isNotEmpty()) return rows
         }
         require(!quoted)
         if (field.isNotEmpty() || row.isNotEmpty() || closed) line()

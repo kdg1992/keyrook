@@ -110,6 +110,15 @@ jobs:
         if: needs.changes.outputs.docs-only != 'true' || matrix.platform == 'linux'
         shell: bash
         run: bash ./gradlew check --no-daemon --console=plain
+      - name: Verify native desktop event routing
+        if: needs.changes.outputs.docs-only != 'true' || matrix.platform == 'linux'
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a bash ./gradlew :app:desktopWindowCheck --no-daemon --console=plain
+          else
+            bash ./gradlew :app:desktopWindowCheck --no-daemon --console=plain
+          fi
       - name: Upload failed test reports
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

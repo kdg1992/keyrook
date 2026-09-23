@@ -19,6 +19,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import app.keyrook.core.model.*
 import app.keyrook.core.crypto.Secret
+import app.keyrook.core.crypto.KdfParameters
 import app.keyrook.core.ssh.SshKeyService
 import java.awt.Desktop
 import java.net.URI
@@ -27,8 +28,11 @@ import java.util.concurrent.Executors
 import javax.swing.JFileChooser
 import javax.swing.SwingUtilities
 
-fun main() = application {
-    Window(onCloseRequest = ::exitApplication, title = "Keyrook") { KeyrookApp(window) }
+fun main(args: Array<String>) {
+    if (args.isNotEmpty()) kotlin.system.exitProcess(runRuntimeCheck(args))
+    application {
+        Window(onCloseRequest = ::exitApplication, title = "Keyrook") { KeyrookApp(window) }
+    }
 }
 
 private fun chooseFile(save: Boolean): Path? {
@@ -71,7 +75,7 @@ fun KeyrookApp(window: java.awt.Window? = null) {
         vault?.close(); vault = null
         runCatching { SecretClipboard.clear() }
         busy = true
-        message = "Tresor gesperrt. Nicht gespeicherte Eingaben wurden verworfen."
+        message = UiText.text("shell.locked")
         worker.execute {
             controller.lock()
             SwingUtilities.invokeLater {
@@ -97,7 +101,7 @@ fun KeyrookApp(window: java.awt.Window? = null) {
                         inactivity.activity()
                     } else {
                         // Exceptions can contain paths or decrypted input. Never display their messages.
-                        message = "Vorgang fehlgeschlagen. Passwort, Schlüsseldatei, Eingaben und Dateizugriff prüfen."
+                        message = UiText.text("shell.failed")
                     }
                     busy = false
                 }
@@ -153,28 +157,30 @@ fun KeyrookApp(window: java.awt.Window? = null) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Keyrook", style = MaterialTheme.typography.h4, modifier = Modifier.weight(1f))
-                    TextButton(onClick = { dark = !dark }) { Text(if (dark) "Hell" else "Dunkel") }
-                    TextButton(onClick = { about = true }) { Text("Info") }
-                    TextButton(onClick = { settings = !settings }) { Text("Sicherheit") }
-                    if (vault != null || (busy && !locking)) Button(onClick = ::lockNow) { Text("Sperren (${shortcutPrefix}L)") }
+                    TextButton(onClick = { dark = !dark }) { Text(if (dark) UiText.text("shell.light") else UiText.text("shell.dark")) }
+                    TextButton(onClick = { about = true }) { Text(UiText.text("shell.about")) }
+                    TextButton(onClick = { settings = !settings }) { Text(UiText.text("shell.security")) }
+                    if (vault != null || (busy && !locking)) Button(onClick = ::lockNow) { Text(UiText.text("shell.lock", shortcutPrefix)) }
                 }
                 if (settings) {
                     Row {
-                        Choice("Sperre nach Minuten", inactivityMinutes.toString(), listOf(1, 2, 5, 10, 15, 30).map { it.toString() to it.toString() }, nullable = false) {
+                        Choice(UiText.text("shell.lockMinutes"), inactivityMinutes.toString(), listOf(1, 2, 5, 10, 15, 30).map { it.toString() to it.toString() }, nullable = false) {
                             it?.toInt()?.let { value -> inactivityMinutes = value }
                         }
-                        Choice("Zwischenablage Sekunden", clipboardSeconds.toString(), listOf(5L, 10L, 20L, 30L, 60L, 120L).map { it.toString() to it.toString() }, nullable = false) {
+                        Choice(UiText.text("shell.clipboardSeconds"), clipboardSeconds.toString(), listOf(5L, 10L, 20L, 30L, 60L, 120L).map { it.toString() to it.toString() }, nullable = false) {
                             it?.toLong()?.let { value -> clipboardSeconds = value; runCatching { SecretClipboard.configure(value) } }
                         }
                     }
-                    Text("Gilt für diese Sitzung. Beim Wechsel zu einer anderen Anwendung wird gesperrt. Betriebssystem-Ereignisse werden unterstützt, sofern verfügbar.")
+                    Text(UiText.text("shell.settingsHint"))
                 }
                 if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                 if (message.isNotEmpty()) Text(message, color = MaterialTheme.colors.error)
                 if (vault == null) {
-                    if (unlockDelay > 0) Text("Nächster Entsperrversuch in ${(unlockDelay + 999) / 1000} Sekunden.")
-                    UnlockForm(busy || unlockDelay > 0) { path, password, key, create ->
-                        operation { controller.unlock(path, password, key, create) }
+                    if (unlockDelay > 0) Text(UiText.text("shell.delay", (unlockDelay + 999) / 1000))
+                    UnlockForm(busy || unlockDelay > 0, generateKey = { target, done ->
+                        operation { generateKeyFile(target); credentialOnEdt(done); null }
+                    }) { path, password, key, create, parameters ->
+                        operation { controller.unlock(path, password, key, create, parameters) }
                     }
                 } else if (creating || editing != null) {
                     Editor(vault!!, editing, busy, shortcuts, onCancel = { editing = null; creating = false }) { entry ->
@@ -191,45 +197,65 @@ fun KeyrookApp(window: java.awt.Window? = null) {
             }
         }
         if (about) AlertDialog(onDismissRequest = { about = false }, title = { Text("Keyrook") },
-            text = { Text("Version ${System.getProperty("keyrook.version", "Entwicklung")}\nGNU GPL v3 oder neuer\nLokaler verschlüsselter Tresor") },
-            confirmButton = { TextButton(onClick = { about = false }) { Text("Schließen") } },
+            text = { Text(UiText.text("shell.aboutBody", System.getProperty("keyrook.version", "dev"))) },
+            confirmButton = { TextButton(onClick = { about = false }) { Text(UiText.text("shell.close")) } },
             dismissButton = { TextButton(onClick = {
                 runCatching { Desktop.getDesktop().browse(URI("https://github.com/kdg1992/keyrook")) }
-            }) { Text("Quellcode öffnen") } })
+            }) { Text(UiText.text("shell.source")) } })
     }
 }
 
 @Composable
-private fun UnlockForm(busy: Boolean, onOpen: (Path, CharArray, Path?, Boolean) -> Unit) {
+private fun UnlockForm(busy: Boolean, generateKey: (Path, () -> Unit) -> Unit,
+                       onOpen: (Path, CharArray, Path?, Boolean, KdfParameters) -> Unit) {
     var path by remember { mutableStateOf("") }
     var key by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmation by remember { mutableStateOf("") }
     var create by remember { mutableStateOf(false) }
+    var memory by remember { mutableStateOf("65536") }
+    var rounds by remember { mutableStateOf("3") }
+    var lanes by remember { mutableStateOf("4") }
+    val parameters = if (create) parseKdfParameters(memory, rounds, lanes) else KdfParameters()
     Column(Modifier.widthIn(max = 640.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(if (create) "Neuen Tresor anlegen" else "Tresor öffnen", style = MaterialTheme.typography.h5)
+        Text(UiText.text(if (create) "credentials.createTitle" else "credentials.openTitle"), style = MaterialTheme.typography.h5)
         Row {
             RadioButton(!create, onClick = { create = false }, enabled = !busy)
-            Text("Öffnen", Modifier.padding(top = 12.dp))
+            Text(UiText.text("credentials.open"), Modifier.padding(top = 12.dp))
             RadioButton(create, onClick = { create = true }, enabled = !busy)
-            Text("Anlegen", Modifier.padding(top = 12.dp))
+            Text(UiText.text("credentials.create"), Modifier.padding(top = 12.dp))
         }
-        OutlinedTextField(path, { path = it }, label = { Text("Tresordatei (.keyrook)") }, enabled = !busy, modifier = Modifier.fillMaxWidth())
-        TextButton(enabled = !busy, onClick = { chooseFile(create)?.let { path = it.toString() } }) { Text("Datei auswählen") }
-        OutlinedTextField(key, { key = it }, label = { Text("Schlüsseldatei (optional, genau 32 Byte)") }, enabled = !busy, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(password, { password = it }, label = { Text("Master-Passwort") }, singleLine = true,
+        OutlinedTextField(path, { path = it }, label = { Text(UiText.text("credentials.vaultFile")) }, enabled = !busy, modifier = Modifier.fillMaxWidth())
+        TextButton(enabled = !busy, onClick = { chooseFile(create)?.let { path = it.toString() } }) { Text(UiText.text("credentials.selectFile")) }
+        OutlinedTextField(key, { key = it }, label = { Text(UiText.text("credentials.optionalKey")) }, enabled = !busy, modifier = Modifier.fillMaxWidth())
+        Row {
+            TextButton(enabled = !busy, onClick = { chooseKeyFile(false)?.let { key = it.toString() } }) { Text(UiText.text("credentials.selectKey")) }
+            TextButton(enabled = !busy, onClick = {
+                chooseKeyFile(true)?.let { target -> generateKey(target) { key = target.toString() } }
+            }) { Text(UiText.text("credentials.generateKey")) }
+            TextButton(enabled = !busy && key.isNotEmpty(), onClick = { key = "" }) { Text(UiText.text("credentials.noKey")) }
+        }
+        OutlinedTextField(password, { if (it.length <= 1024) password = it }, label = { Text(UiText.text("credentials.password")) }, singleLine = true,
             enabled = !busy, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
-        if (create) OutlinedTextField(confirmation, { confirmation = it }, label = { Text("Master-Passwort wiederholen") },
+        if (create) OutlinedTextField(confirmation, { if (it.length <= 1024) confirmation = it }, label = { Text(UiText.text("credentials.repeatPassword")) },
             singleLine = true, enabled = !busy, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
-        Text("Passwort und Schlüsseldatei sicher aufbewahren. Ohne sie gibt es keine Wiederherstellung.")
-        Button(enabled = !busy && path.isNotBlank() && password.isNotEmpty() && (!create || password == confirmation), onClick = {
+        if (create) {
+            Text(UiText.text("credentials.kdfTitle"))
+            OutlinedTextField(memory, { if (it.length <= 10) memory = it }, label = { Text(UiText.text("credentials.memory")) }, singleLine = true, enabled = !busy)
+            OutlinedTextField(rounds, { if (it.length <= 10) rounds = it }, label = { Text(UiText.text("credentials.iterations")) }, singleLine = true, enabled = !busy)
+            OutlinedTextField(lanes, { if (it.length <= 10) lanes = it }, label = { Text(UiText.text("credentials.parallelism")) }, singleLine = true, enabled = !busy)
+            Text(UiText.text("credentials.kdfExplanation"))
+            if (parameters == null) Text(UiText.text("credentials.kdfInvalid"), color = MaterialTheme.colors.error)
+        }
+        Text(UiText.text("credentials.recoveryWarning"))
+        Button(enabled = !busy && parameters != null && path.isNotBlank() && password.length in 1..1024 && (!create || password == confirmation), onClick = {
             val target = runCatching { Path.of(path) }.getOrNull()
             val keyPath = if (key.isBlank()) null else runCatching { Path.of(key) }.getOrNull()
             if (target != null && (key.isBlank() || keyPath != null)) {
                 val chars = password.toCharArray(); password = ""; confirmation = ""
-                onOpen(target, chars, keyPath, create)
+                onOpen(target, chars, keyPath, create, requireNotNull(parameters))
             }
-        }) { Text(if (create) "Anlegen" else "Entsperren") }
+        }) { Text(UiText.text(if (create) "credentials.create" else "credentials.unlock")) }
     }
 }
 
@@ -238,11 +264,10 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
                       onCreate: () -> Unit, onEdit: (Entry) -> Unit,
                       onDuplicate: (Entry) -> Unit, onTrash: (Entry) -> Unit) {
     var search by remember { mutableStateOf("") }
-    var trash by remember { mutableStateOf(false) }
-    var type by remember { mutableStateOf<String?>(null) }
-    var customer by remember { mutableStateOf<String?>(null) }
-    var tag by remember { mutableStateOf<String?>(null) }
-    var expiring by remember { mutableStateOf(false) }
+    var filters by remember { mutableStateOf(EntryListFilters()) }
+    val activeFilters = filters.normalized(vault)
+    val trash = activeFilters.trash
+    LaunchedEffect(activeFilters) { filters = activeFilters }
     var includeHidden by remember { mutableStateOf(false) }
     val matches = searchResults(vault, controller, search, includeHidden)
     val searchFocus = remember { FocusRequester() }
@@ -253,28 +278,43 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         onDispose { shortcuts.newEntry = null; shortcuts.search = null }
     }
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedTextField(search, { if (it.length <= 256) search = it }, label = { Text("Volltextsuche (bis 256 Zeichen)") }, modifier = Modifier.weight(1f).focusRequester(searchFocus), singleLine = true)
-        Button(onClick = onCreate, enabled = !busy && !trash) { Text("Neuer Eintrag") }
-        TextButton(onClick = { trash = !trash }, enabled = !busy) { Text(if (trash) "Alle Einträge" else "Papierkorb") }
+        OutlinedTextField(search, { if (it.length <= 256) search = it }, label = { Text(UiText.text("shell.search")) }, modifier = Modifier.weight(1f).focusRequester(searchFocus), singleLine = true)
+        Button(onClick = onCreate, enabled = !busy && !trash) { Text(UiText.text("shell.newEntry")) }
+        TextButton(onClick = { filters = activeFilters.copy(trash = !trash) }, enabled = !busy) { Text(if (trash) UiText.text("shell.active") else UiText.text("shell.trash")) }
     }
     Row {
         Checkbox(includeHidden, onCheckedChange = { includeHidden = it })
-        Text("Verborgene Felder durchsuchen (Treffer bleiben maskiert)")
+        Text(UiText.text("shell.hiddenSearch"))
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Choice("Typ", type, EntryType.entries.map { it.name to it.label }) { type = it }
-        Choice("Kunde", customer, vault.customers.map { it.id to it.name }) { customer = it }
-        Choice("Tag", tag, vault.entries.flatMap { it.tags }.distinct().sorted().map { it to it }) { tag = it }
-        Checkbox(expiring, onCheckedChange = { expiring = it }); Text("Ablauf binnen 30 Tagen")
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Choice(UiText.text("shell.type"), activeFilters.type?.name, EntryType.entries.map { it.name to it.label }) {
+            filters = activeFilters.copy(type = it?.let(EntryType::valueOf))
+        }
+        Choice(UiText.text("shell.customer"), activeFilters.customerId, vault.customers.map { it.id to it.name }) {
+            filters = activeFilters.copy(customerId = it).normalized(vault)
+        }
+        Choice(UiText.text("shell.project"), activeFilters.projectId, activeFilters.projects(vault).map { it.id to it.name }) {
+            filters = activeFilters.copy(projectId = it)
+        }
+        Choice(UiText.text("shell.tag"), activeFilters.tag, vault.entries.flatMap { it.tags }.distinct().sorted().map { it to it }) {
+            filters = activeFilters.copy(tag = it)
+        }
     }
-    val entries = vault.entries.filter { (it.deletedAt != null) == trash &&
-        (type == null || it.data.type().name == type) && (customer == null || it.customerId == customer) &&
-        (tag == null || tag in it.tags) && (!expiring || it.expiresOn?.let { date ->
-            java.time.LocalDate.parse(date) <= java.time.LocalDate.now().plusDays(30)
-        } == true) &&
-        it.id in matches.orEmpty() }
-    if (matches == null) Text("Suche läuft …")
-    else if (entries.isEmpty()) Text("Keine passenden Einträge.")
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Choice(UiText.text("shell.expiry"), activeFilters.expiry.name, ExpiryFilter.entries.map { it.name to it.label }, nullable = false) {
+            filters = activeFilters.copy(expiry = ExpiryFilter.valueOf(requireNotNull(it)))
+        }
+        Choice(UiText.text("shell.sort"), activeFilters.sort.name, EntrySort.entries.map { it.name to it.label }, nullable = false) {
+            filters = activeFilters.copy(sort = EntrySort.valueOf(requireNotNull(it)))
+        }
+        TextButton(onClick = { filters = EntryListFilters(); search = ""; includeHidden = false }) { Text(UiText.text("shell.reset")) }
+    }
+    val today by produceState(java.time.LocalDate.now()) {
+        while (true) { kotlinx.coroutines.delay(60_000); value = java.time.LocalDate.now() }
+    }
+    val entries = activeFilters.select(vault, matches.orEmpty(), today)
+    if (matches == null) Text(UiText.text("shell.searching"))
+    else if (entries.isEmpty()) Text(UiText.text("shell.noEntries"))
     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         items(entries, key = { it.id }) { entry ->
             Card(Modifier.fillMaxWidth(), elevation = 2.dp) {
@@ -284,9 +324,9 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
                         Text(entry.data.type().label)
                         if (entry.tags.isNotEmpty()) Text(entry.tags.joinToString(", "))
                     }
-                    if (!trash) TextButton(enabled = !busy, onClick = { onEdit(entry) }) { Text("Bearbeiten") }
-                    if (!trash) TextButton(enabled = !busy, onClick = { onDuplicate(entry) }) { Text("Duplizieren") }
-                    TextButton(enabled = !busy, onClick = { onTrash(entry) }) { Text(if (trash) "Wiederherstellen" else "In Papierkorb") }
+                    if (!trash) TextButton(enabled = !busy, onClick = { onEdit(entry) }) { Text(UiText.text("shell.edit")) }
+                    if (!trash) TextButton(enabled = !busy, onClick = { onDuplicate(entry) }) { Text(UiText.text("shell.duplicate")) }
+                    TextButton(enabled = !busy, onClick = { onTrash(entry) }) { Text(if (trash) UiText.text("shell.restore") else "In Papierkorb") }
                 }
             }
         }
@@ -313,6 +353,7 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
     var customerId by remember { mutableStateOf(source?.customerId) }
     var projectId by remember { mutableStateOf(source?.projectId) }
     var history by remember { mutableStateOf(false) }
+    var confirmRemoveTotp by remember { mutableStateOf(false) }
     var customLabel by remember { mutableStateOf("") }
     val ownedFields = remember { mutableListOf<Secret>() }
     fun newField() = Field(Secret(charArrayOf()).also { ownedFields.add(it) }, hidden = true)
@@ -332,7 +373,7 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
         projectId != source?.projectId || values != originalValues || hidden != originalHidden ||
         data != initialData || type != (source?.data?.type() ?: EntryType.WEB) || customLabel.isNotEmpty()
     fun saveDraft() {
-        if (busy || confirmDiscard) return
+        if (busy || confirmDiscard || confirmRemoveTotp) return
         var candidate: Entry? = null
         try {
             candidate = editedEntry(source, data, title, tags, notes, expires, values, hidden).copy(customerId = customerId, projectId = projectId)
@@ -360,7 +401,7 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
     val alive = remember { java.util.concurrent.atomic.AtomicBoolean(true) }
     DisposableEffect(Unit) { onDispose { alive.set(false); ownedFields.forEach { it.close() } } }
     Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(if (source == null) "Neuer Eintrag" else "Eintrag bearbeiten", style = MaterialTheme.typography.h5)
+        Text(if (source == null) UiText.text("editor.new") else UiText.text("editor.edit"), style = MaterialTheme.typography.h5)
         if (source == null) {
             Row(Modifier.horizontalScroll(rememberScrollState())) {
                 EntryType.entries.forEach { candidate ->
@@ -368,24 +409,31 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
                 }
             }
         }
-        OutlinedTextField(title, { title = it }, label = { Text("Titel") }, enabled = !busy, modifier = Modifier.fillMaxWidth().focusRequester(titleFocus))
+        OutlinedTextField(title, { title = it }, label = { Text(UiText.text("editor.title")) }, enabled = !busy, modifier = Modifier.fillMaxWidth().focusRequester(titleFocus))
         Row {
-            Choice("Kunde", customerId, vault.customers.map { it.id to it.name }, !busy) {
+            Choice(UiText.text("common.customer"), customerId, vault.customers.map { it.id to it.name }, !busy) {
                 customerId = it
                 if (vault.projects.find { project -> project.id == projectId }?.customerId?.let { id -> id != it } == true) projectId = null
             }
-            Choice("Projekt", projectId, vault.projects.filter { customerId == null || it.customerId == null || it.customerId == customerId }.map { it.id to it.name }, !busy) { projectId = it }
+            Choice(UiText.text("common.project"), projectId, vault.projects.filter { customerId == null || it.customerId == null || it.customerId == customerId }.map { it.id to it.name }, !busy) {
+                projectId = it
+                vault.projects.find { project -> project.id == it }?.customerId?.let { owner -> customerId = owner }
+            }
         }
         when (val current = data) {
+            is EntryData.Web -> TextButton(enabled = !busy, onClick = {
+                if (current.totp == null) replaceData(current.copy(totp = newField()))
+                else confirmRemoveTotp = true
+            }) { Text(UiText.text(if (current.totp == null) "editor.addTotp" else "editor.removeTotp")) }
             is EntryData.Transfer -> {
-                OutlinedTextField(current.port.toString(), { value -> value.toIntOrNull()?.let { data = current.copy(port = it) } }, label = { Text("Port") }, enabled = !busy)
+                OutlinedTextField(current.port.toString(), { value -> value.toIntOrNull()?.let { data = current.copy(port = it) } }, label = { Text(UiText.text("editor.port")) }, enabled = !busy)
                 Row { TransferProtocol.entries.forEach { protocol -> TextButton(enabled = !busy, onClick = { data = current.copy(protocol = protocol) }) { Text(if (protocol == current.protocol) "• $protocol" else "$protocol") } } }
                 if (current.protocol == TransferProtocol.SFTP) CommandCopyButton("SFTP", busy) {
                     ConnectionCommands.sftp(values[0], current.port, values[1])
                 }
             }
             is EntryData.Server -> {
-                OutlinedTextField(current.port.toString(), { value -> value.toIntOrNull()?.let { data = current.copy(port = it) } }, label = { Text("Port") }, enabled = !busy)
+                OutlinedTextField(current.port.toString(), { value -> value.toIntOrNull()?.let { data = current.copy(port = it) } }, label = { Text(UiText.text("editor.port")) }, enabled = !busy)
                 CommandCopyButton("SSH", busy) { ConnectionCommands.ssh(values[0], current.port, values[1]) }
             }
             is EntryData.Email -> {
@@ -401,27 +449,27 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
                         })
                         Text(name)
                         if (endpoint != null) {
-                            OutlinedTextField(endpoint.port.toString(), { value -> value.toIntOrNull()?.let { update(endpoint.copy(port = it)) } }, label = { Text("Port") }, enabled = !busy, modifier = Modifier.width(110.dp))
-                            Choice("Verschlüsselung", endpoint.encryption.name, MailEncryption.entries.map { it.name to it.name }, !busy, nullable = false) {
+                            OutlinedTextField(endpoint.port.toString(), { value -> value.toIntOrNull()?.let { update(endpoint.copy(port = it)) } }, label = { Text(UiText.text("editor.port")) }, enabled = !busy, modifier = Modifier.width(110.dp))
+                            Choice(UiText.text("editor.encryption"), endpoint.encryption.name, MailEncryption.entries.map { it.name to it.name }, !busy, nullable = false) {
                                 it?.let { update(endpoint.copy(encryption = MailEncryption.valueOf(it))) }
                             }
                         }
                     }
                 }
             }
-            is EntryData.Domain -> Choice("Registrar-Login", current.registrarLoginId, vault.entries.filter { it.id != source?.id && it.deletedAt == null }.map { it.id to it.title }, !busy) { data = current.copy(registrarLoginId = it) }
+            is EntryData.Domain -> Choice(UiText.text("editor.registrarLogin"), current.registrarLoginId, vault.entries.filter { it.id != source?.id && it.deletedAt == null }.map { it.id to it.title }, !busy) { data = current.copy(registrarLoginId = it) }
             is EntryData.Custom -> {
                 Row {
-                    OutlinedTextField(customLabel, { customLabel = it }, label = { Text("Neues Feld") }, enabled = !busy)
+                    OutlinedTextField(customLabel, { customLabel = it }, label = { Text(UiText.text("editor.newField")) }, enabled = !busy)
                     Button(enabled = !busy && customLabel.isNotBlank() && customLabel !in current.values && current.values.size < 100, onClick = {
                         replaceData(current.copy(values = current.values + (customLabel to newField())))
                         customLabel = ""
-                    }) { Text("Feld hinzufügen") }
+                    }) { Text(UiText.text("editor.addField")) }
                 }
             }
             is EntryData.Ssh -> {
                 Row { SshKeyType.entries.forEach { keyType -> TextButton(enabled = !busy && !generating, onClick = { data = current.copy(keyType = keyType) }) { Text(if (keyType == current.keyType) "• $keyType" else "$keyType") } } }
-                Text("Erzeugen ersetzt die Schlüsselfelder. Passphrase zuerst eingeben (mindestens 12 Zeichen).")
+                Text(UiText.text("editor.sshHint"))
                 Button(enabled = !busy && !generating && values[2].length >= 12, onClick = {
                     generating = true
                     val chars = values[2].toCharArray()
@@ -443,7 +491,7 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
                             if (alive.get()) { generating = false; error = result.isFailure }
                         }
                     }, "ssh-key-worker").apply { isDaemon = true; start() }
-                }) { Text(if (generating) "Schlüssel wird erzeugt …" else "SSH-Schlüssel erzeugen") }
+                }) { Text(if (generating) UiText.text("editor.sshGenerating") else UiText.text("editor.sshGenerate")) }
                 SshImportExport(busy, values[1], onBusy = { generating = it }) { material, phrase ->
                     data = current.copy(keyType = SshKeyType.valueOf(material.type.name))
                     values = listOf(material.privateKey.useChars { String(it) }, material.publicKey, phrase, material.fingerprint)
@@ -466,51 +514,65 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
                     visualTransformation = if (hidden[index]) PasswordVisualTransformation() else VisualTransformation.None)
                 Column {
                     Checkbox(hidden[index], enabled = !busy, onCheckedChange = { value -> hidden = hidden.toMutableList().also { it[index] = value } })
-                    Text("Verborgen")
+                    Text(UiText.text("common.hidden"))
                 }
                 TextButton(enabled = !busy, onClick = {
                     error = runCatching { SecretClipboard.copy(values[index]) }.isFailure
-                }) { Text("Kopieren") }
+                }) { Text(UiText.text("common.copy")) }
                 if (data.fields()[index].kind == FieldKind.URL) TextButton(enabled = !busy, onClick = {
                     error = runCatching {
                         val uri = BrowserLinks.parse(values[index])
                         Desktop.getDesktop().browse(uri)
                     }.isFailure
-                }) { Text("Öffnen") }
+                }) { Text(UiText.text("common.open")) }
             }
             if (data is EntryData.Custom) {
                 val current = data as EntryData.Custom
                 Row {
-                    TextButton(enabled = !busy, onClick = { replaceData(current.copy(values = current.values - label)) }) { Text("Feld entfernen") }
+                    TextButton(enabled = !busy, onClick = { replaceData(current.copy(values = current.values - label)) }) { Text(UiText.text("editor.removeField")) }
                     Checkbox(current.values.getValue(label).kind == FieldKind.URL, enabled = !busy, onCheckedChange = { url ->
                         data = current.copy(values = current.values + (label to current.values.getValue(label).copy(kind = if (url) FieldKind.URL else FieldKind.TEXT)))
-                    }); Text("URL-Feld")
+                    }); Text(UiText.text("editor.urlField"))
                 }
             }
-            if (label == "Passwort" || label == "Passphrase") GeneratorTools(busy, onBusy = { generating = it }) { generated ->
+            if (data.canGenerateSecret(index)) GeneratorTools(busy, onBusy = { generating = it }) { generated ->
                 values = values.toMutableList().also { it[index] = generated }
             }
         }
-        OutlinedTextField(tags, { tags = it }, label = { Text("Tags (Komma getrennt)") }, enabled = !busy, modifier = Modifier.fillMaxWidth())
-        Text("Kopierte Werte werden nach der eingestellten Frist entfernt (Standard: 20 Sekunden), sofern die Zwischenablage noch uns gehört. Betriebssystem-Verläufe können bestehen bleiben.")
-        OutlinedTextField(notes, { notes = it }, label = { Text("Notizen") }, enabled = !busy, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(expires, { expires = it }, label = { Text("Ablaufdatum (JJJJ-MM-TT, optional)") }, enabled = !busy)
-        if (error) Text("Eingaben prüfen: Titel erforderlich; Ablaufdatum im Format JJJJ-MM-TT.", color = MaterialTheme.colors.error)
+        OutlinedTextField(tags, { tags = it }, label = { Text(UiText.text("editor.tags")) }, enabled = !busy, modifier = Modifier.fillMaxWidth())
+        Text(UiText.text("editor.clipboard"))
+        OutlinedTextField(notes, { notes = it }, label = { Text(UiText.text("editor.notes")) }, enabled = !busy, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(expires, { expires = it }, label = { Text(UiText.text("editor.expiry")) }, enabled = !busy)
+        if (error) Text(UiText.text("editor.invalid"), color = MaterialTheme.colors.error)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(enabled = !busy, onClick = ::saveDraft) { Text("Speichern") }
-            TextButton(enabled = !busy, onClick = ::requestCancel) { Text("Abbrechen") }
-            if (source?.history?.isNotEmpty() == true) TextButton(onClick = { history = !history }) { Text("Verlauf (${source.history.size})") }
+            Button(enabled = !busy, onClick = ::saveDraft) { Text(UiText.text("common.save")) }
+            TextButton(enabled = !busy, onClick = ::requestCancel) { Text(UiText.text("common.cancel")) }
+            if (source?.history?.isNotEmpty() == true) TextButton(onClick = { history = !history }) { Text(UiText.text("editor.history", source.history.size)) }
         }
         if (history) source?.history?.asReversed()?.forEach { item ->
-            Text(item.changedAt)
+            Text(UiText.text("editor.historyVersion", item.changedAt))
             item.data.labels().zip(item.data.fields()).forEach { (label, field) ->
-                Text("$label: " + if (field.hidden) "••••••••" else field.value.useChars { String(it) })
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("$label: " + if (field.hidden) "••••••••" else field.value.useChars { String(it) })
+                    TextButton(enabled = !busy, onClick = {
+                        error = runCatching { field.value.useChars { SecretClipboard.copy(String(it)) } }.isFailure
+                    }) { Text(UiText.text("editor.historyCopy", label)) }
+                }
             }
         }
     }
+    if (confirmRemoveTotp) AlertDialog(onDismissRequest = { confirmRemoveTotp = false },
+        title = { Text(UiText.text("editor.removeTotpTitle")) },
+        text = { Text(UiText.text("editor.removeTotpBody")) },
+        confirmButton = { TextButton(enabled = !busy, onClick = {
+            val current = data as? EntryData.Web
+            if (current != null) replaceData(current.copy(totp = null))
+            confirmRemoveTotp = false
+        }) { Text(UiText.text("editor.removeTotp")) } },
+        dismissButton = { TextButton(onClick = { confirmRemoveTotp = false }) { Text(UiText.text("common.cancel")) } })
     if (confirmDiscard) AlertDialog(onDismissRequest = { confirmDiscard = false },
-        title = { Text("Änderungen verwerfen?") },
-        text = { Text("Dieser Eintrag enthält ungespeicherte Änderungen. Möchtest du sie verwerfen?") },
-        confirmButton = { TextButton(enabled = !busy, onClick = { confirmDiscard = false; onCancel() }) { Text("Verwerfen") } },
-        dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text("Weiter bearbeiten") } })
+        title = { Text(UiText.text("editor.discardTitle")) },
+        text = { Text(UiText.text("editor.discardBody")) },
+        confirmButton = { TextButton(enabled = !busy, onClick = { confirmDiscard = false; onCancel() }) { Text(UiText.text("editor.discard")) } },
+        dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text(UiText.text("editor.keepEditing")) } })
 }

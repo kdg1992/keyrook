@@ -6,10 +6,14 @@ import app.keyrook.core.crypto.Secret
 import app.keyrook.core.model.*
 import java.time.Instant
 import java.util.UUID
+import java.util.Locale
 
-enum class EntryType(val label: String) {
-    WEB("Web-Login"), TRANSFER("Dateiübertragung"), EMAIL("E-Mail"), PANEL("Webhosting-Panel"),
-    SERVER("Server"), SSH("SSH-Schlüssel"), DOMAIN("Domain"), CUSTOM("Freier Eintrag")
+enum class EntryType(private val key: String) {
+    WEB("web"), TRANSFER("transfer"), EMAIL("email"), PANEL("panel"),
+    SERVER("server"), SSH("ssh"), DOMAIN("domain"), CUSTOM("custom");
+
+    val label: String get() = label(Locale.GERMAN)
+    fun label(locale: Locale): String = UiText.localized(locale, "entry.type.$key")
 }
 
 fun EntryData.type(): EntryType = when (this) {
@@ -34,20 +38,29 @@ fun blankData(type: EntryType): EntryData {
         EntryType.SERVER -> EntryData.Server(field(), 22, field(), field(true), field(), field())
         EntryType.SSH -> EntryData.Ssh(SshKeyType.ED25519, field(true), field(), field(true), field())
         EntryType.DOMAIN -> EntryData.Domain(field(), field(), field())
-        EntryType.CUSTOM -> EntryData.Custom(mapOf("Wert" to field(true)))
+        EntryType.CUSTOM -> EntryData.Custom(mapOf(UiText.text("field.value") to field(true)))
     }
 }
 
-fun EntryData.labels(): List<String> = when (this) {
-    is EntryData.Web -> listOf("URL", "Benutzername", "Passwort") + if (totp != null) listOf("TOTP-Secret") else emptyList()
-    is EntryData.Transfer -> listOf("Host", "Benutzername", "Passwort", "Startverzeichnis")
-    is EntryData.Email -> listOf("Adresse", "Benutzername", "Passwort") +
-        listOfNotNull(imap?.let { "IMAP-Host" }, pop3?.let { "POP3-Host" }, smtp?.let { "SMTP-Host" })
-    is EntryData.Panel -> listOf("URL", "Benutzername", "Passwort", "Rolle")
-    is EntryData.Server -> listOf("Host", "Benutzername", "Passwort", "Betriebssystem", "Rolle")
-    is EntryData.Ssh -> listOf("Privater Schlüssel", "Öffentlicher Schlüssel", "Passphrase", "Fingerprint")
-    is EntryData.Domain -> listOf("Domain", "Registrar", "DNS-Hinweise")
+fun EntryData.labels(locale: Locale = Locale.GERMAN): List<String> = when (this) {
+    is EntryData.Web -> listOf(UiText.localized(locale, "field.url"), UiText.localized(locale, "field.username"), UiText.localized(locale, "field.password")) + if (totp != null) listOf(UiText.localized(locale, "field.totp")) else emptyList()
+    is EntryData.Transfer -> listOf(UiText.localized(locale, "field.host"), UiText.localized(locale, "field.username"), UiText.localized(locale, "field.password"), UiText.localized(locale, "field.directory"))
+    is EntryData.Email -> listOf(UiText.localized(locale, "field.address"), UiText.localized(locale, "field.username"), UiText.localized(locale, "field.password")) +
+        listOfNotNull(imap?.let { UiText.localized(locale, "field.imap") }, pop3?.let { UiText.localized(locale, "field.pop3") }, smtp?.let { UiText.localized(locale, "field.smtp") })
+    is EntryData.Panel -> listOf(UiText.localized(locale, "field.url"), UiText.localized(locale, "field.username"), UiText.localized(locale, "field.password"), UiText.localized(locale, "field.role"))
+    is EntryData.Server -> listOf(UiText.localized(locale, "field.host"), UiText.localized(locale, "field.username"), UiText.localized(locale, "field.password"), UiText.localized(locale, "field.os"), UiText.localized(locale, "field.role"))
+    is EntryData.Ssh -> listOf(UiText.localized(locale, "field.private"), UiText.localized(locale, "field.public"), UiText.localized(locale, "field.passphrase"), UiText.localized(locale, "field.fingerprint"))
+    is EntryData.Domain -> listOf(UiText.localized(locale, "field.domain"), UiText.localized(locale, "field.registrar"), UiText.localized(locale, "field.dns"))
     is EntryData.Custom -> values.keys.toList()
+}
+
+/** Password generation is tied to field semantics, never to a translated or custom label. */
+internal fun EntryData.canGenerateSecret(index: Int): Boolean = when (this) {
+    is EntryData.Web, is EntryData.Email, is EntryData.Panel -> index == 2
+    is EntryData.Transfer, is EntryData.Server -> index == 2
+    is EntryData.Ssh -> index == 2
+    is EntryData.Custom -> values.values.elementAtOrNull(index)?.hidden == true
+    is EntryData.Domain -> false
 }
 
 fun EntryData.mapFields(transform: (Field) -> Field): EntryData = when (this) {
@@ -65,22 +78,32 @@ fun EntryData.mapFields(transform: (Field) -> Field): EntryData = when (this) {
 /** The editor's immutable text values are discarded on cancel/lock; JVM copies cannot be erased. */
 fun editedEntry(source: Entry?, data: EntryData, title: String, tags: String, notes: String, expires: String,
                 values: List<String>, hidden: List<Boolean>): Entry {
-    require(title.isNotBlank())
+    require(title.isNotBlank() && title.length <= 4096)
     require(values.size == data.fields().size && hidden.size == values.size)
+    require(values.all { it.length <= Vault.MAX_FIELD_CHARS } && notes.length <= Vault.MAX_FIELD_CHARS)
+    val parsedTags = tags.split(',').map(String::trim).filter(String::isNotEmpty)
+    require(parsedTags.size <= 100 && parsedTags.all { it.length <= 256 })
+    val expiry = expires.ifBlank { null }?.also { java.time.LocalDate.parse(it) }
+    val owned = mutableListOf<Secret>()
     var index = 0
     fun secret(text: String): Secret {
         val chars = text.toCharArray()
-        return try { Secret(chars) } finally { chars.fill('\u0000') }
+        return try { Secret(chars).also(owned::add) } finally { chars.fill('\u0000') }
     }
-    val changed = data.mapFields { field ->
-        val i = index++
-        field.copy(value = secret(values[i]), hidden = hidden[i])
+    fun copyData(value: EntryData) = value.mapFields { field -> field.copy(value = field.value.copy().also(owned::add)) }
+    try {
+        val changed = data.mapFields { field ->
+            val i = index++
+            field.copy(value = secret(values[i]), hidden = hidden[i])
+        }
+        val now = maxOf(Instant.now(), source?.modifiedAt?.let(Instant::parse) ?: Instant.MIN).toString()
+        val history = source?.history.orEmpty().takeLast(99).map {
+            it.copy(data = copyData(it.data))
+        } + listOfNotNull(source?.let { HistoryItem(now, copyData(it.data)) })
+        return Entry(source?.id ?: UUID.randomUUID().toString(), title, changed, source?.createdAt ?: now, now,
+            source?.customerId, source?.projectId, parsedTags, secret(notes), expiry, source?.deletedAt, history)
+    } catch (failure: Throwable) {
+        owned.forEach(Secret::close)
+        throw failure
     }
-    val now = Instant.now().toString()
-    val history = source?.history.orEmpty().takeLast(99).map {
-        it.copy(data = it.data.mapFields { field -> field.copy(value = field.value.copy()) })
-    } + listOfNotNull(source?.let { HistoryItem(now, it.data.mapFields { field -> field.copy(value = field.value.copy()) }) })
-    return Entry(source?.id ?: UUID.randomUUID().toString(), title, changed, source?.createdAt ?: now, now,
-        source?.customerId, source?.projectId, tags.split(',').map(String::trim).filter(String::isNotEmpty), secret(notes),
-        expires.ifBlank { null }, source?.deletedAt, history)
 }
