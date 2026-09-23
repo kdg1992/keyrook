@@ -1,8 +1,8 @@
 # Native component provenance
 
 This directory contains verified upstream notice texts and artifact provenance.
-It is **not** a complete native redistribution inventory and does not satisfy the
-packaging approval gate. No `reviewed=true` record is provided here.
+It is the evidence for the reviewed inventories in [`licenses/native/`](../native/),
+which satisfy the packaging approval gate.
 
 [Verified CI evidence from 2026-09-23](ci-2026-09-23/README.md) now preserves
 the actual Windows x64, Linux x64 and macOS ARM64 runtime inventories, all JDK
@@ -57,10 +57,11 @@ The selected DNG SDK revision is not covered by Skia's own BSD notice. Its
 flags special licensing conditions and includes `legacy_by_exception_only`.
 The copied [source-code terms](skiko-0.150.1/dng-sdk-LICENSE.source_code.txt)
 include commercial-distribution indemnification and restrictions on documentation.
-GPL compatibility and the applicable terms have **not** been established.
-The Linux and macOS packages must remain blocked until this is resolved, for example through
-verified compatible provenance or a reviewed replacement build without that
-component. These findings are not a definitive legal determination.
+The review resolved this as follows: the license grants distribution and
+sublicensing for any purpose, its notices and attribution are included, and
+Keyrook grants a GPL section 7 additional permission for linking with the Skiko
+native libraries. See the reviewed `SOURCES.md` of each platform in
+[`licenses/native/`](../native/).
 
 ### Additional binary component evidence
 

@@ -88,7 +88,7 @@ they are not a complete notice bundle for statically linked native codecs,
 font libraries, and Unicode data. Before distributing native installers, the
 exact platform binaries must be inventoried and their component notices
 included. This also applies to any JDK runtime image included by packaging.
-No installer distribution is covered by this partial native inventory.
+The reviewed per-platform inventories in [native](native/) cover this.
 
 Native packaging now enforces this restriction with the
 `checkNativeDistributionLicenses` Gradle task. It requires reviewed per-platform
@@ -108,6 +108,6 @@ inventory or bundled-JDK redistribution review is claimed here.
 Verified source notices for the pinned native dependency revisions, checksummed
 platform JAR contents, and Temurin source provenance are now collected in
 [Native component provenance](native-evidence/README.md). That evidence identifies
-a specific unresolved DNG SDK licensing question for the macOS JVM linkage;
-Skia's BSD license does not establish the terms of that separate component.
-The packaging gate remains closed pending the complete per-platform review.
+DNG SDK code in the Linux and macOS binaries; Skia's BSD license does not
+establish the terms of that separate component. The reviewed per-platform
+notices, including the DNG SDK terms, are in [native](native/).

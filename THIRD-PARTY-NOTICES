@@ -2,7 +2,11 @@ Keyrook third-party notices
 ==========================
 
 Keyrook original source: Copyright 2026 Kim Daniel Geisthardt.
-License: GPL-3.0-or-later; see LICENSE.
+License: GPL-3.0-or-later; see LICENSE, with the additional permission in
+licenses/GPL-3.0-Additional-Permission.txt.
+
+This product includes DNG technology under license by Adobe Systems
+Incorporated.
 
 Runtime dependencies
 --------------------
@@ -24,9 +28,10 @@ SLF4J API 1.7.36 — MIT; JCL bridge 1.7.36 — Apache-2.0
   See licenses/SSH-Third-Party.md for copyright and license notices.
 Compose Multiplatform 1.12.1 and AndroidX runtime libraries — Apache-2.0
 Skiko 0.150.1 — Apache-2.0; Skia — BSD-3-Clause
-  These labels do not cover all linked native components. In particular, the
-  macOS build includes DNG SDK licensing terms requiring further review.
-  See licenses/Desktop-Third-Party.md for resolved component versions and notices.
+  The native components linked into each platform binary, including the Adobe
+  DNG SDK on Linux and macOS, are listed with their full notices in
+  licenses/native/<os>-<arch>/NOTICE.txt.
+  See licenses/Desktop-Third-Party.md for resolved component versions.
 
 License texts: licenses/Apache-2.0.txt and licenses/Bouncy-Castle.md.
 Original dependency JAR notices remain applicable and must accompany redistribution.
@@ -54,10 +59,9 @@ java-diff-utils 4.16 — Apache-2.0
 
 The complete resolved core dependency versions are in core/gradle.lockfile.
 Desktop dependency versions are locked per platform in app/gradle/dependency-locks/.
-The desktop development runtime loads platform-native Skiko libraries. No installer
-or Java runtime distribution is provided. Installer releases require the complete
-bundled JDK and native codec/font/Unicode notice inventory described in
-licenses/Desktop-Third-Party.md in addition to these notices.
+The desktop runtime loads platform-native Skiko libraries. Installers bundle an
+Eclipse Temurin runtime; its notices are in licenses/bundled-jdk/ and its source
+archive is published with each release.
 
 Test-vector sources
 -------------------

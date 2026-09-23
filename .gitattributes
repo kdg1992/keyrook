@@ -1,0 +1,2 @@
+# Reviewed native inventories are hashed byte for byte by the packaging gate.
+/licenses/native/** text eol=lf
