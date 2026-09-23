@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/kdg1992/keyrook/compare/v0.3.0...v0.3.1) (2026-09-23)
+
+
+### Bug Fixes
+
+* **release:** approve reviewed native redistribution inventories ([2faf9e1](https://github.com/kdg1992/keyrook/commit/2faf9e10f4f2257926c8b98e96ece9d98a8ec0f1))
+
 ## [0.3.0](https://github.com/kdg1992/keyrook/compare/v0.2.0...v0.3.0) (2026-09-23)
 
 
