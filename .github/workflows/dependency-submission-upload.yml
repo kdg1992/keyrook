@@ -1,0 +1,30 @@
+# SPDX-FileCopyrightText: 2026 Kim Daniel Geisthardt
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Dependency graph upload
+
+on:
+  workflow_run:
+    workflows: [Dependency graph PR]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  submit:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      # No checkout, Gradle execution or cache restoration in this privileged job.
+      - uses: gradle/actions/dependency-submission@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-provider: basic
+          cache-disabled: true
+          dependency-graph: download-and-submit
