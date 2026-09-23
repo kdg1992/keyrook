@@ -48,25 +48,43 @@ internal class DesktopLockMonitor(
         override fun systemAwoke(event: SystemSleepEvent) = Unit
     }
     private val registered = mutableListOf<SystemEventListener>()
-    private val timer = Timer(500) { if (active() && deadline.expired(timeoutMinutes())) requestLock() }
+    private val timer = Timer(500) { if (!closed && active() && deadline.expired(timeoutMinutes())) requestLock() }
     init {
-        toolkit.addAWTEventListener(events, AWTEvent.KEY_EVENT_MASK or AWTEvent.MOUSE_EVENT_MASK or
-            AWTEvent.MOUSE_MOTION_EVENT_MASK or AWTEvent.MOUSE_WHEEL_EVENT_MASK or AWTEvent.WINDOW_EVENT_MASK)
-        listOf<Pair<Desktop.Action, SystemEventListener>>(Desktop.Action.APP_EVENT_USER_SESSION to sessionListener,
-            Desktop.Action.APP_EVENT_SCREEN_SLEEP to screenListener,
-            Desktop.Action.APP_EVENT_SYSTEM_SLEEP to sleepListener).forEach { (action, listener) ->
-            if (desktop?.isSupported(action) == true) {
-                desktop.addAppEventListener(listener)
-                registered.add(listener)
+        try {
+            toolkit.addAWTEventListener(events, AWTEvent.KEY_EVENT_MASK or AWTEvent.MOUSE_EVENT_MASK or
+                AWTEvent.MOUSE_MOTION_EVENT_MASK or AWTEvent.MOUSE_WHEEL_EVENT_MASK or AWTEvent.WINDOW_EVENT_MASK)
+            listOf<Pair<Desktop.Action, SystemEventListener>>(Desktop.Action.APP_EVENT_USER_SESSION to sessionListener,
+                Desktop.Action.APP_EVENT_SCREEN_SLEEP to screenListener,
+                Desktop.Action.APP_EVENT_SYSTEM_SLEEP to sleepListener).forEach { (action, listener) ->
+                if (desktop?.isSupported(action) == true) {
+                    registered.add(listener)
+                    desktop.addAppEventListener(listener)
+                }
             }
+            timer.start()
+        } catch (failure: Throwable) {
+            try { close() } catch (cleanup: Throwable) { failure.addSuppressed(cleanup) }
+            throw failure
         }
-        timer.start()
     }
     override fun close() {
+        if (closed) return
         closed = true
         timer.stop()
-        toolkit.removeAWTEventListener(events)
-        registered.forEach { desktop?.removeAppEventListener(it) }
+        var failure: Throwable? = null
+        fun cleanup(action: () -> Unit) {
+            try { action() }
+            catch (cause: Throwable) {
+                val previous = failure
+                if (previous == null) failure = cause else previous.addSuppressed(cause)
+            }
+        }
+        cleanup { toolkit.removeAWTEventListener(events) }
+        registered.forEach {
+            cleanup { desktop?.removeAppEventListener(it) }
+        }
+        registered.clear()
+        failure?.let { throw it }
     }
 }
 
