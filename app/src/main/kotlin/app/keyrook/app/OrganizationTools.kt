@@ -25,33 +25,33 @@ internal fun OrganizationTools(vault: Vault, controller: VaultController, busy: 
     var editName by remember { mutableStateOf("") }
     var editCustomer by remember { mutableStateOf<String?>(null) }
     var confirmRemoval by remember { mutableStateOf(false) }
-    TextButton(enabled = !busy, onClick = { expanded = !expanded }) { Text("Kunden und Projekte") }
+    TextButton(enabled = !busy, onClick = { expanded = !expanded }) { Text(UiText.text("organization.title")) }
     if (expanded) {
         Row {
-            OutlinedTextField(customer, { customer = it }, enabled = !busy, label = { Text("Neuer Kunde") })
+            OutlinedTextField(customer, { customer = it }, enabled = !busy, label = { Text(UiText.text("organization.newCustomer")) })
             Button(enabled = !busy && customer.isNotBlank(), onClick = {
                 val name = customer; operation { controller.addCustomer(name) }; customer = ""
-            }) { Text("Kunde anlegen") }
+            }) { Text(UiText.text("organization.addCustomer")) }
         }
         Row {
-            OutlinedTextField(project, { project = it }, enabled = !busy, label = { Text("Neues Projekt") })
-            Choice("Kunde", customerId, vault.customers.map { it.id to it.name }, !busy) { customerId = it }
+            OutlinedTextField(project, { project = it }, enabled = !busy, label = { Text(UiText.text("organization.newProject")) })
+            Choice(UiText.text("common.customer"), customerId, vault.customers.map { it.id to it.name }, !busy) { customerId = it }
             Button(enabled = !busy && project.isNotBlank(), onClick = {
                 val name = project; val selected = customerId
                 operation { controller.addProject(name, selected) }; project = ""
-            }) { Text("Projekt anlegen") }
+            }) { Text(UiText.text("organization.addProject")) }
         }
         LazyColumn(Modifier.heightIn(max = 220.dp)) {
             items(vault.customers, key = { "customer:${it.id}" }) { item ->
                 TextButton(enabled = !busy, onClick = {
                     editingCustomer = item.id; editingProject = null; editName = item.name; confirmRemoval = false
-                }) { Text("Kunde bearbeiten: ${item.name}") }
+                }) { Text(UiText.text("organization.editCustomer", item.name)) }
             }
             items(vault.projects, key = { "project:${it.id}" }) { item ->
                 TextButton(enabled = !busy, onClick = {
                     editingProject = item.id; editingCustomer = null; editName = item.name
                     editCustomer = item.customerId; confirmRemoval = false
-                }) { Text("Projekt bearbeiten: ${item.name}") }
+                }) { Text(UiText.text("organization.editProject", item.name)) }
             }
         }
     }
@@ -64,20 +64,20 @@ internal fun OrganizationTools(vault: Vault, controller: VaultController, busy: 
         fun dismiss() { editingCustomer = null; editingProject = null; confirmRemoval = false }
         AlertDialog(
             onDismissRequest = { if (!busy) dismiss() },
-            title = { Text(if (confirmRemoval) "Endgültig entfernen?" else if (selectedCustomer != null) "Kunde bearbeiten" else "Projekt bearbeiten") },
+            title = { Text(if (confirmRemoval) UiText.text("organization.removeTitle") else if (selectedCustomer != null) UiText.text("organization.customerTitle") else UiText.text("organization.projectTitle")) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (confirmRemoval) {
-                        Text("„$editName“ wird entfernt. Dieser Vorgang kann nicht rückgängig gemacht werden.")
+                        Text(UiText.text("organization.removeBody", editName))
                     } else {
                         OutlinedTextField(editName, { editName = it }, enabled = !busy,
-                            label = { Text("Name") }, singleLine = true, isError = editName.length > 4096)
+                            label = { Text(UiText.text("common.name")) }, singleLine = true, isError = editName.length > 4096)
                         if (selectedProject != null) {
-                            Choice("Kunde", editCustomer, vault.customers.map { it.id to it.name }, !busy) { editCustomer = it }
-                            Text("Beim Wechsel zu einem Kunden werden alle Projekteinträge diesem Kunden zugeordnet, auch im Papierkorb. Ohne Projektkunden behalten die Einträge ihre bisherige Kundenzuordnung.")
+                            Choice(UiText.text("common.customer"), editCustomer, vault.customers.map { it.id to it.name }, !busy) { editCustomer = it }
+                            Text(UiText.text("organization.moveHint"))
                         }
-                        if (inUse) Text("Entfernen erst möglich, wenn keine Einträge (auch im Papierkorb) oder Projekte mehr zugeordnet sind.")
-                        else TextButton(enabled = !busy, onClick = { confirmRemoval = true }) { Text("Entfernen …") }
+                        if (inUse) Text(UiText.text("organization.inUse"))
+                        else TextButton(enabled = !busy, onClick = { confirmRemoval = true }) { Text(UiText.text("organization.remove")) }
                     }
                 }
             },
@@ -94,9 +94,9 @@ internal fun OrganizationTools(vault: Vault, controller: VaultController, busy: 
                             }
                         }
                         dismiss()
-                    }) { Text(if (confirmRemoval) "Endgültig entfernen" else "Speichern") }
+                    }) { Text(if (confirmRemoval) UiText.text("organization.removeConfirm") else UiText.text("common.save")) }
             },
-            dismissButton = { TextButton(enabled = !busy, onClick = { if (confirmRemoval) confirmRemoval = false else dismiss() }) { Text("Abbrechen") } },
+            dismissButton = { TextButton(enabled = !busy, onClick = { if (confirmRemoval) confirmRemoval = false else dismiss() }) { Text(UiText.text("common.cancel")) } },
         )
     }
 }

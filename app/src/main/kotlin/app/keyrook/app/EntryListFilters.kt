@@ -9,12 +9,14 @@ import java.time.Instant
 import java.time.LocalDate
 import java.util.Locale
 
-internal enum class ExpiryFilter(val label: String) {
-    ALL("Alle Ablaufdaten"), EXPIRED("Abgelaufen"), UPCOMING("Heute bis in 30 Tagen"), NONE("Ohne Ablaufdatum"),
+internal enum class ExpiryFilter(private val labelKey: String) {
+    ALL("filters.expiry.all"), EXPIRED("filters.expiry.expired"), UPCOMING("filters.expiry.upcoming"), NONE("filters.expiry.none");
+    val label: String get() = UiText.text(labelKey)
 }
 
-internal enum class EntrySort(val label: String) {
-    TITLE("Titel (A–Z)"), MODIFIED("Zuletzt geändert"), EXPIRY("Ablaufdatum (frühestes zuerst)"),
+internal enum class EntrySort(private val labelKey: String) {
+    TITLE("filters.sort.title"), MODIFIED("filters.sort.modified"), EXPIRY("filters.sort.expiry");
+    val label: String get() = UiText.text(labelKey)
 }
 
 internal data class EntryListFilters(

@@ -27,30 +27,30 @@ internal fun GeneratorTools(busy: Boolean, onBusy: (Boolean) -> Unit, generated:
     val alive = remember { java.util.concurrent.atomic.AtomicBoolean(true) }
     val insert by rememberUpdatedState(generated)
     DisposableEffect(Unit) { onDispose { alive.set(false) } }
-    TextButton(enabled = !busy, onClick = { expanded = !expanded }) { Text("Passwortgenerator") }
+    TextButton(enabled = !busy, onClick = { expanded = !expanded }) { Text(UiText.text("generator.title")) }
     if (expanded) {
-        OutlinedTextField(length, { length = it }, enabled = !busy, label = { Text("Länge (12–256)") })
+        OutlinedTextField(length, { length = it }, enabled = !busy, label = { Text(UiText.text("generator.length")) })
         Row {
-            Checkbox(lower, enabled = !busy, onCheckedChange = { lower = it }); Text("a–z")
-            Checkbox(upper, enabled = !busy, onCheckedChange = { upper = it }); Text("A–Z")
-            Checkbox(digits, enabled = !busy, onCheckedChange = { digits = it }); Text("0–9")
-            Checkbox(symbols, enabled = !busy, onCheckedChange = { symbols = it }); Text("Sonderzeichen")
+            Checkbox(lower, enabled = !busy, onCheckedChange = { lower = it }); Text(UiText.text("generator.lower"))
+            Checkbox(upper, enabled = !busy, onCheckedChange = { upper = it }); Text(UiText.text("generator.upper"))
+            Checkbox(digits, enabled = !busy, onCheckedChange = { digits = it }); Text(UiText.text("generator.digits"))
+            Checkbox(symbols, enabled = !busy, onCheckedChange = { symbols = it }); Text(UiText.text("generator.symbols"))
         }
         Button(enabled = !busy, onClick = {
             passwordError = runCatching {
                 deliverGeneratedSecret(PasswordGenerator().generate(PasswordOptions(length.toInt(), lower, upper, digits, symbols)),
                     alive::get, insert)
             }.isFailure
-        }) { Text("Erzeugen und einsetzen") }
-        if (passwordError) Text("Länge prüfen und mindestens eine Zeichenklasse wählen.", color = MaterialTheme.colors.error)
-        Text("Passphrase: eigene geprüfte Wortliste mit mindestens 1024 verschiedenen Wörtern, ein Wort pro Zeile.")
-        Text("Bei 1024 Wörtern mindestens 6 Wörter; ab 4096 Wörtern mindestens 5 Wörter (mindestens 60 Bit).")
-        OutlinedTextField(wordCount, { wordCount = it }, enabled = !busy && !loading, label = { Text("Wörter (5–20, mindestens 60 Bit)") })
+        }) { Text(UiText.text("generator.generate")) }
+        if (passwordError) Text(UiText.text("generator.passwordError"), color = MaterialTheme.colors.error)
+        Text(UiText.text("generator.wordListHelp"))
+        Text(UiText.text("generator.entropyHelp"))
+        OutlinedTextField(wordCount, { wordCount = it }, enabled = !busy && !loading, label = { Text(UiText.text("generator.words")) })
         Row {
             RadioButton(separator == '-', onClick = { separator = '-' }, enabled = !busy && !loading)
-            Text("Bindestrich")
+            Text(UiText.text("generator.hyphen"))
             RadioButton(separator == ' ', onClick = { separator = ' ' }, enabled = !busy && !loading)
-            Text("Leerzeichen")
+            Text(UiText.text("generator.space"))
         }
         phraseMessage?.let { Text(it, color = if (phraseError) MaterialTheme.colors.error else MaterialTheme.colors.onSurface) }
         Button(enabled = !busy && !loading, onClick = {
@@ -59,7 +59,7 @@ internal fun GeneratorTools(busy: Boolean, onBusy: (Boolean) -> Unit, generated:
             val count = wordCount.toIntOrNull()
             val selectedSeparator = separator
             if (count == null || count !in 5..20) {
-                phraseMessage = "Bitte eine Wortanzahl zwischen 5 und 20 wählen."
+                phraseMessage = UiText.text("generator.wordCountError")
                 phraseError = true
                 return@Button
             }
@@ -84,19 +84,19 @@ internal fun GeneratorTools(busy: Boolean, onBusy: (Boolean) -> Unit, generated:
                             if (alive.get()) {
                                 phraseError = result.isFailure
                                 phraseMessage = when {
-                                    minimum > count -> "Diese Wortliste enthält $vocabularySize Wörter. Bitte mindestens $minimum Wörter wählen (60 Bit)."
-                                    result.isFailure -> "Wortliste nicht lesbar oder ungültig: UTF-8, 1024–65536 verschiedene Wörter, je 2–32 Buchstaben pro Zeile, höchstens 6,5 MB."
-                                    else -> "$vocabularySize Wörter geprüft; Mindestanzahl: $minimum Wörter."
+                                    minimum > count -> UiText.text("generator.minimum", vocabularySize, minimum)
+                                    result.isFailure -> UiText.text("generator.wordListError")
+                                    else -> UiText.text("generator.reviewed", vocabularySize, minimum)
                                 }
                             }
                         } catch (_: Exception) {
-                            if (alive.get()) { phraseError = true; phraseMessage = "Passphrase konnte nicht eingesetzt werden." }
+                            if (alive.get()) { phraseError = true; phraseMessage = UiText.text("generator.insertFailed") }
                         } finally {
                             if (alive.get()) { loading = false; onBusy(false) }
                         }
                     }
                 }, "passphrase-worker").apply { isDaemon = true; start() }
             }
-        }) { Text(if (loading) "Wortliste wird geprüft …" else "Wortliste wählen und Passphrase erzeugen") }
+        }) { Text(if (loading) UiText.text("generator.loading") else UiText.text("generator.choose")) }
     }
 }

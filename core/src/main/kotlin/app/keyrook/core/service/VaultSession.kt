@@ -74,6 +74,14 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
 
     @Synchronized fun snapshot(): Vault = codec.duplicate(requireDocument())
 
+    @Synchronized fun kdfParameters(): KdfParameters { requireDocument(); return parameters }
+
+    /** Re-encrypts atomically with existing factors and the same backup policy as an ordinary save. */
+    @Synchronized fun changeKdf(parameters: KdfParameters): SaveResult {
+        parameters.validate()
+        return save(requireDocument(), parameters)
+    }
+
     /** Candidate stays caller-owned; session only adopts its independent copy after successful commit. */
     @Synchronized fun save(candidate: Vault, parameters: KdfParameters = this.parameters,
                            allowExpensive: Boolean = false): SaveResult {

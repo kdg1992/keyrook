@@ -32,55 +32,65 @@ internal fun DataTools(controller: VaultController, busy: Boolean, operation: ((
                     val selection = askBackupConfiguration(folder)
                     if (applyBackupConfiguration(controller, selection)) {
                         val policy = selection!!.policy
-                        inform("Automatische Sicherungen vor dem Speichern sind für diese Sitzung eingerichtet.\nAufbewahrung: letzte ${policy.latest} Versionen und ${policy.daily} Tagesstände.\nÄltere Sicherungen behalten ihr bisheriges Passwort und ihre Schlüsseldatei.")
+                        inform(UiText.text("transfer.configured", policy.latest, policy.daily))
                     }
                 }
                 controller.session.snapshot()
             }
-        }) { Text("Backup-Ordner") }
+        }) { Text(UiText.text("transfer.folder")) }
         TextButton(enabled = !busy, onClick = { operation {
             inform(backupStatusText(controller))
             controller.session.snapshot()
-        } }) { Text("Backupstatus") }
+        } }) { Text(UiText.text("transfer.status")) }
         TextButton(enabled = !busy, onClick = { operation {
             ensureOperationCurrent()
             if (!controller.session.backupStatus().configured) inform(backupStatusText(controller))
             else {
                 val removed = createManualBackup(controller)
-                inform("Der aktuell gespeicherte Tresor wurde verschlüsselt gesichert.\nDie Tresorrevision bleibt unverändert. $removed ältere Sicherungen wurden nach den Aufbewahrungsregeln entfernt.")
+                inform(UiText.text("transfer.backedUp", removed))
             }
             controller.session.snapshot()
-        } }) { Text("Sicherung jetzt") }
+        } }) { Text(UiText.text("transfer.now")) }
         TextButton(enabled = !busy, onClick = { operation {
             ensureOperationCurrent()
             if (!controller.session.backupStatus().configured) inform(backupStatusText(controller))
-            else if (disableBackups(controller, confirm("Automatische und manuelle Backups für diese Sitzung deaktivieren?\nVorhandene Sicherungen bleiben erhalten. Zum erneuten Aktivieren einen Backup-Ordner auswählen."))) {
-                inform("Backups für diese Sitzung deaktiviert. Vorhandene Sicherungen bleiben erhalten.")
+            else if (disableBackups(controller, confirm(UiText.text("transfer.disableConfirm")))) {
+                inform(UiText.text("transfer.disabled"))
             }
             controller.session.snapshot()
-        } }) { Text("Backups deaktivieren") }
-        TextButton(enabled = !busy, onClick = { operation { restoreBackup(); controller.session.snapshot() } }) { Text("Backup wiederherstellen") }
+        } }) { Text(UiText.text("transfer.disable")) }
+        TextButton(enabled = !busy, onClick = { operation { restoreBackup(); controller.session.snapshot() } }) { Text(UiText.text("transfer.restore")) }
         TextButton(enabled = !busy, onClick = { operation {
             selectPath(save = true)?.let { target ->
-                askCredentials("Passwort für den verschlüsselten Export", confirm = true)?.use { credentials ->
+                askCredentials(UiText.text("transfer.exportPassword"), confirm = true)?.use { credentials ->
                     controller.session.snapshot().use {
                         ensureOperationCurrent()
                         VaultStore().save(target, it.copy(revision = 0), credentials)
                     }
-                    inform("Verschlüsselter Export erstellt.")
+                    inform(UiText.text("transfer.exported"))
                 }
             }
             controller.session.snapshot()
-        } }) { Text("Verschlüsselt exportieren") }
-        TextButton(enabled = !busy, onClick = { operation { importData(controller); controller.session.snapshot() } }) { Text("Importieren") }
-        TextButton(enabled = !busy, onClick = { operation { exportPlaintext(controller); controller.session.snapshot() } }) { Text("Klartext exportieren") }
+        } }) { Text(UiText.text("transfer.exportEncrypted")) }
+        TextButton(enabled = !busy, onClick = { operation { importData(controller); controller.session.snapshot() } }) { Text(UiText.text("transfer.import")) }
+        TextButton(enabled = !busy, onClick = { operation { exportPlaintext(controller); controller.session.snapshot() } }) { Text(UiText.text("transfer.exportPlain")) }
         TextButton(enabled = !busy, onClick = { operation {
-            askCredentials("Neues Master-Passwort", confirm = true)?.use {
-                ensureOperationCurrent()
-                controller.session.changePassword(it)
+            askCredentials(UiText.text("credentials.replaceTitle"), confirm = true, replacing = true)?.use {
+                if (confirm(UiText.text("credentials.replaceConfirm"))) {
+                    ensureOperationCurrent()
+                    controller.session.changePassword(it)
+                }
             }
             controller.session.snapshot()
-        } }) { Text("Passwort ändern") }
+        } }) { Text(UiText.text("credentials.replaceTitle")) }
+        TextButton(enabled = !busy, onClick = { operation {
+            configureKdf(controller)
+            controller.session.snapshot()
+        } }) { Text(UiText.text("credentials.kdfTitle")) }
+        TextButton(enabled = !busy, onClick = { operation {
+            generateKeyFileDialog()
+            controller.session.snapshot()
+        } }) { Text(UiText.text("credentials.generateKey")) }
     }
 }
 
@@ -93,14 +103,14 @@ private fun askBackupConfiguration(folder: Path): BackupConfiguration? {
             val days = JTextField(daily, 8)
             val panel = JPanel().apply {
                 layout = BoxLayout(this, BoxLayout.Y_AXIS)
-                add(JLabel("Backup-Ordner: ${folder.toAbsolutePath().normalize()}"))
-                add(JLabel("Letzte Versionen aufbewahren (1–1000)")); add(versions)
-                add(JLabel("Zusätzliche Tagesstände (0–3660; 0 deaktiviert Tagesstände)")); add(days)
-                add(JLabel("Die beiden Aufbewahrungsregeln gelten gemeinsam."))
-                add(JLabel("Bei künftigen Sicherungen können ältere verwaltete Backups entfernt werden."))
-                add(JLabel("Diese Einstellung gilt bis zum Sperren des Tresors."))
+                add(JLabel(UiText.text("transfer.folderPath", folder.toAbsolutePath().normalize())))
+                add(JLabel(UiText.text("transfer.latest"))); add(versions)
+                add(JLabel(UiText.text("transfer.daily"))); add(days)
+                add(JLabel(UiText.text("transfer.combined")))
+                add(JLabel(UiText.text("transfer.rotation")))
+                add(JLabel(UiText.text("transfer.session")))
             }
-            if (JOptionPane.showConfirmDialog(null, panel, "Backup-Aufbewahrung bestätigen",
+            if (JOptionPane.showConfirmDialog(null, panel, UiText.text("transfer.retentionTitle"),
                     JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE) == JOptionPane.OK_OPTION)
                 versions.text to days.text else null
         } ?: return null
@@ -108,25 +118,25 @@ private fun askBackupConfiguration(folder: Path): BackupConfiguration? {
         daily = entered.second
         val policy = parseBackupPolicy(latest, daily)
         if (policy != null) return BackupConfiguration(folder, policy)
-        inform("Bitte ganze Zahlen eingeben: 1–1000 letzte Versionen und 0–3660 Tagesstände.")
+        inform(UiText.text("transfer.retentionInvalid"))
     }
 }
 
 private fun restoreBackup() {
     val source = selectPath() ?: return
-    askCredentials("Passwort der Sicherung")?.use { credentials ->
+    askCredentials(UiText.text("transfer.backupPassword"))?.use { credentials ->
         val service = BackupService(source.toAbsolutePath().parent)
         val preview = service.preview(source, credentials)
-        if (!confirm("Sicherung geprüft: ${preview.entries} Einträge, Revision ${preview.revision}.\nDateidatum: ${preview.modifiedAt}\nIn eine neue Tresordatei wiederherstellen?")) return
+        if (!confirm(UiText.text("transfer.preview", preview.entries, preview.revision, preview.modifiedAt))) return
         val target = selectPath(save = true) ?: return
         ensureOperationCurrent()
         service.restoreToNew(source, target, credentials, preview)
-        inform("Sicherung wiederhergestellt. Zum Öffnen den aktuellen Tresor sperren und die neue Datei auswählen.")
+        inform(UiText.text("transfer.restored"))
     }
 }
 
 private fun importData(controller: VaultController) {
-    val format = choose("Importformat", arrayOf("Keyrook JSON", "CSV mit Feldzuordnung", "Bitwarden JSON", "KeePass XML")) ?: return
+    val format = choose(UiText.text("transfer.importFormat"), arrayOf("Keyrook JSON", UiText.text("transfer.csvMapping"), "Bitwarden JSON", "KeePass XML")) ?: return
     val path = selectPath() ?: return
     val transfer = VaultTransfer()
     val bytes = readTransfer(path)
@@ -141,7 +151,7 @@ private fun importData(controller: VaultController) {
         }
     } finally { bytes.fill(0) }
     imported.use {
-        if (!confirm("${it.entries.size} Einträge wurden geprüft. Zum geöffneten Tresor hinzufügen?\nVorhandene IDs werden nicht überschrieben.")) return
+        if (!confirm(UiText.text("transfer.importConfirm", it.entries.size))) return
         controller.session.snapshot().use { current ->
             val candidate = current.copy(customers = current.customers + it.customers,
                 projects = current.projects + it.projects, entries = current.entries + it.entries)
@@ -153,17 +163,17 @@ private fun importData(controller: VaultController) {
 }
 
 private fun exportPlaintext(controller: VaultController) {
-    if (!confirm("ACHTUNG: Ein Klartext-Export enthält alle Passwörter, privaten Schlüssel und den Verlauf unverschlüsselt.\nJeder mit Dateizugriff kann sie lesen. Trotzdem fortfahren?")) return
-    val format = choose("Klartextformat", arrayOf("JSON", "CSV")) ?: return
+    if (!confirm(UiText.text("transfer.plainWarning"))) return
+    val format = choose(UiText.text("transfer.plainFormat"), arrayOf("JSON", "CSV")) ?: return
     val target = selectPath(save = true) ?: return
-    if (!confirm("Letzte Bestätigung: Alle Geheimnisse jetzt unverschlüsselt in die gewählte neue Datei schreiben?")) return
+    if (!confirm(UiText.text("transfer.plainConfirm"))) return
     controller.session.snapshot().use { vault ->
         val transfer = VaultTransfer()
         val consent = PlaintextConsent(true, true)
         val bytes = if (format == "JSON") transfer.exportJson(vault, consent) else transfer.exportCsv(vault, consent)
         try { writePrivateNew(target, bytes) } finally { bytes.fill(0) }
     }
-    inform("Klartext-Export erstellt. Die Datei enthält ungeschützte Geheimnisse.")
+    inform(UiText.text("transfer.plainDone"))
 }
 
 internal interface TransferIo {
@@ -220,7 +230,7 @@ internal fun writePrivateNew(path: Path, bytes: ByteArray, operations: TransferI
     }
 }
 
-private fun askCredentials(title: String, confirm: Boolean = false): Credentials? {
+private fun askCredentials(title: String, confirm: Boolean = false, replacing: Boolean = false): Credentials? {
     check(!SwingUtilities.isEventDispatchThread()) { "Credential processing requires a worker thread" }
     var chars = charArrayOf()
     var repeated = charArrayOf()
@@ -233,8 +243,14 @@ private fun askCredentials(title: String, confirm: Boolean = false): Credentials
             val panel = JPanel().apply {
                 layout = BoxLayout(this, BoxLayout.Y_AXIS)
                 add(JLabel(title)); add(password)
-                if (confirm) { add(JLabel("Passwort wiederholen")); add(repeat) }
-                add(JLabel("Schlüsseldatei (optional, genau 32 Byte)")); add(key)
+                if (confirm) { add(JLabel(UiText.text("credentials.repeatPassword"))); add(repeat) }
+                add(JLabel(UiText.text("credentials.optionalKey"))); add(key)
+                if (replacing) add(JLabel(UiText.text("credentials.replaceKeyHelp")))
+                add(JButton(UiText.text("credentials.selectKey")).apply {
+                    addActionListener {
+                        chooseKeyFile(false)?.let { key.text = it.toString() }
+                    }
+                })
             }
             try {
                 if (JOptionPane.showConfirmDialog(null, panel, "Keyrook", JOptionPane.OK_CANCEL_OPTION) != JOptionPane.OK_OPTION) return@onEdt null

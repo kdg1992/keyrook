@@ -10,8 +10,8 @@ internal fun CommandCopyButton(protocol: String, busy: Boolean, command: () -> S
     var message by remember { mutableStateOf("") }
     TextButton(enabled = !busy, onClick = {
         message = if (runCatching { SecretClipboard.copy(command()) }.isSuccess)
-            "$protocol-Befehl für PowerShell/sh kopiert. Passwort wird nicht mitkopiert."
-        else "Kopieren fehlgeschlagen. Host, Benutzername, Port und Zwischenablage prüfen."
-    }) { Text("$protocol-Befehl kopieren (PowerShell/sh)") }
+            UiText.text("command.copied", protocol)
+        else UiText.text("command.failed")
+    }) { Text(UiText.text("command.copy", protocol)) }
     if (message.isNotEmpty()) Text(message)
 }

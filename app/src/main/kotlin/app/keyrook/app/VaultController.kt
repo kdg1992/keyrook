@@ -4,6 +4,7 @@ package app.keyrook.app
 
 import app.keyrook.core.crypto.Credentials
 import app.keyrook.core.crypto.Secret
+import app.keyrook.core.crypto.KdfParameters
 import app.keyrook.core.model.Entry
 import app.keyrook.core.model.Vault
 import app.keyrook.core.service.VaultSession
@@ -14,7 +15,8 @@ class VaultController(internal val session: VaultSession = VaultSession(),
                       private val backoff: UnlockBackoff = UnlockBackoff()) : AutoCloseable {
     internal val sessionEpoch = SessionEpoch()
     fun unlockDelayMillis(): Long = backoff.remainingMillis()
-    fun unlock(path: Path, password: CharArray, keyFile: Path?, create: Boolean): Vault {
+    fun unlock(path: Path, password: CharArray, keyFile: Path?, create: Boolean,
+               parameters: KdfParameters = KdfParameters()): Vault {
         try {
             ensureOperationCurrent()
             backoff.requireReady()
@@ -27,7 +29,7 @@ class VaultController(internal val session: VaultSession = VaultSession(),
                 try {
                     Secret(password).use { secret ->
                         Credentials(secret, key).use { credentials ->
-                            if (create) Vault().use { session.create(path, it, credentials) }
+                            if (create) Vault().use { session.create(path, it, credentials, parameters) }
                             else session.open(path, credentials)
                         }
                     }

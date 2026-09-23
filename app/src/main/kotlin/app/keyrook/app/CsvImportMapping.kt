@@ -20,7 +20,7 @@ internal fun importMappedCsv(
         guard()
         val transfer = VaultTransfer()
         val columns = try { transfer.csvColumns(bytes) } catch (_: InvalidImportException) {
-            throw IllegalArgumentException("CSV-Kopf ungültig: maximal 100 eindeutige, nicht leere Spaltennamen mit jeweils höchstens 512 Zeichen und gültigem UTF-8 verwenden.")
+            throw IllegalArgumentException(UiText.text("csv.invalid"))
         }
         val mapping = if (columns == listOf("keyrook-json")) null else selectMapping(columns) ?: return null
         guard()
@@ -45,7 +45,7 @@ internal fun askCsvMapping(columns: List<String>): CsvMapping? {
     val suggested = suggestedCsvMapping(columns)
     data class Column(val index: Int?, val label: String) { override fun toString() = label }
     fun selector(selected: String?, optional: Boolean): JComboBox<Column> {
-        val choices = (if (optional) listOf(Column(null, "Nicht zuordnen")) else emptyList()) +
+        val choices = (if (optional) listOf(Column(null, UiText.text("csv.unmapped"))) else emptyList()) +
             columns.mapIndexed { index, name ->
                 Column(index, "${index + 1}: ${name.map { if (it.isISOControl()) ' ' else it }.joinToString("")}")
             }
@@ -63,19 +63,19 @@ internal fun askCsvMapping(columns: List<String>): CsvMapping? {
     val password = selector(suggested.password, true)
     val notes = selector(suggested.notes, true)
     val fields = JPanel(GridLayout(0, 2, 8, 8)).apply {
-        listOf("Titel (Pflichtfeld)" to title, "URL" to url, "Benutzername" to username,
-            "Passwort" to password, "Notizen" to notes).forEach { (name, selector) ->
+        listOf(UiText.text("csv.requiredTitle") to title, UiText.text("field.url") to url, UiText.text("field.username") to username,
+            UiText.text("field.password") to password, UiText.text("editor.notes") to notes).forEach { (name, selector) ->
             add(JLabel(name).apply { labelFor = selector }); add(selector)
         }
     }
     val panel = JPanel().apply {
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
-        add(JLabel("Die erste CSV-Zeile enthält die Spaltennamen."))
-        add(JLabel("Nicht zugeordnete Spalten werden nicht importiert."))
+        add(JLabel(UiText.text("csv.headers")))
+        add(JLabel(UiText.text("csv.skipped")))
         add(fields)
     }
     return try {
-        if (JOptionPane.showConfirmDialog(null, panel, "CSV-Feldzuordnung",
+        if (JOptionPane.showConfirmDialog(null, panel, UiText.text("csv.title"),
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE) != JOptionPane.OK_OPTION) null
         else {
             fun JComboBox<Column>.column() = (selectedItem as Column).index?.let(columns::get)
