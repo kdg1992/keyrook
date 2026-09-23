@@ -1,0 +1,122 @@
+# SPDX-FileCopyrightText: 2026 Kim Daniel Geisthardt
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      docs-only: ${{ steps.paths.outputs.docs-only }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Classify changed paths
+        id: paths
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const {execFileSync} = require('node:child_process');
+          const base = process.env.BASE_SHA || '';
+          let docsOnly = false;
+          if (/^[a-f0-9]{40}$/.test(base) && !/^0+$/.test(base)) {
+            const paths = execFileSync('git', ['diff', '--no-renames', '--name-only', '-z', base, process.env.GITHUB_SHA], {encoding: 'utf8'})
+              .split('\0').filter(Boolean);
+            docsOnly = paths.length > 0 && paths.every(path =>
+              path.endsWith('.md') && path.split('/').at(-1) !== 'CHANGELOG.md');
+          }
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `docs-only=${docsOnly}\n`);
+          NODE
+
+  pr-title:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check Conventional Commit title
+        shell: bash
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          node <<'NODE'
+          const title = process.env.PR_TITLE || '';
+          const pattern = /^(feat|fix|docs|test|refactor|ci|chore|build|perf|revert)(\([a-z0-9][a-z0-9._/-]*\))?!?: \S[^\r\n]*$/;
+          if (!pattern.test(title)) {
+            console.error('PR title must follow Conventional Commits, for example: fix(storage): preserve the original file');
+            process.exit(1);
+          }
+          NODE
+
+  build:
+    name: build-${{ matrix.platform }}
+    needs: changes
+    if: always()
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux
+            os: ubuntu-latest
+          - platform: windows
+            os: windows-latest
+          - platform: macos
+            os: macos-latest
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - name: Require successful path classification
+        if: needs.changes.result != 'success'
+        shell: bash
+        run: exit 1
+      - name: Complete documentation-only check
+        if: needs.changes.outputs.docs-only == 'true' && matrix.platform != 'linux'
+        shell: bash
+        run: echo 'Documentation-only change; the Linux build performs verification.'
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: needs.changes.outputs.docs-only != 'true' || matrix.platform == 'linux'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        if: needs.changes.outputs.docs-only != 'true' || matrix.platform == 'linux'
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        if: needs.changes.outputs.docs-only != 'true' || matrix.platform == 'linux'
+        with:
+          cache-provider: basic
+          cache-read-only: ${{ github.event_name == 'pull_request' || github.ref != 'refs/heads/main' }}
+          validate-wrappers: true
+      - name: Compile, lint and test
+        if: needs.changes.outputs.docs-only != 'true' || matrix.platform == 'linux'
+        shell: bash
+        run: bash ./gradlew check --no-daemon --console=plain
+      - name: Upload failed test reports
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: test-reports-${{ matrix.platform }}
+          path: |
+            **/build/reports/tests/**
+            **/build/test-results/test/**
+          if-no-files-found: ignore
+          retention-days: 7

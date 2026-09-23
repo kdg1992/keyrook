@@ -1,0 +1,79 @@
+# SPDX-FileCopyrightText: 2026 Kim Daniel Geisthardt
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Dependency review
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        id: review
+        with:
+          fail-on-severity: high
+          license-check: true
+          vulnerability-check: true
+          warn-only: false
+          fail-on-scopes: runtime, development, unknown
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, CC0-1.0, 0BSD, GPL-3.0-only, GPL-3.0-or-later, LGPL-2.1-only, LGPL-2.1-or-later, LGPL-3.0-only, LGPL-3.0-or-later
+          # EPL-2.0 JUnit is test tooling only; checkRuntimeDependencies enforces this boundary.
+          allow-dependencies-licenses: >-
+            pkg:maven/org.junit/junit-bom@5.13.4,
+            pkg:maven/org.junit.jupiter/junit-jupiter@5.13.4,
+            pkg:maven/org.junit.jupiter/junit-jupiter-api@5.13.4,
+            pkg:maven/org.junit.jupiter/junit-jupiter-engine@5.13.4,
+            pkg:maven/org.junit.jupiter/junit-jupiter-params@5.13.4,
+            pkg:maven/org.junit.platform/junit-platform-commons@1.13.4,
+            pkg:maven/org.junit.platform/junit-platform-engine@1.13.4,
+            pkg:maven/org.junit.platform/junit-platform-launcher@1.13.4,
+            pkg:githubactions/gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb,
+            pkg:githubactions/gradle/actions/dependency-submission@9c971963bec38e04b3d30dcc455b5382be2fdbfb
+          retry-on-snapshot-warnings: true
+          retry-on-snapshot-warnings-timeout: 900
+          comment-summary-in-pr: never
+      - name: Reject missing licenses and incomplete snapshots
+        shell: bash
+        env:
+          INVALID_LICENSES: ${{ steps.review.outputs.invalid-license-changes }}
+          GH_TOKEN: ${{ github.token }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          node <<'NODE'
+          async function verify() {
+            const invalid = JSON.parse(process.env.INVALID_LICENSES);
+            for (const category of ['unlicensed', 'unresolved', 'forbidden']) {
+              if (!Array.isArray(invalid[category])) {
+                throw new Error(`Invalid license review output: missing ${category} list.`);
+              }
+              if (invalid[category].length !== 0) {
+                const packages = invalid[category].map(change => ({
+                  package: change.package_url, manifest: change.manifest, license: change.license
+                }));
+                throw new Error(`Dependencies need reviewed, compatible licenses (${category}): ${JSON.stringify(packages)}`);
+              }
+            }
+            const {GITHUB_API_URL, GITHUB_REPOSITORY, BASE_SHA, HEAD_SHA, GH_TOKEN} = process.env;
+            const url = `${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/dependency-graph/compare/${BASE_SHA}...${HEAD_SHA}?per_page=1`;
+            const response = await fetch(url, {
+              headers: {authorization: `Bearer ${GH_TOKEN}`, accept: 'application/vnd.github+json', 'x-github-api-version': '2022-11-28'},
+              signal: AbortSignal.timeout(30000)
+            });
+            if (!response.ok) throw new Error(`Dependency snapshot verification failed (${response.status}).`);
+            const warning = response.headers.get('x-github-dependency-graph-snapshot-warnings');
+            if (warning && Buffer.from(warning, 'base64').toString('utf8').trim()) {
+              throw new Error('Dependency snapshots are incomplete; submit both graphs and rerun this check.');
+            }
+          }
+          verify().catch(error => { console.error(error.message); process.exitCode = 1; });
+          NODE
