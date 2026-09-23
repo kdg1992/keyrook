@@ -20,7 +20,7 @@ the storage foundation.
 
 This is a development build; use test data. Inactivity locking, supported desktop
 session events, lock-on-focus-loss, failed-attempt delays and a local password/expiry
-warning list are implemented. PuTTY PPK import remains unsupported. Native installers
+warning list and authenticated PuTTY PPK 2/3 import are implemented. Native installers
 are configured but blocked pending complete redistribution notices and platform
 verification. See [desktop usage](docs/DESKTOP.md) and [packaging status](docs/PACKAGING.md).
 

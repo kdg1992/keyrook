@@ -53,9 +53,39 @@ flags special licensing conditions and includes `legacy_by_exception_only`.
 The copied [source-code terms](skiko-0.150.1/dng-sdk-LICENSE.source_code.txt)
 include commercial-distribution indemnification and restrictions on documentation.
 GPL compatibility and the applicable terms have **not** been established.
-The macOS package must remain blocked until this is resolved, for example through
+The Linux and macOS packages must remain blocked until this is resolved, for example through
 verified compatible provenance or a reviewed replacement build without that
 component. These findings are not a definitive legal determination.
+
+### Additional binary component evidence
+
+[Additional provenance](skiko-0.150.1/additional-provenance.json) records a static
+inspection of the already checksummed Windows x64, Linux x64 and macOS ARM64
+runtime JARs. Native-entry hashes were compared with `artifacts.json`; no native
+library was executed. The macOS ARM64 JAR also contains an x64 dylib.
+
+The Linux x64 ELF symbol table contains defined functions in its `.text` section
+for `dng_host::Make_dng_image`, `FT_Init_FreeType` and the Wuffs GIF/LZW decoder
+initializers. DNG is therefore not solely a macOS audit concern. ASCII DNG markers
+occur in Linux and both macOS dylibs. Wuffs markers occur on all three packaging
+targets. Counts, representative ELF symbols and binary digests are retained in
+the provenance file. These observations do not establish a complete component
+inventory; missing strings cannot prove absence.
+
+The pinned [Skia defaults](https://github.com/JetBrains/skia/blob/1f14f1166a847cb0e148f981600bf1e3e6ca6e46/gn/skia.gni)
+enable Wuffs, enable FreeType on Linux, and enable DNG when its prerequisites are
+available. The [RAW target](https://github.com/JetBrains/skia/blob/1f14f1166a847cb0e148f981600bf1e3e6ca6e46/BUILD.gn)
+depends on DNG SDK and piex. The explicit Skiko link list alone is insufficient
+to identify all code inside the resulting library.
+
+Unmodified [Wuffs license](skiko-0.150.1/wuffs-LICENSE.txt) and
+[FreeType license](skiko-0.150.1/freetype-FTL.txt) files have been added at the
+revisions selected by the pinned Skia `DEPS`; their original URLs and SHA-256
+digests are in the additional provenance. The selected Wuffs generated C source
+is copyright 2017 The Wuffs Authors and declares Apache-2.0. FreeType's FTL text
+includes binary-distribution acknowledgement requirements. These notices are
+additional evidence, not a completed review of subdirectory exceptions or all
+compiled components.
 
 ### Remaining native evidence
 

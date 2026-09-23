@@ -89,7 +89,24 @@ Plaintext JSON/CSV export requires two separate UI confirmations. New export fil
 
 Apache MINA SSHD writes encrypted OpenSSH keys with AES-256-CTR and bcrypt (64 rounds). Ed25519 and RSA-4096 use established providers; the application does not implement key algorithms or cryptographic formats. Imports verify that the public/private pair matches using a signature challenge. OpenSSH is a standard encrypted format with check values, not authenticated vault encryption; store private keys inside the authenticated vault. Generated private material and its passphrase are masked by default.
 
-SSH inputs are limited to 64 KiB with bounded line lengths. OpenSSH bcrypt and supported encrypted-PKCS#8 PBKDF2 parameters are capped before derivation. Provider-owned private keys and MINA's immutable passphrase strings cannot be fully erased. The application never logs parser exceptions and does not install a logging provider. PuTTY PPK is rejected because the selected upstream parser does not verify its Private-MAC. Convert it with a trusted external tool before importing OpenSSH.
+SSH inputs are limited to 64 KiB with bounded line lengths. OpenSSH bcrypt and supported encrypted-PKCS#8 PBKDF2 parameters are capped before derivation. Provider-owned private keys and immutable parser/passphrase strings cannot be fully erased. The application never logs parser exceptions and does not install a logging provider.
+
+PPK 2/3 uses a bounded format adapter following the
+[PuTTY specification](https://the.earth.li/~sgtatham/putty/0.85/htmldoc/AppendixC.html).
+BC supplies SHA-1/SHA-256, HMAC, AES-CBC and Argon2; no cryptographic primitive is
+implemented by the adapter. MAC comparison is constant-time and precedes private
+key construction even for unencrypted files. Exact UTF-8 comment bytes participate
+in the MAC. Public key framing and RSA operand sizes are bounded before provider
+calls, and the existing signing check verifies the key pair before OpenSSH export.
+Version 3 derivation allows at most 262144 KiB, 128 passes and 16 lanes, with the
+additional bound `memoryKiB * passes <= 262144 * 5`, checked before derivation.
+The product bound accommodates PuTTY's many-pass/small-memory settings without
+exceeding the vault's automatic memory/work budget. PPK 1, unsupported ciphers,
+other key types, duplicate/out-of-order headers and trailing records are rejected.
+Owned byte buffers are erased on exit; provider state, immutable strings and RSA
+integers remain subject to JVM garbage collection. Independent PuTTY Ed25519
+vectors and separate JCE-generated RSA fixtures exercise interoperability and
+tampering. These checks are not an external cryptographic audit.
 
 Public SSH export parses the key using MINA, checks the supported type and RSA
 bounds and compares its canonical blob to the input. Options, trailing binary

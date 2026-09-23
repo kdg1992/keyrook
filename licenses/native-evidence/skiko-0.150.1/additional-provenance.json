@@ -1,0 +1,149 @@
+{
+  "status": "additional component evidence; not a complete inventory or redistribution approval",
+  "version": "0.150.1",
+  "method": "JAR and native hashes compared against artifacts.json; case-sensitive ASCII marker occurrence counts; ELF64 symbol-table parsing without executing binaries. Marker counts include repeated symbols and are not function counts. Absence does not establish component absence.",
+  "binaries": [
+    {
+      "sha256": "5061ffbbfbad9fc8c6c8e0c1741b674c863293d3d071b061db9e6e0fc3ef1d38",
+      "entry": "skiko-windows-x64.dll",
+      "target": "windows-x64",
+      "markers": {
+        "wuffs_": 4,
+        "dng_": 0,
+        "vmaCreateAllocator": 0,
+        "FT_Init_FreeType": 0,
+        "BrotliDecoder": 0
+      }
+    },
+    {
+      "sha256": "10674295a4eb78232b97fb94c20a66687b8af8e4b512b1224dcf75f8e16cc030",
+      "entry": "libskiko-linux-x64.so",
+      "target": "linux-x64",
+      "markers": {
+        "wuffs_": 274,
+        "dng_": 3680,
+        "vmaCreateAllocator": 0,
+        "FT_Init_FreeType": 1,
+        "BrotliDecoder": 0
+      }
+    },
+    {
+      "sha256": "4b22275236c861e1288750f3022a5851440f1ba7dec227e6d428b5ee0899175a",
+      "entry": "libskiko-macos-arm64.dylib",
+      "target": "macos-arm64",
+      "markers": {
+        "wuffs_": 177,
+        "dng_": 1957,
+        "vmaCreateAllocator": 0,
+        "FT_Init_FreeType": 0,
+        "BrotliDecoder": 0
+      }
+    },
+    {
+      "sha256": "d0bc2312ebe44602a2618fc0d87b8a775519be7d53989421a170e5a5cff9e3dd",
+      "entry": "libskiko-macos-x64.dylib",
+      "target": "macos-arm64",
+      "markers": {
+        "wuffs_": 79,
+        "dng_": 1965,
+        "vmaCreateAllocator": 0,
+        "FT_Init_FreeType": 0,
+        "BrotliDecoder": 0
+      }
+    }
+  ],
+  "linuxDefinedSymbols": [
+    {
+      "name": "_ZN8dng_host14Make_dng_imageERK8dng_rectjj.cold",
+      "sectionIndex": 12,
+      "sectionName": ".text",
+      "binding": 0,
+      "size": 21
+    },
+    {
+      "name": "FT_Init_FreeType",
+      "sectionIndex": 12,
+      "sectionName": ".text",
+      "binding": 0,
+      "size": 102
+    },
+    {
+      "name": "_ZN8dng_host14Make_dng_imageERK8dng_rectjj",
+      "sectionIndex": 12,
+      "sectionName": ".text",
+      "binding": 0,
+      "size": 101
+    },
+    {
+      "name": "wuffs_lzw__decoder__initialize",
+      "sectionIndex": 12,
+      "sectionName": ".text",
+      "binding": 0,
+      "size": 225
+    },
+    {
+      "name": "wuffs_gif__decoder__initialize",
+      "sectionIndex": 12,
+      "sectionName": ".text",
+      "binding": 0,
+      "size": 324
+    }
+  ],
+  "sources": [
+    {
+      "url": "https://raw.githubusercontent.com/JetBrains/skia/1f14f1166a847cb0e148f981600bf1e3e6ca6e46/gn/skia.gni",
+      "sha256": "8d866ece199f1f0175684b056cc4121c2e28e1bb3c98d1299df14105fc19339f",
+      "encoding": "original source bytes; Gitiles TEXT responses decoded from base64"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/JetBrains/skia/1f14f1166a847cb0e148f981600bf1e3e6ca6e46/BUILD.gn",
+      "sha256": "550dc1f12f80b9d873ff95c154d06afdf358de2a6a24aa52490e9422bc086d58",
+      "encoding": "original source bytes; Gitiles TEXT responses decoded from base64"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/JetBrains/skia/1f14f1166a847cb0e148f981600bf1e3e6ca6e46/tools/skia_release/build.py",
+      "sha256": "120c52e31ad80c250a55dee2719e91f12d106480269c9fb396348cc9e653eba9",
+      "encoding": "original source bytes; Gitiles TEXT responses decoded from base64"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/JetBrains/skia/1f14f1166a847cb0e148f981600bf1e3e6ca6e46/DEPS",
+      "sha256": "83573d68e6eea2a8ea7308dfd9215803fa1794137bcc40b60bec9e6e722bd35b",
+      "encoding": "original source bytes; Gitiles TEXT responses decoded from base64"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/JetBrains/skia/1f14f1166a847cb0e148f981600bf1e3e6ca6e46/third_party/wuffs/BUILD.gn",
+      "sha256": "45b1ac75fe1d40d97c71c756ffc5c8aba18043aa091fb52e90717b071fd12915",
+      "encoding": "original source bytes; Gitiles TEXT responses decoded from base64"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/JetBrains/skiko/3956e988e6e93eaf1ee985d725049443e7845807/skiko/build.gradle.kts",
+      "sha256": "95707101f7e812c02f82527e6133c5d96d6029064364af8256b72cc7589bbcf5",
+      "encoding": "original source bytes; Gitiles TEXT responses decoded from base64"
+    },
+    {
+      "url": "https://android.googlesource.com/platform/external/dng_sdk/+/dbe0a676450d9b8c71bf00688bb306409b779e90/source/dng_host.cpp?format=TEXT",
+      "sha256": "59fff65e9ce70b0ee7d145966ddc1f3292babbf53b5cba00635c462c18821bcb",
+      "encoding": "original source bytes; Gitiles TEXT responses decoded from base64"
+    },
+    {
+      "url": "https://skia.googlesource.com/external/github.com/google/wuffs-mirror-release-c/+/e3f919ccfe3ef542cfc983a82146070258fb57f8/release/c/wuffs-v0.3.c?format=TEXT",
+      "sha256": "ca10c422ebd4bf9f2cc469bafec4d5606eed3db0db7cbe21cb5232249ac0fe68",
+      "encoding": "original source bytes; Gitiles TEXT responses decoded from base64"
+    }
+  ],
+  "notices": [
+    {
+      "file": "wuffs-LICENSE.txt",
+      "revision": "e3f919ccfe3ef542cfc983a82146070258fb57f8",
+      "source": "https://skia.googlesource.com/external/github.com/google/wuffs-mirror-release-c/+/e3f919ccfe3ef542cfc983a82146070258fb57f8/LICENSE?format=TEXT",
+      "copyright": "Copyright 2017 The Wuffs Authors. (from pinned release/c/wuffs-v0.3.c)",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "file": "freetype-FTL.txt",
+      "revision": "264b5fbf5b912b39f98d038bf75d39be0a73f21b",
+      "source": "https://chromium.googlesource.com/chromium/src/third_party/freetype2/+/264b5fbf5b912b39f98d038bf75d39be0a73f21b/docs/FTL.TXT?format=TEXT",
+      "sha256": "5a5ee54c5001bbad1cdc1a57cc3dd4c42199b2da09d39c7ee41fab002d02967f"
+    }
+  ]
+}

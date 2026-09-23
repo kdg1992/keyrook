@@ -48,8 +48,18 @@ installer does not resolve this gap. No reviewed inventory is shipped yet.
 [Native component provenance](../licenses/native-evidence/README.md) now contains
 the pinned dependency notice texts, verified runtime-JAR checksums and Temurin
 source records. It also identifies special licensing conditions in the DNG SDK
-declared by Skiko's macOS JVM build. Its compatibility has not been established;
+found in the macOS and Linux native binaries. Its compatibility has not been established;
 this requires resolution in addition to finishing the artifact/JDK inventory.
+
+A DNG-free replacement requires rebuilding both Skia and the matching Skiko
+native libraries, disabling `skia_use_dng_sdk` and `skia_use_piex` and removing
+the corresponding Skiko link inputs. Removing a single link declaration is
+insufficient: the Linux binary contains defined DNG functions despite their
+absence from that explicit link list. Replacement binaries need reproducible
+build provenance, actual link/component evidence and a fresh inventory review.
+Additional pinned Wuffs and FreeType notices are retained with the component
+evidence; neither those notices nor a rebuilt binary automatically approve
+redistribution.
 
 `:app:checkNativeDistributionLicenses` fails explicitly when an inventory is
 missing or no longer matches the resolved artifacts. Every jlink/jpackage task
