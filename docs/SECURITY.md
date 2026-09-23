@@ -40,9 +40,21 @@ The desktop controller runs vault operations on a serial worker, keeping Argon2 
 
 Inactivity locking defaults to five minutes and can be set to 1, 2, 5, 10, 15 or 30 minutes for the current application session. A monotonic timer observes keyboard and mouse activity in application windows. Minimizing or switching away from the application's windows also locks it; transitions to this JVM's own dialogs are exempt when the window system identifies the destination. AWT user-session deactivation, screen-sleep and system-sleep events trigger locking where the platform advertises support. These APIs do not provide a universal OS-lock notification: conservative window-deactivation locking and the inactivity deadline provide additional coverage. Behavior under each target desktop/window manager still requires end-to-end verification; no privileged native hooks are installed.
 
+An input event arriving after the inactivity deadline requests locking before it
+can reset the deadline. This also covers a delayed event loop whose periodic
+timer has not yet processed the expiry.
+
 Failed unlock attempts impose delays of 1, 2, 4, 8, 16, 32 and then at most 60 seconds. Delays use monotonic time, remain in force when locking or retrying, and reset after a successful unlock. Rejected retries do not derive a key and their submitted password arrays are still erased. This state is process-local and resets when the application restarts. It cannot defend against a modified application or offline password guessing.
 
 Compose and Swing text controls retain immutable strings, including temporary passwords and edited fields. These cannot be reliably erased; owned input arrays and `Secret` instances are cleared. Explicit field copying clears the owned clipboard after 20 seconds by default and on lock. The expiry can be set to 5, 10, 20, 30, 60 or 120 seconds for this application session; changing it clears a currently owned value. Clipboard access can be delayed by another application; clearing retries. Later clipboard owners are not intentionally cleared. OS clipboard history and clipboard managers can retain copies that Keyrook cannot remove.
+
+Clipboard ownership uses a per-copy JVM-local token and owner callback rather
+than comparing secret text. Equal text copied by another owner does not identify
+Keyrook's copy. Locally owned clipboard character arrays are erased when cleared
+or ownership is lost, including while OS clearing must retry. AWT supplies no
+atomic OS compare-and-clear operation: an ownership change between checking and
+clearing remains a platform limitation. Closing the clipboard guard bounds its
+retry period; permanently unavailable clipboard access cannot guarantee OS erasure.
 
 ## Local warning list
 

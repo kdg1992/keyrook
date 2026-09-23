@@ -23,6 +23,12 @@ Choose an existing `.keyrook` file to open, or a new file to create. Creation re
 
 Entries are saved immediately through authenticated, atomic vault storage. Fields can be masked independently. Web, transfer, email, hosting-panel, server, SSH, domain and custom records have their own editors. Customers/projects can be created and assigned. Entries can be duplicated, moved to the trash and restored. Editing retains up to 100 historical field snapshots. Search and filters narrow the visible list; history displays hidden fields masked. Canceling an edit discards that edit.
 
+Under **Kunden und Projekte**, existing customers and projects can be renamed.
+Changing a project's customer moves all its entries, including trash, to that
+customer in one save. Clearing only the project's customer preserves the entries'
+individual customer assignments. Removal requires confirmation and is available
+only when no entries (including trash) or projects still reference the item.
+
 Full-text search includes current titles, tags, notes, field names and visible values, customer/project names and expiry dates. Space-separated terms must all match the same record, without case sensitivity. **Verborgene Felder durchsuchen** explicitly includes hidden current values; matching values are never exposed in result rows. History is excluded. Searches run in the background over an independently owned snapshot, are canceled when replaced or locked, and do not create a persistent plaintext index. Queries are limited to 256 characters.
 
 The password generator supports 12–256 characters and selectable character classes. Passphrase generation accepts a user-supplied reviewed wordlist with at least 1024 distinct letter-only words; the chosen word count must provide at least 60 bits of selection entropy. No small demonstration wordlist is bundled.
@@ -50,11 +56,16 @@ Select an existing **Backup-Ordner** after unlocking, then confirm how many rece
 Import parses and validates first, then asks for confirmation showing the entry count. It adds records to the current vault; duplicate IDs fail rather than overwrite records. Enable backups before importing into a valuable vault. Supported inputs:
 
 - Keyrook JSON: all entry types, references, metadata and history.
-- CSV: a header row and a user-selected mapping for title, URL, username, password and notes; empty optional mappings are allowed. KeePass-style column defaults are provided. Quoted commas, escaped quotes and multiline values are supported.
+- CSV: select the actual header names from dropdowns for title, URL, username, password and notes. The title column is required; optional fields can remain unassigned. Common German and English column names are suggested. Quoted commas, escaped quotes and multiline values are supported. Headers must be unique and nonblank, with at most 100 columns and 512 characters per name. A UTF-8 BOM is accepted. Keyrook's own CSV format is recognized automatically without a mapping dialog.
 - Bitwarden unencrypted JSON: login and secure-note items, custom fields, folders, multiple URLs, dates and password history. Cards, identities, organization records, attachments, passkeys and password-reprompt restrictions are not imported.
 - KeePass XML: exported plaintext strings, group paths, tags, ISO timestamps, expiry and history. Entries in the identified recycle bin, including nested groups, remain deleted; their last-modified time supplies the deletion timestamp because the export has no separate deletion date. KDBX, binary/attached data, protected values, custom plugin data and binary timestamps are not supported. DTDs, external entities and ambiguous recycle-bin/expiry metadata are refused.
 
 The source export's immutable parser strings cannot be reliably wiped from JVM memory. Imported Bitwarden/KeePass fields are stored as custom records to preserve additional values. Unsupported structures produce a generic failure instead of exposing data in errors.
+
+The CSV mapping dialog shows column names only, rendered as plain text. It does
+not preview row values. Canceling or locking while choosing a mapping aborts the
+import and clears the owned input buffer. Unassigned source columns are omitted;
+check the mapping before confirming the import.
 
 **Klartext exportieren** warns twice before writing. JSON is the full Keyrook model. Keyrook CSV uses a `keyrook-json` header and one quoted JSON record so every type, reference and history roundtrips without flattening losses. It is not intended for spreadsheet editing. Both include secrets and deleted/history records. Keep them private and use encrypted export when possible.
 
