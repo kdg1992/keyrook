@@ -36,6 +36,13 @@ Use a trusted local directory. The code refuses a symbolic-link vault leaf and c
 
 `VaultSession` serializes operations. It preserves the current document and credentials when a write fails, enters `ERROR`, and permits a retry or lock. Changing a password adopts the new credentials only after a successful commit. Old backups still require the old password and may retain old secrets. Opening a vault is permitted only while locked; a failed open leaves the session locked.
 
+Desktop Argon2 settings use the core's automatic resource limits. Changing them
+uses the same atomic save and pre-save backup path, preserving the factors.
+Generating a key file uses `SecureRandom`, exclusive creation and private file
+permissions; the owned 32-byte buffer is erased on every exit path. Replacing or
+removing the key-file factor requires explicit confirmation alongside password
+replacement. No operation rewrites old backups with new factors or KDF settings.
+
 The desktop controller runs vault operations on a serial worker, keeping Argon2 and storage off the event thread. UI snapshots are independent and closed on replacement/lock. Locking immediately removes the document and unsaved editors from presentation state, closes its snapshot and clears the owned clipboard, even while work is running. It invalidates the operation generation and closes open application dialogs. Pending confirmations check their generation before proceeding. Late results are closed instead of reopening the vault or changing the locked screen. Session cleanup is queued behind outstanding work; an atomic write already started is allowed to finish rather than being interrupted. Consequently locking can complete presentation cleanup before the worker has erased its credentials. Process termination, sleep suspension and power loss can still stop a worker at any point.
 
 Inactivity locking defaults to five minutes and can be set to 1, 2, 5, 10, 15 or 30 minutes for the current application session. A monotonic timer observes keyboard and mouse activity in application windows. Minimizing or switching away from the application's windows also locks it; transitions to this JVM's own dialogs are exempt when the window system identifies the destination. AWT user-session deactivation, screen-sleep and system-sleep events trigger locking where the platform advertises support. These APIs do not provide a universal OS-lock notification: conservative window-deactivation locking and the inactivity deadline provide additional coverage. Behavior under each target desktop/window manager still requires end-to-end verification; no privileged native hooks are installed.
@@ -83,6 +90,13 @@ Plaintext JSON/CSV export requires two separate UI confirmations. New export fil
 Apache MINA SSHD writes encrypted OpenSSH keys with AES-256-CTR and bcrypt (64 rounds). Ed25519 and RSA-4096 use established providers; the application does not implement key algorithms or cryptographic formats. Imports verify that the public/private pair matches using a signature challenge. OpenSSH is a standard encrypted format with check values, not authenticated vault encryption; store private keys inside the authenticated vault. Generated private material and its passphrase are masked by default.
 
 SSH inputs are limited to 64 KiB with bounded line lengths. OpenSSH bcrypt and supported encrypted-PKCS#8 PBKDF2 parameters are capped before derivation. Provider-owned private keys and MINA's immutable passphrase strings cannot be fully erased. The application never logs parser exceptions and does not install a logging provider. PuTTY PPK is rejected because the selected upstream parser does not verify its Private-MAC. Convert it with a trusted external tool before importing OpenSSH.
+
+Public SSH export parses the key using MINA, checks the supported type and RSA
+bounds and compares its canonical blob to the input. Options, trailing binary
+data and control characters are refused. Export creates a new private-permission
+file, and canceled/disposed editors cannot initiate a later export. Imported
+private material and replacement passphrase buffers are released even when an
+insertion callback fails.
 
 SSH/SFTP connection commands are copied as text only. Host and username operands use a strict character/length policy, ports are bounded, and operands are quoted for PowerShell/POSIX shells. IPv6 validation parses literals without DNS or interface resolution. Passwords, key material, directory paths and arbitrary remote commands are never appended. A copied command still invokes the user's own OpenSSH configuration if they execute it outside the application.
 

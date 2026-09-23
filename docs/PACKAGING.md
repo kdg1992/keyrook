@@ -129,6 +129,17 @@ review even when that packaging attempt fails at the approval gate.
 The first complete manual run and installation smoke tests on all supported
 platforms must succeed before a release pull request is merged.
 
+After packaging, the workflow launches the generated application image with its
+bundled runtime and `--self-test <new-report-path>`. This explicit diagnostic
+performs an in-memory vault encryption/decryption roundtrip, an encrypted
+Ed25519 export/import roundtrip and offscreen desktop rendering. It uses only
+synthetic data, accesses no user vault and writes a fixed success marker to a
+new file. A failure, missing marker or two-minute timeout blocks publication.
+This verifies the application image; it does not replace installation, upgrade,
+uninstall or operating-system session-lock tests. The diagnostic is covered by
+ordinary source tests, but execution from each packaged launcher remains pending
+until the license gate permits packaging.
+
 On `main` pushes, release-please maintains the version/changelog pull request.
 When it creates a release, the same workflow builds the installers. Build jobs
 have read-only permissions. Only after all builds succeed does a separate job
