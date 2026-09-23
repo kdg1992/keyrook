@@ -1,0 +1,87 @@
+// SPDX-FileCopyrightText: 2026 Kim Daniel Geisthardt
+// SPDX-License-Identifier: GPL-3.0-or-later
+package app.keyrook.app
+
+import app.keyrook.core.crypto.Secret
+import app.keyrook.core.model.*
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
+import java.time.LocalDate
+
+class EntryListFiltersTest {
+    private val today = LocalDate.of(2026, 12, 15)
+    private fun entry(id: String, expires: LocalDate? = null, title: String = id,
+                      modified: String = "2026-01-01T00:00:00Z", trash: Boolean = false,
+                      customer: String? = null, project: String? = null, tags: List<String> = emptyList()) = Entry(
+        id, title, EntryData.Custom(mapOf("Secret" to Field(Secret("synthetic".toCharArray())))),
+        "2025-01-01T00:00:00Z", modified, customerId = customer, projectId = project, tags = tags,
+        expiresOn = expires?.toString(), deletedAt = if (trash) modified else null,
+    )
+
+    private fun EntryListFilters.ids(vault: Vault, matches: Set<String> = vault.entries.map { it.id }.toSet()) =
+        select(vault, matches, today).map { it.id }
+
+    @Test fun `expiry filters separate yesterday today day thirty and later across year boundary`() {
+        Vault(entries = listOf(entry("yesterday", today.minusDays(1)), entry("today", today),
+            entry("thirty", today.plusDays(30)), entry("later", today.plusDays(31)), entry("none"),
+            entry("trash", today, trash = true))).use { vault ->
+            assertEquals(listOf("yesterday"), EntryListFilters(expiry = ExpiryFilter.EXPIRED).ids(vault))
+            assertEquals(listOf("thirty", "today"), EntryListFilters(expiry = ExpiryFilter.UPCOMING).ids(vault))
+            assertEquals(listOf("none"), EntryListFilters(expiry = ExpiryFilter.NONE).ids(vault))
+            assertEquals(5, EntryListFilters().ids(vault).size)
+            assertEquals(listOf("trash"), EntryListFilters(trash = true, expiry = ExpiryFilter.UPCOMING).ids(vault))
+        }
+    }
+
+    @Test fun `customer filter includes inherited owner and combines project tag type and search`() {
+        Vault(customers = listOf(Customer("a", "A"), Customer("b", "B")),
+            projects = listOf(Project("project-a", "A", "a"), Project("project-b", "B", "b"), Project("free", "Free")),
+            entries = listOf(entry("inherited", customer = null, project = "project-a", tags = listOf("tag")),
+                entry("direct", customer = "a", project = "project-a"), entry("other", project = "project-b"),
+                entry("independent", customer = "a", project = "free"))).use { vault ->
+            assertEquals(listOf("direct", "independent", "inherited"), EntryListFilters(customerId = "a").ids(vault))
+            val filters = EntryListFilters(customerId = "a", projectId = "project-a", tag = "tag", type = EntryType.CUSTOM)
+            assertEquals(listOf("inherited"), filters.ids(vault))
+            assertTrue(filters.ids(vault, setOf("direct")).isEmpty())
+            assertTrue(filters.copy(type = EntryType.WEB).ids(vault).isEmpty())
+            assertEquals(listOf("project-a", "free"), filters.projects(vault).map { it.id })
+        }
+    }
+
+    @Test fun `incompatible and removed organization selections are cleared`() {
+        Vault(customers = listOf(Customer("a", "A"), Customer("b", "B")),
+            projects = listOf(Project("owned", "Owned", "a"), Project("free", "Free"))).use { vault ->
+            assertNull(EntryListFilters(customerId = "b", projectId = "owned").normalized(vault).projectId)
+            assertEquals("free", EntryListFilters(customerId = "b", projectId = "free").normalized(vault).projectId)
+            assertNull(EntryListFilters(customerId = "missing").normalized(vault).customerId)
+            assertNull(EntryListFilters(projectId = "missing").normalized(vault).projectId)
+        }
+    }
+
+    @Test fun `sort is deterministic by title then identifier regardless of input order`() {
+        Vault(entries = listOf(entry("c", title = "beta"), entry("b", title = "Alpha"), entry("a", title = "Alpha"))).use { vault ->
+            val expected = listOf("a", "b", "c")
+            EntrySort.entries.forEach { sort ->
+                assertEquals(expected, EntryListFilters(sort = sort).ids(vault))
+                assertEquals(expected, EntryListFilters(sort = sort).ids(vault.copy(entries = vault.entries.reversed())))
+            }
+        }
+    }
+
+    @Test fun `modified sorting compares instants and expiry puts undated entries last`() {
+        Vault(entries = listOf(entry("older", today.plusDays(1), modified = "2026-01-01T01:00:00+02:00"),
+            entry("newer", today, modified = "2026-01-01T00:00:00Z"),
+            entry("undated", modified = "2025-01-01T00:00:00Z"))).use { vault ->
+            assertEquals(listOf("newer", "older", "undated"), EntryListFilters(sort = EntrySort.MODIFIED).ids(vault))
+            assertEquals(listOf("newer", "older", "undated"), EntryListFilters(sort = EntrySort.EXPIRY).ids(vault))
+        }
+    }
+
+    @Test fun `filtering and sorting never access closed secret values`() {
+        val vault = Vault(entries = listOf(entry("one", today), entry("two", today.minusDays(1))))
+        vault.close()
+        EntrySort.entries.forEach { sort ->
+            assertEquals(listOf("one"), EntryListFilters(expiry = ExpiryFilter.UPCOMING, sort = sort).ids(vault))
+        }
+    }
+}

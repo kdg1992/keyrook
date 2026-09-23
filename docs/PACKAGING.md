@@ -48,7 +48,7 @@ installer does not resolve this gap. No reviewed inventory is shipped yet.
 [Native component provenance](../licenses/native-evidence/README.md) now contains
 the pinned dependency notice texts, verified runtime-JAR checksums and Temurin
 source records. It also identifies special licensing conditions in the DNG SDK
-declared by Skiko's macOS JVM build. Its compatibility has not been established;
+found in the macOS and Linux native binaries. Its compatibility has not been established;
 this requires resolution in addition to finishing the artifact/JDK inventory.
 
 [The collected CI evidence](../licenses/native-evidence/ci-2026-09-23/README.md)
@@ -57,6 +57,16 @@ legal directories from Windows x64, Linux x64 and macOS ARM64, matched against
 official Temurin archives. Vendor SBOMs and verified source-archive provenance
 are retained too. These are evidence records, not approved native inventories;
 the DNG question and complete native component review remain open.
+
+A DNG-free replacement requires rebuilding both Skia and the matching Skiko
+native libraries, disabling `skia_use_dng_sdk` and `skia_use_piex` and removing
+the corresponding Skiko link inputs. Removing a single link declaration is
+insufficient: the Linux binary contains defined DNG functions despite their
+absence from that explicit link list. Replacement binaries need reproducible
+build provenance, actual link/component evidence and a fresh inventory review.
+Additional pinned Wuffs and FreeType notices are retained with the component
+evidence; neither those notices nor a rebuilt binary automatically approve
+redistribution.
 
 `:app:checkNativeDistributionLicenses` fails explicitly when an inventory is
 missing or no longer matches the resolved artifacts. Every jlink/jpackage task
@@ -135,6 +145,17 @@ The separate unreviewed evidence artifacts remain downloadable for the license
 review even when that packaging attempt fails at the approval gate.
 The first complete manual run and installation smoke tests on all supported
 platforms must succeed before a release pull request is merged.
+
+After packaging, the workflow launches the generated application image with its
+bundled runtime and `--self-test <new-report-path>`. This explicit diagnostic
+performs an in-memory vault encryption/decryption roundtrip, an encrypted
+Ed25519 export/import roundtrip and offscreen desktop rendering. It uses only
+synthetic data, accesses no user vault and writes a fixed success marker to a
+new file. A failure, missing marker or two-minute timeout blocks publication.
+This verifies the application image; it does not replace installation, upgrade,
+uninstall or operating-system session-lock tests. The diagnostic is covered by
+ordinary source tests, but execution from each packaged launcher remains pending
+until the license gate permits packaging.
 
 On `main` pushes, release-please maintains the version/changelog pull request.
 When it creates a release, the same workflow builds the installers. Build jobs

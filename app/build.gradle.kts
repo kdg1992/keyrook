@@ -5,6 +5,7 @@ import org.jetbrains.compose.desktop.application.tasks.AbstractJLinkTask
 import org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask
 import java.security.MessageDigest
 import java.util.Properties
+import java.time.Duration
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 
 plugins {
@@ -37,6 +38,19 @@ tasks.test {
     jvmArgs("--enable-native-access=ALL-UNNAMED")
     systemProperty("java.awt.headless", "true")
     systemProperty("skiko.renderApi", "SOFTWARE")
+}
+tasks.register<JavaExec>("desktopWindowCheck") {
+    group = "verification"
+    description = "Checks native AWT event routing on an isolated CI desktop."
+    dependsOn(tasks.testClasses)
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("app.keyrook.app.DesktopWindowCheck")
+    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(25)) })
+    systemProperty("java.awt.headless", "false")
+    timeout.set(Duration.ofSeconds(90))
+    doFirst {
+        check(System.getenv("GITHUB_ACTIONS") == "true") { "Native window checks require an isolated CI desktop" }
+    }
 }
 val checkRuntimeDependencies = tasks.register("checkRuntimeDependencies") {
     group = "verification"

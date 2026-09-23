@@ -8,67 +8,124 @@ import java.awt.datatransfer.ClipboardOwner
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.StringSelection
 import java.awt.datatransfer.Transferable
-import java.util.concurrent.Executors
+import java.awt.datatransfer.UnsupportedFlavorException
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
-/** A later clipboard owner is never cleared. OS clipboard history cannot be erased by this application. */
-internal class ClipboardGuard(private val clipboard: Clipboard) : ClipboardOwner, AutoCloseable {
-    private val timer = Executors.newSingleThreadScheduledExecutor { Thread(it, "clipboard-expiry").apply { isDaemon = true } }
-    private var current: StringSelection? = null
+/** Ownership checks are best effort: AWT has no atomic OS clipboard compare-and-clear. */
+internal class ClipboardGuard(
+    private val clipboard: Clipboard,
+    private val timer: ScheduledExecutorService = ScheduledThreadPoolExecutor(1) {
+        Thread(it, "clipboard-expiry").apply { isDaemon = true }
+    }.apply { removeOnCancelPolicy = true },
+) : AutoCloseable {
+    private var current: OwnedSelection? = null
     private var expiration: ScheduledFuture<*>? = null
     private var expirySeconds = 20L
+    private var closing = false
+    private var closeRetries = 0
 
     @Synchronized fun configure(seconds: Long) {
+        check(!closing) { "Clipboard guard is closed" }
         require(seconds in 5..120)
         clear()
         expirySeconds = seconds
     }
 
     @Synchronized fun copy(text: String) {
-        val selection = StringSelection(text)
-        clipboard.setContents(selection, this)
-        current = selection
-        expiration?.cancel(false)
-        expiration = timer.schedule({ clearOwned(selection) }, expirySeconds, TimeUnit.SECONDS)
-    }
-
-    @Synchronized fun clear() {
-        val selection = current ?: return
-        clearOwned(selection)
-    }
-
-    @Synchronized private fun clearOwned(selection: StringSelection) {
-        if (current !== selection) return
+        check(!closing) { "Clipboard guard is closed" }
+        val selection = OwnedSelection(text)
         try {
-            if (clipboard.isDataFlavorAvailable(DataFlavor.stringFlavor) &&
-                clipboard.getData(DataFlavor.stringFlavor) == selection.getTransferData(DataFlavor.stringFlavor)) {
-                clipboard.setContents(StringSelection(""), null)
-            }
-            current = null
-            expiration?.cancel(false)
-        } catch (_: IllegalStateException) {
-            // Another application can temporarily hold the OS clipboard open.
-            expiration = timer.schedule({ clearOwned(selection) }, 1, TimeUnit.SECONDS)
+            // Native AWT clipboards wrap Transferable objects, so callback object identity is unreliable.
+            clipboard.setContents(selection, ClipboardOwner { _, _ -> relinquish(selection) })
+        } catch (failure: RuntimeException) {
+            selection.erase()
+            throw failure
+        }
+        expiration?.cancel(false)
+        current?.erase()
+        current = selection
+        try {
+            expiration = timer.schedule({ clearOwned(selection) }, expirySeconds, TimeUnit.SECONDS)
+        } catch (failure: RuntimeException) {
+            clearOwned(selection)
+            throw failure
         }
     }
 
-    @Synchronized override fun lostOwnership(clipboard: Clipboard, contents: Transferable) {
-        if (contents === current) { current = null; expiration?.cancel(false) }
+    @Synchronized fun clear() { current?.let { clearOwned(it) } }
+
+    @Synchronized private fun clearOwned(selection: OwnedSelection) {
+        if (current !== selection) return
+        expiration?.cancel(false)
+        expiration = null
+        // The OS can retain its own copy, but our local array need not survive a busy clipboard.
+        selection.erase()
+        try {
+            val contents = clipboard.getContents(null)
+            if (contents?.isDataFlavorSupported(OWNERSHIP_FLAVOR) == true &&
+                contents.getTransferData(OWNERSHIP_FLAVOR) === selection.token) {
+                clipboard.setContents(StringSelection(""), null)
+            }
+            relinquish(selection)
+        } catch (_: IllegalStateException) {
+            // Keep at most one retry pending. Closing is bounded even if another process never releases it.
+            if ((!closing || closeRetries++ < 10) && !timer.isShutdown) {
+                expiration = timer.schedule({ clearOwned(selection) }, 1, TimeUnit.SECONDS)
+            } else relinquish(selection)
+        } catch (_: java.io.IOException) {
+            relinquish(selection)
+        } catch (_: UnsupportedFlavorException) {
+            relinquish(selection)
+        }
     }
 
-    override fun close() { clear(); timer.shutdown() }
+    @Synchronized private fun relinquish(selection: OwnedSelection) {
+        selection.erase()
+        if (current !== selection) return
+        current = null
+        expiration?.cancel(false)
+        expiration = null
+        if (closing) timer.shutdown()
+    }
+
+    @Synchronized override fun close() {
+        if (closing) return
+        closing = true
+        clear()
+        if (current == null) timer.shutdown()
+    }
+
+    private class OwnedSelection(text: String) : Transferable {
+        private val chars = text.toCharArray()
+        val token = Any()
+        @Synchronized fun erase() { chars.fill('\u0000') }
+        override fun getTransferDataFlavors(): Array<DataFlavor> = arrayOf(DataFlavor.stringFlavor, OWNERSHIP_FLAVOR)
+        override fun isDataFlavorSupported(flavor: DataFlavor): Boolean =
+            flavor == DataFlavor.stringFlavor || flavor == OWNERSHIP_FLAVOR
+        @Synchronized override fun getTransferData(flavor: DataFlavor): Any = when (flavor) {
+            DataFlavor.stringFlavor -> String(chars)
+            OWNERSHIP_FLAVOR -> token
+            else -> throw UnsupportedFlavorException(flavor)
+        }
+    }
+
+    private companion object {
+        val OWNERSHIP_FLAVOR = DataFlavor("${DataFlavor.javaJVMLocalObjectMimeType};class=java.lang.Object", "Keyrook clipboard ownership")
+    }
 }
 
 internal object SecretClipboard {
     private var expirySeconds = 20L
     private val initializedGuard = lazy { ClipboardGuard(Toolkit.getDefaultToolkit().systemClipboard) }
     private val guard by initializedGuard
-    fun configure(seconds: Long) {
+    @Synchronized fun configure(seconds: Long) {
         require(seconds in 5..120)
         expirySeconds = seconds
         if (initializedGuard.isInitialized()) guard.configure(seconds)
     }
-    fun copy(text: String) { guard.configure(expirySeconds); guard.copy(text) }
-    fun clear() { if (initializedGuard.isInitialized()) guard.clear() }
+    @Synchronized fun copy(text: String) { guard.configure(expirySeconds); guard.copy(text) }
+    @Synchronized fun clear() { if (initializedGuard.isInitialized()) guard.clear() }
 }

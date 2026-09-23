@@ -31,3 +31,24 @@ internal fun applyBackupConfiguration(controller: VaultController, selection: Ba
     controller.session.configureBackups(BackupService(folder, selection.policy))
     return true
 }
+
+internal fun disableBackups(controller: VaultController, confirmed: Boolean): Boolean {
+    if (!confirmed) return false
+    ensureOperationCurrent()
+    controller.session.configureBackups(null)
+    return true
+}
+
+internal fun createManualBackup(controller: VaultController): Int {
+    ensureOperationCurrent()
+    return controller.session.backupNow().removed
+}
+
+internal fun backupStatusText(controller: VaultController): String {
+    ensureOperationCurrent()
+    val status = controller.session.backupStatus()
+    if (!status.configured) return UiText.text("backup.notConfigured")
+    val saved = status.lastRevision?.let { UiText.text("backup.lastRevision", it) }
+        ?: UiText.text("backup.noCopy")
+    return UiText.text("backup.active", saved)
+}

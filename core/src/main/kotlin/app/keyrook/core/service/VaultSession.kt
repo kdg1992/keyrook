@@ -4,6 +4,7 @@ package app.keyrook.core.service
 
 import app.keyrook.core.crypto.Credentials
 import app.keyrook.core.backup.BackupService
+import app.keyrook.core.backup.BackupResult
 import app.keyrook.core.crypto.KdfParameters
 import app.keyrook.core.format.VaultCodec
 import app.keyrook.core.model.Vault
@@ -11,6 +12,9 @@ import app.keyrook.core.storage.*
 import java.nio.file.Path
 
 enum class SessionState { LOCKED, UNLOCKED, SAVING, ERROR }
+
+/** Session-only status; never exposes credentials or filesystem paths. */
+data class BackupStatus(val configured: Boolean, val lastRevision: Long?)
 
 /** Serializes access. Snapshots are independent and must be closed by their caller. */
 class VaultSession(private val store: VaultStore = VaultStore(), private val codec: VaultCodec = VaultCodec()) : AutoCloseable {
@@ -21,10 +25,27 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
     private var parameters = KdfParameters()
     private var currentState = SessionState.LOCKED
     private var backups: BackupService? = null
+    private var lastBackupRevision: Long? = null
     val state: SessionState @Synchronized get() = currentState
 
     /** A configured backup must succeed before an existing vault is replaced. */
-    @Synchronized fun configureBackups(service: BackupService?) { backups = service }
+    @Synchronized fun configureBackups(service: BackupService?) {
+        requireDocument()
+        backups = service
+        lastBackupRevision = null
+    }
+
+    @Synchronized fun backupStatus(): BackupStatus = BackupStatus(backups != null, lastBackupRevision)
+
+    /** Authenticates and copies the persisted revision without rewriting it or exporting credentials. */
+    @Synchronized fun backupNow(allowExpensive: Boolean = false): BackupResult {
+        requireDocument()
+        val service = checkNotNull(backups) { "Backups are not configured" }
+        return createBackup(service, allowExpensive)
+    }
+
+    private fun createBackup(service: BackupService, allowExpensive: Boolean): BackupResult =
+        service.create(path!!, credentials!!, stamp!!, allowExpensive).also { lastBackupRevision = stamp!!.revision }
 
     @Synchronized fun create(path: Path, vault: Vault, credentials: Credentials,
                              parameters: KdfParameters = KdfParameters(), allowExpensive: Boolean = false): SaveResult {
@@ -53,6 +74,14 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
 
     @Synchronized fun snapshot(): Vault = codec.duplicate(requireDocument())
 
+    @Synchronized fun kdfParameters(): KdfParameters { requireDocument(); return parameters }
+
+    /** Re-encrypts atomically with existing factors and the same backup policy as an ordinary save. */
+    @Synchronized fun changeKdf(parameters: KdfParameters): SaveResult {
+        parameters.validate()
+        return save(requireDocument(), parameters)
+    }
+
     /** Candidate stays caller-owned; session only adopts its independent copy after successful commit. */
     @Synchronized fun save(candidate: Vault, parameters: KdfParameters = this.parameters,
                            allowExpensive: Boolean = false): SaveResult {
@@ -75,7 +104,7 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
                        parameters: KdfParameters, allowExpensive: Boolean): SaveResult {
         currentState = SessionState.SAVING
         try {
-            backups?.create(path!!, credentials!!, stamp, allowExpensive)
+            backups?.let { createBackup(it, allowExpensive) }
             val result = store.save(path!!, next, nextCredentials, stamp, parameters, allowExpensive)
             document!!.close()
             document = next
@@ -109,6 +138,7 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
     @Synchronized fun lock() {
         document?.close(); credentials?.close()
         document = null; credentials = null; path = null; stamp = null; backups = null
+        lastBackupRevision = null
         currentState = SessionState.LOCKED
     }
     override fun close() = lock()
