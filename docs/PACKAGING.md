@@ -74,6 +74,14 @@ depends on this check. Native image/installer tasks additionally refuse executio
 outside GitHub Actions. Regular source builds and tests remain available locally.
 There is no Gradle switch to ignore the inventory check.
 
+Release packaging pins Temurin `25.0.4.1+1`, matching the retained JDK evidence.
+After all platform packages pass verification, publication also downloads the
+matching official JDK source archive, verifies its recorded SHA-256, and includes
+it with its provenance and the release checksums. A failed source download or
+checksum mismatch prevents publication. This makes the matching JDK source
+available beside the binaries; it does not approve the remaining native graphics
+components or replace their separate source and license review.
+
 A reviewed inventory for each packaging target belongs in
 `licenses/native/<os>-<arch>/` and must contain:
 

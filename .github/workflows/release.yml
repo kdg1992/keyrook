@@ -57,7 +57,7 @@ jobs:
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
-          java-version: '25'
+          java-version: '25.0.4.1+1'
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-provider: basic
@@ -167,6 +167,8 @@ jobs:
         with:
           ref: ${{ needs.release-please.outputs.tag_name }}
           persist-credentials: false
+      - name: Collect matching JDK source archive
+        run: node scripts/collect-jdk-source.mjs
       - name: Download and verify all platform outputs
         shell: bash
         env:
@@ -207,7 +209,12 @@ jobs:
           if (!['msi','dmg','deb','rpm'].every(extension => names.filter(name => name.endsWith(`.${extension}`)).length === 1)) {
             throw Error('Incomplete installer set');
           }
-          fs.writeFileSync('build/release/SHA256SUMS.txt', names.map(name => `${digest(`build/release/${name}`)}  ${name}\n`).join(''));
+          for (const name of fs.readdirSync('build/jdk-source')) {
+            if (name.endsWith('.partial') || fs.existsSync(`build/release/${name}`)) throw Error('Invalid source output');
+            fs.copyFileSync(`build/jdk-source/${name}`, `build/release/${name}`);
+          }
+          const releaseFiles = fs.readdirSync('build/release').sort();
+          fs.writeFileSync('build/release/SHA256SUMS.txt', releaseFiles.map(name => `${digest(`build/release/${name}`)}  ${name}\n`).join(''));
           NODE
       - name: Upload installers and unsigned installation instructions
         shell: bash
