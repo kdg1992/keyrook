@@ -1,8 +1,7 @@
 # Development readiness
 
-The 0.3.0 development branch extends the desktop application. It is not an
-approved installer release. Use synthetic data until platform acceptance and
-redistribution review are complete.
+Keyrook is still in development. Installers are published for reviewed
+platforms, but use synthetic data until platform acceptance is complete.
 
 | Area | Implemented and tested | Remaining boundary |
 | --- | --- | --- |
@@ -12,11 +11,11 @@ redistribution review are complete.
 | Transfer and recovery | Automatic/manual encrypted backups, retention, authenticated restore preview, new-file restoration, encrypted export and confirmed plaintext import/export | External format support is deliberately bounded; see the exact Bitwarden/KeePass limitations in [desktop usage](DESKTOP.md). Backup settings are session-local. |
 | Security | Inactivity/session-event locking, clipboard ownership/expiry, failed-attempt delay, password/expiry warnings and regression coverage | JVM erasure, OS event coverage and clipboard history have documented limits. Real desktop lock/sleep/resume acceptance remains pending on each supported system. |
 | Builds | Source checks on Windows, Linux and macOS, native-window lifecycle/event-routing checks, CodeQL, dependency graph/review, release automation and a packaged-runtime diagnostic | Packaged-launcher execution, installer/upgrade/uninstall tests and a successful manual packaging run are pending. Native-window tests inject controlled events; actual OS lock/sleep notifications still need acceptance. |
-| Redistribution | License gate, artifact hashes, source/notice provenance and separate evidence review | Exact native/JDK inventories are not approved. DNG SDK terms/provenance in the macOS and Linux binaries remain unresolved. Installer creation/publication stays blocked; a DNG-free replacement build or verified applicable license grant is needed. |
+| Redistribution | License gate, artifact hashes, source/notice provenance, reviewed native/JDK inventories for Windows x64, Linux x64 and macOS ARM64, DNG SDK notices and a GPL section 7 additional permission | Dependency or JDK changes require a renewed inventory review. Linux ARM64 and macOS x64 are not reviewed. |
 
 Source checks and the offscreen diagnostic do not certify real desktop session
 events or installation behavior. The packaged diagnostic exercises bundled
 cryptography, SSH and rendering only after the unchanged license gate permits
-building. See [packaging](PACKAGING.md) and [security](SECURITY.md) for the
+building; the reviewed inventories now permit that. See [packaging](PACKAGING.md) and [security](SECURITY.md) for the
 required evidence and limits. No complete-release claim follows from a green
 source build.

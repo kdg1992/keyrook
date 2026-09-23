@@ -20,9 +20,9 @@ the storage foundation.
 
 This is a development build; use test data. Inactivity locking, supported desktop
 session events, lock-on-focus-loss, failed-attempt delays and a local password/expiry
-warning list and authenticated PuTTY PPK 2/3 import are implemented. Native installers
-are configured but blocked pending complete redistribution notices and platform
-verification. See [desktop usage](docs/DESKTOP.md) and [packaging status](docs/PACKAGING.md).
+warning list and authenticated PuTTY PPK 2/3 import are implemented. Unsigned native
+installers for Windows x64, macOS ARM64 and Linux x64 are published with each
+release; platform installation tests are still pending. See [desktop usage](docs/DESKTOP.md) and [packaging status](docs/PACKAGING.md).
 
 ## Build and test
 
@@ -65,3 +65,8 @@ must be verified when the workflows are published.
 
 Copyright 2026 Kim Daniel Geisthardt. Keyrook is licensed under
 GNU GPL version 3 or later (`GPL-3.0-or-later`); see [LICENSE](LICENSE).
+An [additional permission](licenses/GPL-3.0-Additional-Permission.txt) under
+section 7 allows linking with the Skiko native libraries and their components.
+Native component notices are listed per platform in [licenses/native](licenses/native/).
+
+This product includes DNG technology under license by Adobe Systems Incorporated.

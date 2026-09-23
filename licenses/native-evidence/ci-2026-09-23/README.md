@@ -65,9 +65,10 @@ All candidates deliberately retain `reviewed=false`. These records close the
 missing CI runtime inventories, JDK notice capture and official-archive comparison,
 vendor SBOM capture, and source-archive checksum verification. They do not resolve
 the DNG license question, prove a complete inventory of all code statically linked
-into Skiko, or cover future packaging-tool additions. The existing upstream
-native notices remain partial evidence for that remaining review. No
-`licenses/native/<target>/inventory.properties` approval record is created here.
+into Skiko, or cover future packaging-tool additions. The approval records were
+created separately in [`licenses/native/`](../../native/) after the review of
+this evidence, together with the DNG SDK notices and a GPL section 7 additional
+permission.
 
 This collection covers Windows x64, Linux x64 and macOS ARM64 only. It does not
 approve Linux ARM64 or macOS x64 packaging. Future JDK patches, dependency changes

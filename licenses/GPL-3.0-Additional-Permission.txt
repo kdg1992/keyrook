@@ -1,0 +1,25 @@
+Keyrook additional permission under GNU GPL version 3, section 7
+================================================================
+
+Copyright 2026 Kim Daniel Geisthardt
+
+Keyrook is licensed under the GNU General Public License, version 3 or (at
+your option) any later version. In addition to that license, the following
+additional permission applies:
+
+If you modify this Program, or any covered work, by linking or combining it
+with the Skiko native runtime libraries published by JetBrains, including the
+Skia graphics engine and the third-party components statically linked into
+those libraries such as the Adobe DNG SDK and piex (or modified versions of
+those libraries), containing parts covered by the terms of the Apache License
+2.0, the BSD licenses, the DNG SDK License Agreement or other licenses listed
+in licenses/native/, the licensors of this Program grant you additional
+permission to convey the resulting work.
+
+This additional permission does not change the license of the Skiko native
+runtime libraries or of their components. Their own license terms, notices and
+attribution requirements continue to apply and are listed per packaging target
+in licenses/native/<os>-<arch>/NOTICE.txt.
+
+You may remove this additional permission from your copy of Keyrook or from
+modified versions of it, as described in section 7 of the GNU GPL version 3.

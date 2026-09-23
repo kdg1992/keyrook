@@ -33,40 +33,29 @@ checks pass, then approve and squash-merge it directly into current `main`.
 The normal Release workflow creates the tag and release at that merge commit.
 If recovery fails after creating a PR, inspect that PR and the restored pending
 label before retrying. Installer publication still requires the license review
-below; recovering a source release does not approve redistribution.
+below; recovering a source release does not change the reviewed inventory.
 
-## Current redistribution block
+## Reviewed redistribution inventory
 
-**Installer creation and publication are blocked until the exact native library
-and bundled JDK license inventory has been reviewed.**
+Reviewed inventories exist for Windows x64, Linux x64 and macOS ARM64 in
+[`licenses/native/`](../licenses/native/). They were created from the
+[collected CI evidence](../licenses/native-evidence/ci-2026-09-23/README.md):
+52 external runtime artifacts per platform and the complete JDK legal
+directories, matched against official Temurin archives, together with the
+verified Skiko artifacts and [native component provenance](../licenses/native-evidence/README.md).
+Each `NOTICE.txt` contains the full notices of the components linked into that
+platform's Skiko binary. Each `SOURCES.md` records the exact upstream revisions,
+binary digests, source availability and the review decision.
 
-The existing [desktop notices](../licenses/Desktop-Third-Party.md) identify the
-JVM libraries and Skiko/Skia, but do not contain a verified, complete inventory
-of the native libraries embedded in every platform binary. Building a working
-installer does not resolve this gap. No reviewed inventory is shipped yet.
+The Linux and macOS binaries contain the Adobe DNG SDK and piex. The DNG SDK
+License Agreement permits distribution and sublicensing for any purpose; its
+notices and the required attribution are included. Keyrook grants an additional
+permission under GPL version 3 section 7 for linking with the Skiko native
+libraries and their components; see
+[GPL-3.0-Additional-Permission.txt](../licenses/GPL-3.0-Additional-Permission.txt).
+The Windows x64 binary contains no DNG SDK markers.
 
-[Native component provenance](../licenses/native-evidence/README.md) now contains
-the pinned dependency notice texts, verified runtime-JAR checksums and Temurin
-source records. It also identifies special licensing conditions in the DNG SDK
-found in the macOS and Linux native binaries. Its compatibility has not been established;
-this requires resolution in addition to finishing the artifact/JDK inventory.
-
-[The collected CI evidence](../licenses/native-evidence/ci-2026-09-23/README.md)
-now includes 52 external runtime artifacts per platform and the complete JDK
-legal directories from Windows x64, Linux x64 and macOS ARM64, matched against
-official Temurin archives. Vendor SBOMs and verified source-archive provenance
-are retained too. These are evidence records, not approved native inventories;
-the DNG question and complete native component review remain open.
-
-A DNG-free replacement requires rebuilding both Skia and the matching Skiko
-native libraries, disabling `skia_use_dng_sdk` and `skia_use_piex` and removing
-the corresponding Skiko link inputs. Removing a single link declaration is
-insufficient: the Linux binary contains defined DNG functions despite their
-absence from that explicit link list. Replacement binaries need reproducible
-build provenance, actual link/component evidence and a fresh inventory review.
-Additional pinned Wuffs and FreeType notices are retained with the component
-evidence; neither those notices nor a rebuilt binary automatically approve
-redistribution.
+Linux ARM64 and macOS x64 are not reviewed and cannot be packaged.
 
 `:app:checkNativeDistributionLicenses` fails explicitly when an inventory is
 missing or no longer matches the resolved artifacts. Every jlink/jpackage task
@@ -79,8 +68,7 @@ After all platform packages pass verification, publication also downloads the
 matching official JDK source archive, verifies its recorded SHA-256, and includes
 it with its provenance and the release checksums. A failed source download or
 checksum mismatch prevents publication. This makes the matching JDK source
-available beside the binaries; it does not approve the remaining native graphics
-components or replace their separate source and license review.
+available beside the binaries.
 
 A reviewed inventory for each packaging target belongs in
 `licenses/native/<os>-<arch>/` and must contain:
@@ -148,9 +136,8 @@ platform-specific archive of those files accompanies each release.
 
 A manual `workflow_dispatch` tests and packages all three platforms without
 creating a tag or release. Successful verification outputs are retained for seven
-days. Currently the missing inventory stops the run before installer creation.
-The separate unreviewed evidence artifacts remain downloadable for the license
-review even when that packaging attempt fails at the approval gate.
+days. The separate evidence artifacts remain downloadable for a renewed license
+review even when a packaging attempt fails at the approval gate.
 The first complete manual run and installation smoke tests on all supported
 platforms must succeed before a release pull request is merged.
 
@@ -162,8 +149,7 @@ synthetic data, accesses no user vault and writes a fixed success marker to a
 new file. A failure, missing marker or two-minute timeout blocks publication.
 This verifies the application image; it does not replace installation, upgrade,
 uninstall or operating-system session-lock tests. The diagnostic is covered by
-ordinary source tests, but execution from each packaged launcher remains pending
-until the license gate permits packaging.
+ordinary source tests and runs from each packaged launcher before publication.
 
 On `main` pushes, release-please maintains the version/changelog pull request.
 When it creates a release, the same workflow builds the installers. Build jobs
