@@ -41,8 +41,13 @@ class UnlockBackoff(private val nanoTime: () -> Long = System::nanoTime) {
 
 internal class InactivityDeadline(private val nanoTime: () -> Long = System::nanoTime) {
     private var lastActivity = nanoTime()
-    fun activity() { lastActivity = nanoTime() }
-    fun expired(timeoutMinutes: Int): Boolean {
+    @Synchronized fun activity() { lastActivity = nanoTime() }
+    @Synchronized fun activityBeforeExpiry(timeoutMinutes: Int): Boolean {
+        if (expired(timeoutMinutes)) return false
+        activity()
+        return true
+    }
+    @Synchronized fun expired(timeoutMinutes: Int): Boolean {
         require(timeoutMinutes in 1..30)
         return nanoTime() - lastActivity >= timeoutMinutes * 60_000_000_000L
     }

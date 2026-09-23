@@ -20,7 +20,7 @@ internal class DesktopLockMonitor(
     private val lock: () -> Unit,
     private val deadline: InactivityDeadline,
 ) : AutoCloseable {
-    private var closed = false
+    @Volatile private var closed = false
     private val toolkit = Toolkit.getDefaultToolkit()
     private val desktop = if (Desktop.isDesktopSupported()) Desktop.getDesktop() else null
     private fun requestLock() {
@@ -28,8 +28,8 @@ internal class DesktopLockMonitor(
         else SwingUtilities.invokeLater { if (!closed && active()) lock() }
     }
     private val events = AWTEventListener { event ->
-        when (event) {
-            is InputEvent -> deadline.activity()
+        if (!closed) when (event) {
+            is InputEvent -> handleDesktopActivity(active(), timeoutMinutes(), deadline, ::requestLock)
             is WindowEvent -> if (event.id == WindowEvent.WINDOW_ICONIFIED || (event.id == WindowEvent.WINDOW_DEACTIVATED &&
                 // Swing's null-owner file choosers have a shared JVM owner, not the Compose frame.
                 event.oppositeWindow !in Window.getWindows().toSet())) requestLock()
@@ -68,4 +68,11 @@ internal class DesktopLockMonitor(
         toolkit.removeAWTEventListener(events)
         registered.forEach { desktop?.removeAppEventListener(it) }
     }
+}
+
+/** A delayed event loop must not let the first key or mouse event revive an expired session. */
+internal fun handleDesktopActivity(active: Boolean, timeoutMinutes: Int, deadline: InactivityDeadline, lock: () -> Unit) {
+    if (active) {
+        if (!deadline.activityBeforeExpiry(timeoutMinutes)) lock()
+    } else deadline.activity()
 }
