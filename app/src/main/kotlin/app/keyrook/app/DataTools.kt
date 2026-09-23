@@ -115,15 +115,7 @@ private fun importData(controller: VaultController) {
             "Bitwarden JSON" -> transfer.importBitwarden(bytes)
             "KeePass XML" -> transfer.importKeePassXml(bytes)
             else -> {
-                val columns = onEdt {
-                    JOptionPane.showInputDialog(null, "Spaltennamen für Titel, URL, Benutzername, Passwort, Notizen (Komma getrennt).\nFür Keyrook-CSV leer lassen; optionale Spalten dürfen leer sein.", "Title,URL,UserName,Password,Notes")
-                } ?: return
-                val parts = columns.split(',').map { it.trim() }
-                val mapping = if (columns.isBlank()) null else {
-                    require(parts.size == 5 && parts[0].isNotBlank())
-                    CsvMapping(parts[0], parts[1].ifEmpty { null }, parts[2].ifEmpty { null }, parts[3].ifEmpty { null }, parts[4].ifEmpty { null })
-                }
-                transfer.importCsv(bytes, mapping)
+                importMappedCsv(bytes, selectMapping = { columns -> onEdt { askCsvMapping(columns) } }) ?: return
             }
         }
     } finally { bytes.fill(0) }
