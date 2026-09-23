@@ -3,7 +3,6 @@
   "packages": {
     ".": {
       "release-type": "simple",
-      "component": "keyrook",
       "include-component-in-tag": false,
       "include-v-in-tag": true,
       "bump-minor-pre-major": true,

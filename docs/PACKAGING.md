@@ -8,6 +8,33 @@ the target architecture. The application and package version both come from
 `version.txt`, including development versions such as `0.1.0`.
 See the [Compose native distribution documentation](https://kotlinlang.org/docs/multiplatform/compose-native-distribution.html).
 
+## Recovering an unpublished release
+
+Merge release-please pull requests directly into `main` using squash merge;
+do not first merge them into an integration branch. Release-please tags the
+release PR's merge commit. If its workflow files differ from current `main`,
+GitHub can reject creation with `Resource not accessible by integration` even
+when the job has `contents: write`. The normal Actions token cannot receive
+the additional workflow permission described in the
+[GitHub release API documentation](https://docs.github.com/en/rest/releases/releases#create-a-release).
+
+For an unpublished `0.x.y` version, run **Recover release pull request** on
+`main`, supplying the old release PR number. It checks the version and manifest,
+refuses an existing tag, release or replacement PR, removes the old PR's pending
+label, and invokes release-please to generate a replacement at the same version.
+It restores the old label if recovery fails. No tag or release is created by
+this recovery workflow, and it uses only `GITHUB_TOKEN`.
+The single root package uses the default release branch
+`release-please--branches--main`; recovery also accepts the previous
+`release-please--branches--main--components--keyrook` branch.
+
+Review the replacement's generated changelog and version files, ensure all CI
+checks pass, then approve and squash-merge it directly into current `main`.
+The normal Release workflow creates the tag and release at that merge commit.
+If recovery fails after creating a PR, inspect that PR and the restored pending
+label before retrying. Installer publication still requires the license review
+below; recovering a source release does not approve redistribution.
+
 ## Current redistribution block
 
 **Installer creation and publication are blocked until the exact native library
