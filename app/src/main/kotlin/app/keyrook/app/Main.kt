@@ -238,11 +238,10 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
                       onCreate: () -> Unit, onEdit: (Entry) -> Unit,
                       onDuplicate: (Entry) -> Unit, onTrash: (Entry) -> Unit) {
     var search by remember { mutableStateOf("") }
-    var trash by remember { mutableStateOf(false) }
-    var type by remember { mutableStateOf<String?>(null) }
-    var customer by remember { mutableStateOf<String?>(null) }
-    var tag by remember { mutableStateOf<String?>(null) }
-    var expiring by remember { mutableStateOf(false) }
+    var filters by remember { mutableStateOf(EntryListFilters()) }
+    val activeFilters = filters.normalized(vault)
+    val trash = activeFilters.trash
+    LaunchedEffect(activeFilters) { filters = activeFilters }
     var includeHidden by remember { mutableStateOf(false) }
     val matches = searchResults(vault, controller, search, includeHidden)
     val searchFocus = remember { FocusRequester() }
@@ -255,24 +254,39 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(search, { if (it.length <= 256) search = it }, label = { Text("Volltextsuche (bis 256 Zeichen)") }, modifier = Modifier.weight(1f).focusRequester(searchFocus), singleLine = true)
         Button(onClick = onCreate, enabled = !busy && !trash) { Text("Neuer Eintrag") }
-        TextButton(onClick = { trash = !trash }, enabled = !busy) { Text(if (trash) "Alle Einträge" else "Papierkorb") }
+        TextButton(onClick = { filters = activeFilters.copy(trash = !trash) }, enabled = !busy) { Text(if (trash) "Aktive Einträge" else "Papierkorb") }
     }
     Row {
         Checkbox(includeHidden, onCheckedChange = { includeHidden = it })
         Text("Verborgene Felder durchsuchen (Treffer bleiben maskiert)")
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Choice("Typ", type, EntryType.entries.map { it.name to it.label }) { type = it }
-        Choice("Kunde", customer, vault.customers.map { it.id to it.name }) { customer = it }
-        Choice("Tag", tag, vault.entries.flatMap { it.tags }.distinct().sorted().map { it to it }) { tag = it }
-        Checkbox(expiring, onCheckedChange = { expiring = it }); Text("Ablauf binnen 30 Tagen")
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Choice("Typ", activeFilters.type?.name, EntryType.entries.map { it.name to it.label }) {
+            filters = activeFilters.copy(type = it?.let(EntryType::valueOf))
+        }
+        Choice("Kunde", activeFilters.customerId, vault.customers.map { it.id to it.name }) {
+            filters = activeFilters.copy(customerId = it).normalized(vault)
+        }
+        Choice("Projekt", activeFilters.projectId, activeFilters.projects(vault).map { it.id to it.name }) {
+            filters = activeFilters.copy(projectId = it)
+        }
+        Choice("Tag", activeFilters.tag, vault.entries.flatMap { it.tags }.distinct().sorted().map { it to it }) {
+            filters = activeFilters.copy(tag = it)
+        }
     }
-    val entries = vault.entries.filter { (it.deletedAt != null) == trash &&
-        (type == null || it.data.type().name == type) && (customer == null || it.customerId == customer) &&
-        (tag == null || tag in it.tags) && (!expiring || it.expiresOn?.let { date ->
-            java.time.LocalDate.parse(date) <= java.time.LocalDate.now().plusDays(30)
-        } == true) &&
-        it.id in matches.orEmpty() }
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Choice("Ablauf", activeFilters.expiry.name, ExpiryFilter.entries.map { it.name to it.label }, nullable = false) {
+            filters = activeFilters.copy(expiry = ExpiryFilter.valueOf(requireNotNull(it)))
+        }
+        Choice("Sortierung", activeFilters.sort.name, EntrySort.entries.map { it.name to it.label }, nullable = false) {
+            filters = activeFilters.copy(sort = EntrySort.valueOf(requireNotNull(it)))
+        }
+        TextButton(onClick = { filters = EntryListFilters(); search = ""; includeHidden = false }) { Text("Filter zurücksetzen") }
+    }
+    val today by produceState(java.time.LocalDate.now()) {
+        while (true) { kotlinx.coroutines.delay(60_000); value = java.time.LocalDate.now() }
+    }
+    val entries = activeFilters.select(vault, matches.orEmpty(), today)
     if (matches == null) Text("Suche läuft …")
     else if (entries.isEmpty()) Text("Keine passenden Einträge.")
     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
