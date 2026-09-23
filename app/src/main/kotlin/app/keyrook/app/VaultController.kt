@@ -91,6 +91,55 @@ class VaultController(internal val session: VaultSession = VaultSession(),
         return session.snapshot()
     }
 
+    fun renameCustomer(id: String, name: String): Vault = updateOrganization { current ->
+        require(name.isNotBlank() && name.length <= 4096)
+        require(current.customers.any { it.id == id })
+        current.copy(customers = current.customers.map { if (it.id == id) it.copy(name = name.trim()) else it })
+    }
+
+    fun updateProject(id: String, name: String, customerId: String?): Vault = updateOrganization { current ->
+        require(name.isNotBlank() && name.length <= 4096)
+        val project = current.projects.single { it.id == id }
+        require(customerId == null || current.customers.any { it.id == customerId })
+        val now = java.time.Instant.now().toString()
+        current.copy(
+            projects = current.projects.map { if (it.id == id) it.copy(name = name.trim(), customerId = customerId) else it },
+            // Moving a project carries its entries, including trash, to its new customer atomically.
+            // Removing only the project's customer preserves existing entry assignments.
+            entries = current.entries.map {
+                if (project.customerId != customerId && customerId != null && it.projectId == id && it.customerId != customerId)
+                    it.copy(customerId = customerId,
+                        modifiedAt = maxOf(java.time.Instant.parse(now), java.time.Instant.parse(it.modifiedAt)).toString()) else it
+            },
+        )
+    }
+
+    fun removeCustomer(id: String, confirmed: Boolean): Vault = updateOrganization { current ->
+        require(confirmed)
+        require(current.customers.any { it.id == id })
+        require(current.projects.none { it.customerId == id } && current.entries.none { it.customerId == id }) {
+            "Customer is still in use"
+        }
+        current.copy(customers = current.customers.filterNot { it.id == id })
+    }
+
+    fun removeProject(id: String, confirmed: Boolean): Vault = updateOrganization { current ->
+        require(confirmed)
+        require(current.projects.any { it.id == id })
+        require(current.entries.none { it.projectId == id }) { "Project is still in use" }
+        current.copy(projects = current.projects.filterNot { it.id == id })
+    }
+
+    private fun updateOrganization(change: (Vault) -> Vault): Vault {
+        ensureOperationCurrent()
+        session.snapshot().use { current ->
+            val candidate = change(current)
+            candidate.validate()
+            session.save(candidate)
+        }
+        return session.snapshot()
+    }
+
     fun lock() = session.lock()
     override fun close() = session.close()
 }
