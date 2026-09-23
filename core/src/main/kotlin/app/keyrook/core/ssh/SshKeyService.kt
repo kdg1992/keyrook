@@ -73,13 +73,20 @@ class SshKeyService {
         return try { encode(pair, passphrase, comment) } finally { destroy(pair) }
     }
 
-    /** Imports one OpenSSH/PEM key and re-encrypts it with the supplied output passphrase. */
+    /** Imports one OpenSSH/PEM/PPK key and re-encrypts it with the supplied output passphrase. */
     fun importKey(encoded: Secret, passphrase: Secret, outputPassphrase: Secret, comment: String = ""): SshKeyMaterial {
         validateOutput(outputPassphrase, comment)
         return encoded.useChars { chars ->
             require(chars.size in 32..65536) { "SSH key must contain at most 64 KiB of text" }
+            passphrase.useChars { require(it.size <= 1024) }
             // MINA needs immutable strings internally; never include its exceptions in UI or logs.
             try {
+                val ppkPrefix = "PuTTY-User-Key-File-"
+                if (chars.size >= ppkPrefix.length && ppkPrefix.indices.all { chars[it] == ppkPrefix[it] }) {
+                    val pair = PpkKeyReader.read(chars, passphrase)
+                    return@useChars try { validatePair(pair); encode(pair, outputPassphrase, comment) }
+                    finally { destroy(pair) }
+                }
                 preflight(chars)
                 passphrase.useChars { password ->
                     require(password.size <= 1024)
@@ -98,7 +105,7 @@ class SshKeyService {
                     } finally { pairs.forEach(::destroy) }
                 }
             } catch (_: Exception) {
-                throw IllegalArgumentException("SSH import failed: unsupported or damaged key, excessive derivation cost, or incorrect passphrase. Use OpenSSH or PEM; PuTTY PPK requires conversion to OpenSSH.")
+                throw IllegalArgumentException("SSH import failed: unsupported or damaged key, excessive derivation cost, or incorrect passphrase. Use OpenSSH, PEM, or PPK version 2 or 3.")
             }
         }
     }
@@ -219,8 +226,7 @@ class SshKeyService {
                 require(kdf.keyLength == null || kdf.keyLength.toInt() in 16..64 && kdf.keyLength.bitLength() <= 7)
             } finally { bytes.fill(0) }
         }
-        // Bound OpenSSH work independently of MINA's process-wide configuration. PPK is rejected:
-        // its current parser does not verify Private-MAC. No partial authenticity check substitutes for that MAC.
+        // Bound OpenSSH work independently of MINA's process-wide configuration.
     }
 
     private fun destroy(pair: KeyPair) {
