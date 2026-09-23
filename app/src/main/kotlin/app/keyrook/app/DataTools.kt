@@ -38,6 +38,27 @@ internal fun DataTools(controller: VaultController, busy: Boolean, operation: ((
                 controller.session.snapshot()
             }
         }) { Text("Backup-Ordner") }
+        TextButton(enabled = !busy, onClick = { operation {
+            inform(backupStatusText(controller))
+            controller.session.snapshot()
+        } }) { Text("Backupstatus") }
+        TextButton(enabled = !busy, onClick = { operation {
+            ensureOperationCurrent()
+            if (!controller.session.backupStatus().configured) inform(backupStatusText(controller))
+            else {
+                val removed = createManualBackup(controller)
+                inform("Der aktuell gespeicherte Tresor wurde verschlüsselt gesichert.\nDie Tresorrevision bleibt unverändert. $removed ältere Sicherungen wurden nach den Aufbewahrungsregeln entfernt.")
+            }
+            controller.session.snapshot()
+        } }) { Text("Sicherung jetzt") }
+        TextButton(enabled = !busy, onClick = { operation {
+            ensureOperationCurrent()
+            if (!controller.session.backupStatus().configured) inform(backupStatusText(controller))
+            else if (disableBackups(controller, confirm("Automatische und manuelle Backups für diese Sitzung deaktivieren?\nVorhandene Sicherungen bleiben erhalten. Zum erneuten Aktivieren einen Backup-Ordner auswählen."))) {
+                inform("Backups für diese Sitzung deaktiviert. Vorhandene Sicherungen bleiben erhalten.")
+            }
+            controller.session.snapshot()
+        } }) { Text("Backups deaktivieren") }
         TextButton(enabled = !busy, onClick = { operation { restoreBackup(); controller.session.snapshot() } }) { Text("Backup wiederherstellen") }
         TextButton(enabled = !busy, onClick = { operation {
             selectPath(save = true)?.let { target ->
