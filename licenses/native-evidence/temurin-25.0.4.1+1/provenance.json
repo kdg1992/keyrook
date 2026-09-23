@@ -1,27 +1,29 @@
 {
-    "status":  "upstream-source-provenance-not-a-bundled-runtime-review",
-    "metadataSource":  "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.4.1%2B1/OpenJDK25U-jdk-sources_25.0.4.1_1.tar.gz.json",
-    "release":  "jdk-25.0.4.1+1",
-    "sourceArchive":  "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.4.1%2B1/OpenJDK25U-jdk-sources_25.0.4.1_1.tar.gz",
-    "sourceArchiveSha256":  "cb9e50d2eb3de72ffd28466d7c511b4039b4bc4bd8f0d276d1e4cf81e30fdf09",
-    "sourceArchiveDownloaded":  false,
-    "sourceCommit":  "https://github.com/adoptium/jdk25u/commit/520406d871955300957ef01e406ac2acd0f9b75c",
-    "buildCommit":  "https://github.com/adoptium/temurin-build/commit/e6ba7dec3d07654074559310376a3ae89da5f4ac",
-    "files":  [
-                  {
-                      "file":  "LICENSE.txt",
-                      "source":  "https://raw.githubusercontent.com/adoptium/jdk25u/520406d871955300957ef01e406ac2acd0f9b75c/LICENSE",
-                      "sha256":  "4b9abebc4338048a7c2dc184e9f800deb349366bdf28eb23c2677a77b4c87726"
-                  },
-                  {
-                      "file":  "ASSEMBLY_EXCEPTION.txt",
-                      "source":  "https://raw.githubusercontent.com/adoptium/jdk25u/520406d871955300957ef01e406ac2acd0f9b75c/ASSEMBLY_EXCEPTION",
-                      "sha256":  "75292f03bf23d3db7c985aecc191029b93883200721ed23ed34a2e601463df33"
-                  },
-                  {
-                      "file":  "ADDITIONAL_LICENSE_INFO.txt",
-                      "source":  "https://raw.githubusercontent.com/adoptium/jdk25u/520406d871955300957ef01e406ac2acd0f9b75c/ADDITIONAL_LICENSE_INFO",
-                      "sha256":  "a69bce275ba7a3570af6579cb0f55682cd75fedfcd49e0e8e9022270c447c916"
-                  }
-              ]
+  "status": "source-and-ci-runtime-evidence-not-a-complete-redistribution-review",
+  "metadataSource": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.4.1%2B1/OpenJDK25U-jdk-sources_25.0.4.1_1.tar.gz.json",
+  "release": "jdk-25.0.4.1+1",
+  "sourceArchive": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.4.1%2B1/OpenJDK25U-jdk-sources_25.0.4.1_1.tar.gz",
+  "sourceArchiveSha256": "cb9e50d2eb3de72ffd28466d7c511b4039b4bc4bd8f0d276d1e4cf81e30fdf09",
+  "sourceArchiveDownloaded": true,
+  "sourceCommit": "https://github.com/adoptium/jdk25u/commit/520406d871955300957ef01e406ac2acd0f9b75c",
+  "buildCommit": "https://github.com/adoptium/temurin-build/commit/e6ba7dec3d07654074559310376a3ae89da5f4ac",
+  "files": [
+    {
+      "file": "LICENSE.txt",
+      "source": "https://raw.githubusercontent.com/adoptium/jdk25u/520406d871955300957ef01e406ac2acd0f9b75c/LICENSE",
+      "sha256": "4b9abebc4338048a7c2dc184e9f800deb349366bdf28eb23c2677a77b4c87726"
+    },
+    {
+      "file": "ASSEMBLY_EXCEPTION.txt",
+      "source": "https://raw.githubusercontent.com/adoptium/jdk25u/520406d871955300957ef01e406ac2acd0f9b75c/ASSEMBLY_EXCEPTION",
+      "sha256": "75292f03bf23d3db7c985aecc191029b93883200721ed23ed34a2e601463df33"
+    },
+    {
+      "file": "ADDITIONAL_LICENSE_INFO.txt",
+      "source": "https://raw.githubusercontent.com/adoptium/jdk25u/520406d871955300957ef01e406ac2acd0f9b75c/ADDITIONAL_LICENSE_INFO",
+      "sha256": "a69bce275ba7a3570af6579cb0f55682cd75fedfcd49e0e8e9022270c447c916"
+    }
+  ],
+  "sourceArchiveHashVerified": true,
+  "rootNoticesMatchSourceArchive": true
 }

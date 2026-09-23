@@ -1,0 +1,96 @@
+{
+  "status": "verified-evidence-not-redistribution-approval",
+  "runUrl": "https://github.com/kdg1992/keyrook/actions/runs/35887498871",
+  "commit": "de0ff01748375ee7248fa30326a0f1992384b5ca",
+  "platforms": [
+    {
+      "target": "windows-x64",
+      "runtimeArtifacts": 52,
+      "jdkVersion": "25.0.4.1+1-LTS",
+      "jdkLegalFiles": 253,
+      "jdkLegalSha256": "dd182ea73c5e9fc7228dd9f8e3e60389b330ecc2ec7a4d836461b9b81e5f81a8",
+      "artifactId": 10763685797,
+      "artifactSha256": "sha256:0697693f744916dbb8a2456748ff49eb6b980ccbb35ac26e0d4ec1774c3ff1c2",
+      "jdkArchive": {
+        "url": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.4.1%2B1/OpenJDK25U-jdk_x64_windows_hotspot_25.0.4.1_1.zip",
+        "sha256": "00c847d804f4a78e9f04f2683faf14fed898535b177b7fc704486cb0284e9283",
+        "legalFilesMatch": true
+      },
+      "sbom": {
+        "file": "../temurin-25.0.4.1+1/OpenJDK25U-sbom_x64_windows_hotspot_25.0.4.1_1.json",
+        "sha256": "99f7b367375eb073fb18586dcc08a3810bcb3ddcd840a4451f3efff9dc691c69",
+        "metadataFile": "../temurin-25.0.4.1+1/OpenJDK25U-sbom_x64_windows_hotspot_25.0.4.1_1-metadata.json",
+        "metadataSha256": "632344362169b63bdc1f83f8f9747f2742868587f039fddeb21fcf219a8e61d5"
+      }
+    },
+    {
+      "target": "linux-x64",
+      "runtimeArtifacts": 52,
+      "jdkVersion": "25.0.4.1+1-LTS",
+      "jdkLegalFiles": 254,
+      "jdkLegalSha256": "9eba21c82a3dc3e4cf47ff555e398221afd2721939d9dcfe5838a11679304a8b",
+      "artifactId": 10763960820,
+      "artifactSha256": "sha256:f3b7aeb1c0b18c6b47ea19ffa2eacf19b58941a1b3946021fdad6a1891534675",
+      "jdkArchive": {
+        "url": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.4.1%2B1/OpenJDK25U-jdk_x64_linux_hotspot_25.0.4.1_1.tar.gz",
+        "sha256": "dbb698396d478e7fa2b1e50f4103324b2a99b90569ee27c33f2261f9215cf41e",
+        "legalFilesMatch": true
+      },
+      "sbom": {
+        "file": "../temurin-25.0.4.1+1/OpenJDK25U-sbom_x64_linux_hotspot_25.0.4.1_1.json",
+        "sha256": "d8b6eab492d2bdf98625d74d5f9f97587cf74512255a86ae328305134229b938",
+        "metadataFile": "../temurin-25.0.4.1+1/OpenJDK25U-sbom_x64_linux_hotspot_25.0.4.1_1-metadata.json",
+        "metadataSha256": "94d3ad6814124028f946d95fdf336a578192936e332b028f78c987c789630ee1"
+      }
+    },
+    {
+      "target": "macos-arm64",
+      "runtimeArtifacts": 52,
+      "jdkVersion": "25.0.4.1+1-LTS",
+      "jdkLegalFiles": 252,
+      "jdkLegalSha256": "9188e404dd6f50775105e9d84550915c189c3d4c3791de455de48765d4c50599",
+      "artifactId": 10763920693,
+      "artifactSha256": "sha256:3a311c4b5015af9ab6fb44edc7d8a7356467d6e3e0f6a31dd1d79b2ea16918af",
+      "jdkArchive": {
+        "url": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.4.1%2B1/OpenJDK25U-jdk_aarch64_mac_hotspot_25.0.4.1_1.tar.gz",
+        "sha256": "61979887f7506a24a57439ff99adb8b3a7fc89977d9cfe3b8984f58a981b7b9d",
+        "legalFilesMatch": true
+      },
+      "sbom": {
+        "file": "../temurin-25.0.4.1+1/OpenJDK25U-sbom_aarch64_mac_hotspot_25.0.4.1_1.json",
+        "sha256": "504ecf4afa2917776130910bd66ab53367b2fbcbb1f19ce60f354ca210634a32",
+        "metadataFile": "../temurin-25.0.4.1+1/OpenJDK25U-sbom_aarch64_mac_hotspot_25.0.4.1_1-metadata.json",
+        "metadataSha256": "3e8da983f6a8132b61cbe0f9ae80b9a9c8351e97175bdb483c4ec042c8639c84"
+      }
+    }
+  ],
+  "uniqueJdkNoticeFiles": 54,
+  "macosDngBinaryEvidence": [
+    {
+      "file": "libskiko-macos-arm64.dylib",
+      "sha256": "4b22275236c861e1288750f3022a5851440f1ba7dec227e6d428b5ee0899175a",
+      "matchingStrings": 1420,
+      "samples": [
+        "Overflow in dng_rect constructor",
+        "dng_priority_manager::fMutex",
+        "dng_jpeg_image_find_digest_task",
+        "dng_negative::DefloatStage2",
+        "dng_read_tiles_task",
+        "dng_ref_counted_block"
+      ]
+    },
+    {
+      "file": "libskiko-macos-x64.dylib",
+      "sha256": "d0bc2312ebe44602a2618fc0d87b8a775519be7d53989421a170e5a5cff9e3dd",
+      "matchingStrings": 1424,
+      "samples": [
+        "Overflow in dng_rect constructor",
+        "dng_priority_manager::fMutex",
+        "dng_jpeg_image_find_digest_task",
+        "dng_negative::DefloatStage2",
+        "dng_read_tiles_task",
+        "dng_ref_counted_block"
+      ]
+    }
+  ]
+}

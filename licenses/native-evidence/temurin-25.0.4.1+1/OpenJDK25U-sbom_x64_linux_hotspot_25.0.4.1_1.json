@@ -1,0 +1,922 @@
+{
+  "bomFormat" : "CycloneDX",
+  "specVersion" : "1.6",
+  "serialNumber" : "urn:uuid:4064860e-fa17-4bfb-92c1-60804940b035",
+  "version" : 1,
+  "metadata" : {
+    "timestamp" : "2026-08-18T20:56:38Z",
+    "tools" : {
+      "components" : [
+        {
+          "type" : "application",
+          "name" : "GLIBC",
+          "version" : "2.17"
+        },
+        {
+          "type" : "application",
+          "name" : "GCC",
+          "version" : "14.2.0"
+        },
+        {
+          "type" : "application",
+          "name" : "BOOTJDK",
+          "version" : "24.0.2+12"
+        },
+        {
+          "type" : "application",
+          "name" : "ALSA",
+          "version" : "1.1.8"
+        },
+        {
+          "type" : "application",
+          "name" : "FreeType",
+          "version" : "2.14.3"
+        },
+        {
+          "type" : "application",
+          "name" : "Docker image SHA1",
+          "version" : "adoptopenjdk/centos7_build_image@sha256:b72393954092d1206c2a7221e46fa3e07ad028914aaec7f8a6bcedb2810cfe4e"
+        }
+      ],
+      "services" : [ ]
+    },
+    "authors" : [
+      {
+        "name" : "Adoptium Temurin"
+      }
+    ],
+    "component" : {
+      "type" : "framework",
+      "name" : "Eclipse Temurin",
+      "version" : "25.0.4.1+1-LTS",
+      "description" : "Eclipse Temurin components"
+    },
+    "manufacture" : {
+      "name" : "Eclipse Foundation",
+      "url" : [
+        "https://www.eclipse.org/"
+      ]
+    },
+    "properties" : [
+      {
+        "name" : "OS version",
+        "value" : "CentOS Linux 7 (Kernel: 6.8.0-1064-azure)"
+      },
+      {
+        "name" : "OS architecture",
+        "value" : "x86_64"
+      },
+      {
+        "name" : "Use Docker for build",
+        "value" : "true"
+      }
+    ]
+  },
+  "components" : [
+    {
+      "type" : "framework",
+      "author" : "Eclipse Temurin",
+      "publisher" : "Eclipse Temurin",
+      "group" : "adoptium.net",
+      "name" : "JDK Component",
+      "version" : "25.0.4.1+1-LTS",
+      "description" : "Temurin JDK Component",
+      "hashes" : [
+        {
+          "alg" : "SHA-256",
+          "content" : "dbb698396d478e7fa2b1e50f4103324b2a99b90569ee27c33f2261f9215cf41e"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "Filename",
+          "value" : "OpenJDK25U-jdk_x64_linux_hotspot_25.0.4.1_1.tar.gz"
+        },
+        {
+          "name" : "JDK Variant",
+          "value" : "Temurin"
+        },
+        {
+          "name" : "SCM Ref",
+          "value" : "jdk-25.0.4.1+1_adopt"
+        },
+        {
+          "name" : "OpenJDK Source Commit",
+          "value" : "https://github.com/adoptium/jdk25u/commit/520406d871955300957ef01e406ac2acd0f9b75c"
+        },
+        {
+          "name" : "Temurin Build Ref",
+          "value" : "https://github.com/adoptium/temurin-build/commit/e6ba7dec3d07654074559310376a3ae89da5f4ac"
+        },
+        {
+          "name" : "Builder Job Reference",
+          "value" : "https://ci.adoptium.net/job/build-scripts/job/jobs/job/release/job/jobs/job/jdk25u/job/jdk25u-release-linux-x64-temurin/15/"
+        },
+        {
+          "name" : "Builder Name",
+          "value" : "build-azure-linux-x64-5858b5"
+        },
+        {
+          "name" : "Build Timestamp",
+          "value" : "2026-08-18 00:00:00"
+        },
+        {
+          "name" : "Build Workspace Directory",
+          "value" : "/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src"
+        },
+        {
+          "name" : "Build LC_ALL",
+          "value" : "C"
+        },
+        {
+          "name" : "Build Tools Summary",
+          "value" : "Tools summary: * Boot JDK: openjdk version \"24.0.2\" 2025-07-15 OpenJDK Runtime Environment Temurin-24.0.2+12 (build 24.0.2+12) OpenJDK 64-Bit Server VM Temurin-24.0.2+12 (build 24.0.2+12, mixed mode, sharing) (at /usr/lib/jvm/jdk24) * Toolchain: gcc (GNU Compiler Collection) * Devkit: gcc-14.2.0 - Centos7.9.2009 (/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01) * C Compiler: Version 14.2.0 (at /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc) * C++ Compiler: Version 14.2.0 (at /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++) Build performance summary: * Build jobs: 4 * Memory limit: 15988 MB The following warnings were produced. Repeated here for convenience: WARNING: No UTF-8 locale found. This is not supported. Proceeding with the C locale, but the build might fail unexpectedly. WARNING: pandoc is version 3.8.2, not the recommended version 2.19.2"
+        },
+        {
+          "name" : "Build Config",
+          "value" : "{ \"ADOPTIUM_DEVKIT_LOCATION\" : \"/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01\", \"ADOPT_PATCHES\" : \"true\", \"ALSA\" : \"true\", \"ASSEMBLE_EXPLODED_IMAGE\" : \"false\", \"OPENJDK_BUILD_REPO_BRANCH\" : \"master\", \"OPENJDK_BUILD_REPO_URI\" : \"https://github.com/adoptium/temurin-build.git\", \"BRANCH\" : \"dev\", \"BUILD_FULL_NAME\" : \"linux-x86_64--server-release\", \"BUILD_REPRODUCIBLE_DATE\" : \"\", \"BUILD_TIMESTAMP\" : \"2026-08-18 00:00:00\", \"BUILD_VARIANT\" : \"temurin\", \"CONTAINER_AS_ROOT\" : \"\", \"CLEAN_DOCKER_BUILD\" : \"false\", \"CLEAN_GIT_REPO\" : \"true\", \"CLEAN_LIBS\" : \"true\", \"CONTAINER_COMMAND\" : \"false\", \"CONTAINER_NAME\" : \"openjdk_container\", \"CONTAINER_IMAGE\" : \"ubuntu:18.04\", \"COPY_MACOSX_FREE_FONT_LIB_FOR_JDK_FLAG\" : \"false\", \"COPY_MACOSX_FREE_FONT_LIB_FOR_JRE_FLAG\" : \"false\", \"CREATE_DEBUG_IMAGE\" : \"true\", \"CREATE_JRE_IMAGE\" : \"true\", \"CREATE_SBOM\" : \"true\", \"CREATE_SOURCE_ARCHIVE\" : \"true\", \"CUSTOM_CACERTS\" : \"true\", \"CROSSCOMPILE\" : \"false\", \"DEBUG_DOCKER\" : \"false\", \"DEBUG_IMAGE_PATH\" : \"debug-image\", \"DISABLE_ADOPT_BRANCH_SAFETY\" : \"false\", \"DOCKER_FILE_PATH\" : \"\", \"DOCKER_SOURCE_VOLUME_NAME\" : \"openjdk-source-volume-jdk25u-temurin\", \"ENABLE_SBOM_STRACE\" : \"true\", \"FREETYPE\" : \"true\", \"FREETYPE_DIRECTORY\" : \"\", \"FREETYPE_FONT_BUILD_TYPE_PARAM\" : \"\", \"FREETYPE_FONT_VERSION\" : \"86bc8a95056c97a810986434a3f268cbe67f2902\", \"GRADLE_USER_HOME_DIR\" : \"\", \"KEEP_CONTAINER\" : \"false\", \"JDK_BOOT_DIR\" : \"/usr/lib/jvm/jdk24\", \"JDK_PATH\" : \"jdk\", \"JRE_PATH\" : \"jre\", \"TEST_IMAGE_PATH\" : \"test\", \"STATIC_LIBS_IMAGE_PATH\" : \"static-libs-graal\", \"JMODS_IMAGE_PATH\" : \"jmods\", \"JVM_VARIANT\" : \"server\", \"LOCAL_DEPENDENCY_CACHE_DIR\" : \"\", \"MACOSX_CODESIGN_IDENTITY\" : \"\", \"MAKE_ARGS_FOR_ANY_PLATFORM\" : \"product-images legacy-jre-image\", \"MAKE_EXPLODED\" : \"false\", \"MAKE_COMMAND_NAME\" : \"make\", \"NUM_PROCESSORS\" : \"1\", \"OPENJDK_BUILD_NUMBER\" : \"\", \"OPENJDK_CORE_VERSION\" : \"jdk25\", \"OPENJDK_FEATURE_NUMBER\" : \"25\", \"OPENJDK_FOREST_NAME\" : \"jdk25u\", \"OPENJDK_LOCAL_SOURCE_ARCHIVE\" : \"false\", \"OPENJDK_LOCAL_SOURCE_ARCHIVE_ABSPATH\" : \"\", \"OPENJDK_SOURCE_DIR\" : \"src\", \"OPENJDK_UPDATE_VERSION\" : \"\", \"OS_KERNEL_NAME\" : \"linux\", \"OS_FULL_VERSION\" : \"CentOS Linux 7 (Kernel: 6.8.0-1064-azure)\", \"OS_ARCHITECTURE\" : \"x86_64\", \"PATCHES\" : \"\", \"RELEASE\" : \"true\", \"REPOSITORY\" : \"https://github.com/adoptium/jdk25u\", \"REUSE_CONTAINER\" : \"true\", \"SHALLOW_CLONE_OPTION\" : \"\", \"SIGN\" : \"false\", \"TAG\" : \"jdk-25.0.4.1+1_adopt\", \"TARGET_DIR\" : \"target/\", \"TARGET_FILE_NAME\" : \"OpenJDK25U-jdk_x64_linux_hotspot_25.0.4.1_1.tar.gz\", \"TMP_CONTAINER_NAME\" : \"openjdk-copy-src\", \"TMP_SPACE_BUILD\" : \"false\", \"USE_ADOPTIUM_DEVKIT\" : \"gcc-14.2.0-Centos7.9.2009-b01\", \"USE_JEP319_CERTS\" : \"true\", \"USE_SSH\" : \"false\", \"USER_DEVKIT_LOCATION\" : \"\", \"USER_SUPPLIED_CONFIGURE_ARGS\" : \" --disable-warnings-as-errors --disable-precompiled-headers --enable-dtrace\", \"USER_SUPPLIED_MAKE_ARGS\" : \"\", \"USER_OPENJDK_BUILD_ROOT_DIRECTORY\" : \"\", \"VENDOR\" : \"Eclipse Adoptium\", \"VENDOR_URL\" : \"https://adoptium.net/\", \"VENDOR_BUG_URL\" : \"https://github.com/adoptium/adoptium-support/issues\", \"VENDOR_VM_BUG_URL\" : \"https://github.com/adoptium/adoptium-support/issues\", \"WORKING_DIR\" : \"./build/\", \"WORKSPACE_DIR\" : \"/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace\", \"Data Source\" : \"BUILD_CONFIG hashmap\"}"
+        },
+        {
+          "name" : "full_version_output",
+          "value" : "openjdk version \"25.0.4.1\" 2026-08-18 LTS OpenJDK Runtime Environment Temurin-25.0.4.1+1 (build 25.0.4.1+1-LTS) OpenJDK 64-Bit Server VM Temurin-25.0.4.1+1 (build 25.0.4.1+1-LTS, mixed mode, sharing)"
+        },
+        {
+          "name" : "makejdk_any_platform_args",
+          "value" : "--clean-git-repo --jdk-boot-dir /usr/lib/jvm/jdk24 --configure-args \" --disable-warnings-as-errors --disable-precompiled-headers --enable-dtrace\" --target-file-name OpenJDK25U-jdk_x64_linux_hotspot_25.0.4.1_1.tar.gz --release --clean-libs --tag jdk-25.0.4.1+1_adopt --create-source-archive --create-jre-image --create-sbom --enable-sbom-strace --use-adoptium-devkit gcc-14.2.0-Centos7.9.2009-b01 --use-jep319-certs --create-debug-image --build-variant temurin jdk25u"
+        },
+        {
+          "name" : "make_command_args",
+          "value" : "mkdir /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/./build//straceOutput && strace -o /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/./build//straceOutput/outputFile -ff -e trace=open,openat,execve make product-images legacy-jre-image test-image static-libs-graal-image"
+        },
+        {
+          "name" : "configure_args",
+          "value" : "--with-vendor-name=\"Eclipse Adoptium\" --with-vendor-url=https://adoptium.net/ --with-vendor-bug-url=https://github.com/adoptium/adoptium-support/issues --with-vendor-vm-bug-url=https://github.com/adoptium/adoptium-support/issues --with-version-opt=LTS --without-version-pre --with-version-build=1 --with-vendor-version-string=Temurin-25.0.4.1+1 --with-boot-jdk=/usr/lib/jvm/jdk24 --with-devkit=/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01 --enable-linkable-runtime --with-debug-level=release --with-native-debug-symbols=external --with-source-date=version --disable-ccache --with-build-user=admin --with-jvm-variants=server --with-cacerts-src=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/sbin/../security/certs --disable-warnings-as-errors --disable-precompiled-headers --enable-dtrace --with-freetype=bundled --with-zlib=bundled"
+        },
+        {
+          "name" : "configure_txt",
+          "value" : "Runnable configure script is not present Generating runnable configure script at /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/.configure-support/generated-configure.sh Using autoconf at /usr/bin/autoconf [autoconf (GNU Autoconf) 2.69] configure: Configuration created at Tue Aug 18 19:24:35 UTC 2026. checking for basename... /usr/bin/basename checking for dirname... /usr/bin/dirname checking for file... /usr/bin/file checking for ldd... /usr/bin/ldd checking for echo... echo [builtin] checking for tr... /usr/bin/tr checking for uname... /usr/bin/uname checking for wc... /usr/bin/wc checking for grep that handles long lines and -e... /usr/bin/grep checking for egrep... /usr/bin/grep -E checking for a sed that does not truncate output... /usr/bin/sed checking for locale... /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/repro_locale/locale checking for cygpath... [not found] checking for wslpath... [not found] checking for cmd.exe... [not found] checking for lsb_release... [not found] checking build system type... x86_64-pc-linux-gnu checking host system type... x86_64-pc-linux-gnu checking target system type... x86_64-pc-linux-gnu checking openjdk-build os-cpu... linux-x86_64 checking openjdk-build C library... gnu checking openjdk-target os-cpu... linux-x86_64 checking openjdk-target C library... gnu checking compilation type... native checking for top-level directory... /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src checking for bash... /usr/bin/bash checking for cat... /usr/bin/cat checking for chmod... /usr/bin/chmod checking for cp... /usr/bin/cp checking for cut... /usr/bin/cut checking for date... /usr/bin/date checking for gdiff... [not found] checking for diff... /usr/bin/diff checking for expr... /usr/bin/expr checking for find... /usr/bin/find checking for gunzip... /usr/bin/gunzip checking for pigz... /usr/bin/pigz checking for head... /usr/bin/head checking for ln... /usr/bin/ln checking for ls... /usr/bin/ls checking for gmkdir... [not found] checking for mkdir... /usr/bin/mkdir checking for mktemp... /usr/bin/mktemp checking for mv... /usr/bin/mv checking for gawk... /usr/bin/gawk checking for printf... printf [builtin] checking for rm... /usr/bin/rm checking for rmdir... /usr/bin/rmdir checking for sh... /usr/bin/sh checking for sort... /usr/bin/sort checking for tail... /usr/bin/tail checking for gtar... /usr/bin/gtar checking for tee... /usr/bin/tee checking for touch... /usr/bin/touch checking for xargs... /usr/bin/xargs checking for fgrep... /usr/bin/grep -F checking for cmake... /usr/local/bin/cmake checking for df... /usr/bin/df checking for git... /usr/local/bin/git checking for nice... /usr/bin/nice checking for greadlink... [not found] checking for readlink... /usr/bin/readlink checking for whoami... /usr/bin/whoami checking for cmp... /usr/bin/cmp checking for uniq... /usr/bin/uniq configure: CI environment variable set to true checking for build environment type... ci, default (calculated from 'auto') checking for locale to use... no UTF-8 locale found configure: The recommended locale is C.UTF-8, but en_US.UTF-8 is also accepted. checking if custom source is suppressed (openjdk-only)... disabled, default checking for --enable-debug... disabled, default checking which debug level to use... release checking which variants of the JVM to build... server checking if absolute paths should be allowed in the build output... no, release build checking for devkit... gcc-14.2.0 - Centos7.9.2009 in /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01 checking for toolchain path... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin checking for sysroot... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/x86_64-linux-gnu/sysroot checking for extra path... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin checking where to store configuration... in default location checking what configuration name to use... linux-x86_64-server-release checking for zypper... [not found] checking for apt-get... [not found] checking for yum... /usr/bin/yum checking for pandoc... /usr/local/bin/pandoc checking for pandoc version... 3.8.2 checking if the pandoc smart extension needs to be disabled for markdown... yes checking if the pandoc tex_math_dollars extension needs to be disabled for markdown... yes checking for gmake... /usr/local/bin/gmake configure: Testing potential make at /usr/local/bin/gmake, found using gmake in PATH configure: Using GNU make at /usr/local/bin/gmake (version: GNU Make 4.1) checking if make --output-sync is supported... yes checking for make --output-sync value... none, default checking if find supports -delete... yes checking what type of tar was found... gnu checking that grep (/usr/bin/grep) -Fx handles empty lines in the pattern list correctly... yes checking for unzip... /usr/bin/unzip checking for zip... /usr/bin/zip checking for greadelf... [not found] checking for readelf... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/readelf checking for dot... [not found] checking for stat... /usr/bin/stat checking for time... time [builtin] checking for flock... /usr/bin/flock checking for dtrace... /usr/bin/dtrace checking for gpatch... [not found] checking for patch... /usr/bin/patch checking if date is a GNU compatible version... yes checking for ulimit... ulimit [builtin] checking bash version... 4.2.46 checking if bash supports pipefail... yes checking if bash supports errexit (-e)... yes checking for pkg-config... /usr/bin/pkg-config checking pkg-config is at least version 0.9.0... yes checking for default LOG value... checking for JMOD compression type... zip-6, default checking whether or not a JDK suitable for linking from the run-time image should be produced... enabled, from command line checking if packaged modules are kept... disabled, default checking for --with-extra-jlink-flags... <disabled>, default checking for --with-build-user... admin, from command line checking for --with-jdk-rc-name... OpenJDK Platform, default checking for --with-vendor-name... Eclipse Adoptium, from command line checking for --with-jdk-rc-company-name... Eclipse Adoptium, default checking for --with-vendor-url... https://adoptium.net/, from command line checking for --with-vendor-bug-url... https://github.com/adoptium/adoptium-support/issues, from command line checking for --with-vendor-vm-bug-url... https://github.com/adoptium/adoptium-support/issues, from command line checking for --with-version-string... <none>, default checking for --with-version-feature... 25, default checking for --with-version-date... 2026-08-18, default checking for --with-vendor-version-string... Temurin-25.0.4.1+1, from command line checking for --with-macosx-bundle-name-base... OpenJDK, default checking for --with-macosx-bundle-id-base... net.java.openjdk, default checking for --with-macosx-bundle-build-version... 1, default checking for version string... 25.0.4.1+1-LTS configure: Found potential Boot JDK using configure arguments checking for Boot JDK... /usr/lib/jvm/jdk24 checking Boot JDK version... openjdk version \"24.0.2\" 2025-07-15 OpenJDK Runtime Environment Temurin-24.0.2+12 (build 24.0.2+12) OpenJDK 64-Bit Server VM Temurin-24.0.2+12 (build 24.0.2+12, mixed mode, sharing) checking for java [Boot JDK]... $BOOT_JDK/bin/java checking for javac [Boot JDK]... $BOOT_JDK/bin/javac checking for javadoc [Boot JDK]... $BOOT_JDK/bin/javadoc checking for jar [Boot JDK]... $BOOT_JDK/bin/jar checking if Boot JDK jar supports --date=TIMESTAMP... true checking if Boot JDK is 32 or 64 bits... 64 checking for local Boot JDK Class Data Sharing (CDS)... yes, created checking for Build JDK... yes, will use output dir checking for docs-reference JDK... no, using interim javadoc for the docs-reference targets checking what source date to use... 1787011200, from 'version' checking if we should build headless-only (no GUI)... disabled, default checking if linker should clean out unused code (linktime-gc)... disabled, default checking for graphviz dot... no, cannot generate full docs or man pages checking for pandoc... yes checking for --enable-full-docs... disabled, from default 'auto' checking for cacerts file... default checking for cacerts source... /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/sbin/../security/certs checking for --enable-unlimited-crypto... enabled, default checking for jni library path... default configure: Using default toolchain gcc (GNU Compiler Collection) checking for gcc... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc checking resolved symbolic links for CC... no symlink configure: Using gcc C compiler version 14.2.0 [gcc (GCC) 14.2.0] checking whether the C compiler works... yes checking for C compiler default output file name... a.out checking for suffix of executables... checking whether we are cross compiling... no checking for suffix of object files... o checking whether /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc accepts -g... yes checking for g++... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++ checking resolved symbolic links for CXX... no symlink configure: Using gcc C++ compiler version 14.2.0 [g++ (GCC) 14.2.0] checking whether /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++ accepts -g... yes checking how to run the C preprocessor... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc -E checking how to run the C++ preprocessor... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++ -E configure: Using gcc linker version 2.43 [GNU ld (GNU Binutils) 2.43] configure: comparing linker version to minimum version 2.25 checking for ar... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/ar checking for strip... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/strip checking for nm... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/nm checking for gobjcopy... [not found] checking for objcopy... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/objcopy checking for gobjdump... [not found] checking for objdump... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/objdump checking for c++filt... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/c++filt checking for jtreg... [not found] checking for jtreg test harness... no, not found checking for jtreg jdk... no, using BOOT_JDK checking for jmh (Java Microbenchmark Harness)... no, disabled checking for jib... no checking for tidy... [not found] checking for ANSI C header files... yes checking for sys/types.h... yes checking for sys/stat.h... yes checking for stdlib.h... yes checking for string.h... yes checking for memory.h... yes checking for strings.h... yes checking for inttypes.h... yes checking for stdint.h... yes checking for unistd.h... yes checking stdio.h usability... yes checking stdio.h presence... yes checking for stdio.h... yes checking size of int *... 8 checking for target address size... 64 bits checking whether byte ordering is bigendian... no checking for --enable-branch-protection... disabled, default checking if CC supports \"-fdebug-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if CXX supports \"-fdebug-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if both CC and CXX support \"-fdebug-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking for --enable-warnings-as-errors... disabled, from command line checking if TARGET is x86... no checking if CC supports \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if CXX supports \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if both CC and CXX support \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking how to prevent absolute paths in output... using compiler options checking if CC supports \"-ffp-contract=off\"... yes checking if CXX supports \"-ffp-contract=off\"... yes checking if both CC and CXX support \"-ffp-contract=off\"... yes checking if BUILD is x86... no checking if BUILD_CC supports \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if BUILD_CXX supports \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if both BUILD_CC and BUILD_CXX support \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking how to prevent absolute paths in output... using compiler options checking if BUILD_CC supports \"-ffp-contract=off\"... yes checking if BUILD_CXX supports \"-ffp-contract=off\"... yes checking if both BUILD_CC and BUILD_CXX support \"-ffp-contract=off\"... yes checking how to run strip... --strip-debug checking what type of native debug symbols to use... external checking if we should add external native debug symbols to the shipped bundles... no checking if native coverage is available... yes checking for --enable-native-coverage... disabled, default checking for --with-jcov-modules... <disabled>, default checking if AddressSanitizer (asan) is available... yes checking for --enable-asan... disabled, default checking for --with-additional-ubsan-checks... <disabled>, default checking if UndefinedBehaviorSanitizer (ubsan) is available... yes checking for --enable-ubsan... disabled, default checking if LeakSanitizer (lsan) is available... yes checking for --enable-lsan... disabled, default checking if static analyzer is available... yes checking for --enable-static-analyzer... disabled, default checking if fallback linker enabled... disabled, default checking if static link of stdc++ is possible... yes checking how to link with libstdc++... static checking for which libjpeg to use... bundled checking for which giflib to use... bundled checking for PNG... yes checking for which libpng to use... bundled checking for compress in -lz... yes checking for which zlib to use... bundled checking for which lcms to use... bundled checking for which harfbuzz to use... bundled checking cups/cups.h usability... yes checking cups/cups.h presence... yes checking for cups/cups.h... yes checking cups/ppd.h usability... yes checking cups/ppd.h presence... yes checking for cups/ppd.h... yes checking fontconfig/fontconfig.h usability... yes checking fontconfig/fontconfig.h presence... yes checking for fontconfig/fontconfig.h... yes Using freetype: bundled checking for --enable-hsdis-bundling... disabled, default checking what hsdis backend to use... 'none', hsdis will not be built checking if hsdis should be bundled... no checking for --enable-libffi-bundling... disabled, default checking for cos in -lm... yes checking for dlopen in -ldl... yes checking for X... libraries /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/x86_64-linux-gnu/sysroot/usr/lib64, headers /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/x86_64-linux-gnu/sysroot/usr/include checking whether -R must be followed by a space... neither works checking for gethostbyname... yes checking for connect... yes checking for remove... yes checking for shmat... yes checking for IceConnectionNumber in -lICE... yes checking for X11/extensions/shape.h... yes checking for X11/extensions/Xrender.h... yes checking for X11/extensions/XTest.h... yes checking for X11/Intrinsic.h... yes checking for X11/extensions/Xrandr.h... yes checking for JVM features enabled by the user... 'dtrace' checking for JVM features disabled by the user... none checking if platform is supported by CDS... yes checking if JVM feature 'cds' is available... yes checking for dtrace tool and platform support... /usr/bin/dtrace checking sys/sdt.h usability... yes checking sys/sdt.h presence... yes checking for sys/sdt.h... yes checking if JVM feature 'dtrace' is available... yes checking if platform is supported by JVMCI... yes checking if JVM feature 'jvmci' is available... yes checking if platform is supported by Shenandoah... yes checking if JVM feature 'shenandoahgc' is available... yes checking if platform is supported by ZGC... yes checking if JVM feature 'zgc' is available... yes configure: Default JVM features explicitly enabled for 'server': 'dtrace' checking JVM features to use for variant 'server'... 'cds compiler1 compiler2 dtrace epsilongc g1gc jfr jni-check jvmci jvmti management parallelgc serialgc services shenandoahgc vm-structs zgc' checking what hotspot build time to use... 2026-08-18T00:00:00Z (from --with-source-date) checking if the jtreg failure handler is available... no (jtreg not present) checking if the jtreg failure handler should be built... disabled, from default 'auto' checking if the jtreg test thread factory is available... no (jtreg not present) checking if the jtreg test thread factory should be built... disabled, from default 'auto' checking if the CDS classlist generation should be enabled... enabled, from default 'auto' checking if any translations should be excluded... no checking if CDS archive is available... yes checking if a default CDS archive should be generated... enabled, from default 'auto' checking if CDS archive with compact object headers is available... yes checking if default CDS archives for compact object headers should be generated... enabled, from default 'auto' checking if CDS archive is available... yes checking if compatible cds region alignment enabled... disabled, default checking for --with-signing-hook... <disabled>, default checking for signing hook... none checking for --enable-java-warnings-as-errors... enabled, default checking for number of cores... 4 checking for memory size... 15988 MB checking for appropriate number of jobs to run in parallel... 4 checking whether to use javac server... enabled, default checking flags for boot jdk java command ... -Duser.language=en -Duser.country=US -Xlog:all=off:stdout -Xlog:all=warning:stderr -XX:+UnlockDiagnosticVMOptions -XX:-VerifySharedSpaces -XX:SharedArchiveFile=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/configure-support/classes.jsa -Xshare:auto checking flags for boot jdk java command for big workloads... -Xms64M -Xmx2048M checking flags for bootcycle boot jdk java command for big workloads... -Xms64M -Xmx2048M checking flags for boot jdk java command for small workloads... -XX:+UseSerialGC -Xms32M -Xmx512M -XX:TieredStopAtLevel=1 checking for --enable-icecc... disabled, default checking if precompiled headers are available... yes checking for --enable-precompiled-headers... disabled, from command line checking for ccache... /usr/local/bin/ccache checking if ccache is available... yes checking if ccache is enabled... disabled, from command line checking if build directory is on local disk... yes configure: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/configure-support/config.status config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/spec.gmk config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/bootcycle-spec.gmk config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/buildjdk-spec.gmk config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/compare.sh config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/Makefile ==================================================== A new configuration has been successfully created in /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release using configure arguments '--verbose --with-vendor-name='Eclipse Adoptium' --with-vendor-url=https://adoptium.net/ --with-vendor-bug-url=https://github.com/adoptium/adoptium-support/issues --with-vendor-vm-bug-url=https://github.com/adoptium/adoptium-support/issues --with-version-opt=LTS --without-version-pre --with-version-build=1 --with-vendor-version-string=Temurin-25.0.4.1+1 --with-boot-jdk=/usr/lib/jvm/jdk24 --with-devkit=/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01 --enable-linkable-runtime --with-debug-level=release --with-native-debug-symbols=external --with-source-date=version --disable-ccache --with-build-user=admin --with-jvm-variants=server --with-cacerts-src=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/sbin/../security/certs --disable-warnings-as-errors --disable-precompiled-headers --enable-dtrace --with-freetype=bundled --with-zlib=bundled'. Configuration summary: * Name: linux-x86_64-server-release * Debug level: release * HS debug level: product * JVM variants: server * JVM features: server: 'cds compiler1 compiler2 dtrace epsilongc g1gc jfr jni-check jvmci jvmti management parallelgc serialgc services shenandoahgc vm-structs zgc' * OpenJDK target: OS: linux, CPU architecture: x86, address length: 64 * Version string: 25.0.4.1+1-LTS (25.0.4.1) * Source date: 1787011200 (2026-08-18T00:00:00Z) Tools summary: * Boot JDK: openjdk version \"24.0.2\" 2025-07-15 OpenJDK Runtime Environment Temurin-24.0.2+12 (build 24.0.2+12) OpenJDK 64-Bit Server VM Temurin-24.0.2+12 (build 24.0.2+12, mixed mode, sharing) (at /usr/lib/jvm/jdk24) * Toolchain: gcc (GNU Compiler Collection) * Devkit: gcc-14.2.0 - Centos7.9.2009 (/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01) * C Compiler: Version 14.2.0 (at /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc) * C++ Compiler: Version 14.2.0 (at /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++) Build performance summary: * Build jobs: 4 * Memory limit: 15988 MB The following warnings were produced. Repeated here for convenience: WARNING: No UTF-8 locale found. This is not supported. Proceeding with the C locale, but the build might fail unexpectedly. WARNING: pandoc is version 3.8.2, not the recommended version 2.19.2"
+        }
+      ]
+    },
+    {
+      "type" : "framework",
+      "author" : "Eclipse Temurin",
+      "publisher" : "Eclipse Temurin",
+      "group" : "adoptium.net",
+      "name" : "JRE Component",
+      "version" : "25.0.4.1+1-LTS",
+      "description" : "Temurin JRE Component",
+      "hashes" : [
+        {
+          "alg" : "SHA-256",
+          "content" : "1731a34baadec5479258ea0202e4d5d865d2efeee60cb0c7d7eb056fe96ca219"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "Filename",
+          "value" : "OpenJDK25U-jre_x64_linux_hotspot_25.0.4.1_1.tar.gz"
+        },
+        {
+          "name" : "JDK Variant",
+          "value" : "Temurin"
+        },
+        {
+          "name" : "SCM Ref",
+          "value" : "jdk-25.0.4.1+1_adopt"
+        },
+        {
+          "name" : "OpenJDK Source Commit",
+          "value" : "https://github.com/adoptium/jdk25u/commit/520406d871955300957ef01e406ac2acd0f9b75c"
+        },
+        {
+          "name" : "Temurin Build Ref",
+          "value" : "https://github.com/adoptium/temurin-build/commit/e6ba7dec3d07654074559310376a3ae89da5f4ac"
+        },
+        {
+          "name" : "Builder Job Reference",
+          "value" : "https://ci.adoptium.net/job/build-scripts/job/jobs/job/release/job/jobs/job/jdk25u/job/jdk25u-release-linux-x64-temurin/15/"
+        },
+        {
+          "name" : "Builder Name",
+          "value" : "build-azure-linux-x64-5858b5"
+        },
+        {
+          "name" : "Build Timestamp",
+          "value" : "2026-08-18 00:00:00"
+        },
+        {
+          "name" : "Build Workspace Directory",
+          "value" : "/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src"
+        },
+        {
+          "name" : "Build LC_ALL",
+          "value" : "C"
+        },
+        {
+          "name" : "Build Tools Summary",
+          "value" : "Tools summary: * Boot JDK: openjdk version \"24.0.2\" 2025-07-15 OpenJDK Runtime Environment Temurin-24.0.2+12 (build 24.0.2+12) OpenJDK 64-Bit Server VM Temurin-24.0.2+12 (build 24.0.2+12, mixed mode, sharing) (at /usr/lib/jvm/jdk24) * Toolchain: gcc (GNU Compiler Collection) * Devkit: gcc-14.2.0 - Centos7.9.2009 (/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01) * C Compiler: Version 14.2.0 (at /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc) * C++ Compiler: Version 14.2.0 (at /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++) Build performance summary: * Build jobs: 4 * Memory limit: 15988 MB The following warnings were produced. Repeated here for convenience: WARNING: No UTF-8 locale found. This is not supported. Proceeding with the C locale, but the build might fail unexpectedly. WARNING: pandoc is version 3.8.2, not the recommended version 2.19.2"
+        },
+        {
+          "name" : "Build Config",
+          "value" : "{ \"ADOPTIUM_DEVKIT_LOCATION\" : \"/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01\", \"ADOPT_PATCHES\" : \"true\", \"ALSA\" : \"true\", \"ASSEMBLE_EXPLODED_IMAGE\" : \"false\", \"OPENJDK_BUILD_REPO_BRANCH\" : \"master\", \"OPENJDK_BUILD_REPO_URI\" : \"https://github.com/adoptium/temurin-build.git\", \"BRANCH\" : \"dev\", \"BUILD_FULL_NAME\" : \"linux-x86_64--server-release\", \"BUILD_REPRODUCIBLE_DATE\" : \"\", \"BUILD_TIMESTAMP\" : \"2026-08-18 00:00:00\", \"BUILD_VARIANT\" : \"temurin\", \"CONTAINER_AS_ROOT\" : \"\", \"CLEAN_DOCKER_BUILD\" : \"false\", \"CLEAN_GIT_REPO\" : \"true\", \"CLEAN_LIBS\" : \"true\", \"CONTAINER_COMMAND\" : \"false\", \"CONTAINER_NAME\" : \"openjdk_container\", \"CONTAINER_IMAGE\" : \"ubuntu:18.04\", \"COPY_MACOSX_FREE_FONT_LIB_FOR_JDK_FLAG\" : \"false\", \"COPY_MACOSX_FREE_FONT_LIB_FOR_JRE_FLAG\" : \"false\", \"CREATE_DEBUG_IMAGE\" : \"true\", \"CREATE_JRE_IMAGE\" : \"true\", \"CREATE_SBOM\" : \"true\", \"CREATE_SOURCE_ARCHIVE\" : \"true\", \"CUSTOM_CACERTS\" : \"true\", \"CROSSCOMPILE\" : \"false\", \"DEBUG_DOCKER\" : \"false\", \"DEBUG_IMAGE_PATH\" : \"debug-image\", \"DISABLE_ADOPT_BRANCH_SAFETY\" : \"false\", \"DOCKER_FILE_PATH\" : \"\", \"DOCKER_SOURCE_VOLUME_NAME\" : \"openjdk-source-volume-jdk25u-temurin\", \"ENABLE_SBOM_STRACE\" : \"true\", \"FREETYPE\" : \"true\", \"FREETYPE_DIRECTORY\" : \"\", \"FREETYPE_FONT_BUILD_TYPE_PARAM\" : \"\", \"FREETYPE_FONT_VERSION\" : \"86bc8a95056c97a810986434a3f268cbe67f2902\", \"GRADLE_USER_HOME_DIR\" : \"\", \"KEEP_CONTAINER\" : \"false\", \"JDK_BOOT_DIR\" : \"/usr/lib/jvm/jdk24\", \"JDK_PATH\" : \"jdk\", \"JRE_PATH\" : \"jre\", \"TEST_IMAGE_PATH\" : \"test\", \"STATIC_LIBS_IMAGE_PATH\" : \"static-libs-graal\", \"JMODS_IMAGE_PATH\" : \"jmods\", \"JVM_VARIANT\" : \"server\", \"LOCAL_DEPENDENCY_CACHE_DIR\" : \"\", \"MACOSX_CODESIGN_IDENTITY\" : \"\", \"MAKE_ARGS_FOR_ANY_PLATFORM\" : \"product-images legacy-jre-image\", \"MAKE_EXPLODED\" : \"false\", \"MAKE_COMMAND_NAME\" : \"make\", \"NUM_PROCESSORS\" : \"1\", \"OPENJDK_BUILD_NUMBER\" : \"\", \"OPENJDK_CORE_VERSION\" : \"jdk25\", \"OPENJDK_FEATURE_NUMBER\" : \"25\", \"OPENJDK_FOREST_NAME\" : \"jdk25u\", \"OPENJDK_LOCAL_SOURCE_ARCHIVE\" : \"false\", \"OPENJDK_LOCAL_SOURCE_ARCHIVE_ABSPATH\" : \"\", \"OPENJDK_SOURCE_DIR\" : \"src\", \"OPENJDK_UPDATE_VERSION\" : \"\", \"OS_KERNEL_NAME\" : \"linux\", \"OS_FULL_VERSION\" : \"CentOS Linux 7 (Kernel: 6.8.0-1064-azure)\", \"OS_ARCHITECTURE\" : \"x86_64\", \"PATCHES\" : \"\", \"RELEASE\" : \"true\", \"REPOSITORY\" : \"https://github.com/adoptium/jdk25u\", \"REUSE_CONTAINER\" : \"true\", \"SHALLOW_CLONE_OPTION\" : \"\", \"SIGN\" : \"false\", \"TAG\" : \"jdk-25.0.4.1+1_adopt\", \"TARGET_DIR\" : \"target/\", \"TARGET_FILE_NAME\" : \"OpenJDK25U-jdk_x64_linux_hotspot_25.0.4.1_1.tar.gz\", \"TMP_CONTAINER_NAME\" : \"openjdk-copy-src\", \"TMP_SPACE_BUILD\" : \"false\", \"USE_ADOPTIUM_DEVKIT\" : \"gcc-14.2.0-Centos7.9.2009-b01\", \"USE_JEP319_CERTS\" : \"true\", \"USE_SSH\" : \"false\", \"USER_DEVKIT_LOCATION\" : \"\", \"USER_SUPPLIED_CONFIGURE_ARGS\" : \" --disable-warnings-as-errors --disable-precompiled-headers --enable-dtrace\", \"USER_SUPPLIED_MAKE_ARGS\" : \"\", \"USER_OPENJDK_BUILD_ROOT_DIRECTORY\" : \"\", \"VENDOR\" : \"Eclipse Adoptium\", \"VENDOR_URL\" : \"https://adoptium.net/\", \"VENDOR_BUG_URL\" : \"https://github.com/adoptium/adoptium-support/issues\", \"VENDOR_VM_BUG_URL\" : \"https://github.com/adoptium/adoptium-support/issues\", \"WORKING_DIR\" : \"./build/\", \"WORKSPACE_DIR\" : \"/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace\", \"Data Source\" : \"BUILD_CONFIG hashmap\"}"
+        },
+        {
+          "name" : "full_version_output",
+          "value" : "openjdk version \"25.0.4.1\" 2026-08-18 LTS OpenJDK Runtime Environment Temurin-25.0.4.1+1 (build 25.0.4.1+1-LTS) OpenJDK 64-Bit Server VM Temurin-25.0.4.1+1 (build 25.0.4.1+1-LTS, mixed mode, sharing)"
+        },
+        {
+          "name" : "makejdk_any_platform_args",
+          "value" : "--clean-git-repo --jdk-boot-dir /usr/lib/jvm/jdk24 --configure-args \" --disable-warnings-as-errors --disable-precompiled-headers --enable-dtrace\" --target-file-name OpenJDK25U-jdk_x64_linux_hotspot_25.0.4.1_1.tar.gz --release --clean-libs --tag jdk-25.0.4.1+1_adopt --create-source-archive --create-jre-image --create-sbom --enable-sbom-strace --use-adoptium-devkit gcc-14.2.0-Centos7.9.2009-b01 --use-jep319-certs --create-debug-image --build-variant temurin jdk25u"
+        },
+        {
+          "name" : "make_command_args",
+          "value" : "mkdir /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/./build//straceOutput && strace -o /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/./build//straceOutput/outputFile -ff -e trace=open,openat,execve make product-images legacy-jre-image test-image static-libs-graal-image"
+        },
+        {
+          "name" : "configure_args",
+          "value" : "--with-vendor-name=\"Eclipse Adoptium\" --with-vendor-url=https://adoptium.net/ --with-vendor-bug-url=https://github.com/adoptium/adoptium-support/issues --with-vendor-vm-bug-url=https://github.com/adoptium/adoptium-support/issues --with-version-opt=LTS --without-version-pre --with-version-build=1 --with-vendor-version-string=Temurin-25.0.4.1+1 --with-boot-jdk=/usr/lib/jvm/jdk24 --with-devkit=/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01 --enable-linkable-runtime --with-debug-level=release --with-native-debug-symbols=external --with-source-date=version --disable-ccache --with-build-user=admin --with-jvm-variants=server --with-cacerts-src=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/sbin/../security/certs --disable-warnings-as-errors --disable-precompiled-headers --enable-dtrace --with-freetype=bundled --with-zlib=bundled"
+        },
+        {
+          "name" : "configure_txt",
+          "value" : "Runnable configure script is not present Generating runnable configure script at /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/.configure-support/generated-configure.sh Using autoconf at /usr/bin/autoconf [autoconf (GNU Autoconf) 2.69] configure: Configuration created at Tue Aug 18 19:24:35 UTC 2026. checking for basename... /usr/bin/basename checking for dirname... /usr/bin/dirname checking for file... /usr/bin/file checking for ldd... /usr/bin/ldd checking for echo... echo [builtin] checking for tr... /usr/bin/tr checking for uname... /usr/bin/uname checking for wc... /usr/bin/wc checking for grep that handles long lines and -e... /usr/bin/grep checking for egrep... /usr/bin/grep -E checking for a sed that does not truncate output... /usr/bin/sed checking for locale... /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/repro_locale/locale checking for cygpath... [not found] checking for wslpath... [not found] checking for cmd.exe... [not found] checking for lsb_release... [not found] checking build system type... x86_64-pc-linux-gnu checking host system type... x86_64-pc-linux-gnu checking target system type... x86_64-pc-linux-gnu checking openjdk-build os-cpu... linux-x86_64 checking openjdk-build C library... gnu checking openjdk-target os-cpu... linux-x86_64 checking openjdk-target C library... gnu checking compilation type... native checking for top-level directory... /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src checking for bash... /usr/bin/bash checking for cat... /usr/bin/cat checking for chmod... /usr/bin/chmod checking for cp... /usr/bin/cp checking for cut... /usr/bin/cut checking for date... /usr/bin/date checking for gdiff... [not found] checking for diff... /usr/bin/diff checking for expr... /usr/bin/expr checking for find... /usr/bin/find checking for gunzip... /usr/bin/gunzip checking for pigz... /usr/bin/pigz checking for head... /usr/bin/head checking for ln... /usr/bin/ln checking for ls... /usr/bin/ls checking for gmkdir... [not found] checking for mkdir... /usr/bin/mkdir checking for mktemp... /usr/bin/mktemp checking for mv... /usr/bin/mv checking for gawk... /usr/bin/gawk checking for printf... printf [builtin] checking for rm... /usr/bin/rm checking for rmdir... /usr/bin/rmdir checking for sh... /usr/bin/sh checking for sort... /usr/bin/sort checking for tail... /usr/bin/tail checking for gtar... /usr/bin/gtar checking for tee... /usr/bin/tee checking for touch... /usr/bin/touch checking for xargs... /usr/bin/xargs checking for fgrep... /usr/bin/grep -F checking for cmake... /usr/local/bin/cmake checking for df... /usr/bin/df checking for git... /usr/local/bin/git checking for nice... /usr/bin/nice checking for greadlink... [not found] checking for readlink... /usr/bin/readlink checking for whoami... /usr/bin/whoami checking for cmp... /usr/bin/cmp checking for uniq... /usr/bin/uniq configure: CI environment variable set to true checking for build environment type... ci, default (calculated from 'auto') checking for locale to use... no UTF-8 locale found configure: The recommended locale is C.UTF-8, but en_US.UTF-8 is also accepted. checking if custom source is suppressed (openjdk-only)... disabled, default checking for --enable-debug... disabled, default checking which debug level to use... release checking which variants of the JVM to build... server checking if absolute paths should be allowed in the build output... no, release build checking for devkit... gcc-14.2.0 - Centos7.9.2009 in /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01 checking for toolchain path... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin checking for sysroot... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/x86_64-linux-gnu/sysroot checking for extra path... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin checking where to store configuration... in default location checking what configuration name to use... linux-x86_64-server-release checking for zypper... [not found] checking for apt-get... [not found] checking for yum... /usr/bin/yum checking for pandoc... /usr/local/bin/pandoc checking for pandoc version... 3.8.2 checking if the pandoc smart extension needs to be disabled for markdown... yes checking if the pandoc tex_math_dollars extension needs to be disabled for markdown... yes checking for gmake... /usr/local/bin/gmake configure: Testing potential make at /usr/local/bin/gmake, found using gmake in PATH configure: Using GNU make at /usr/local/bin/gmake (version: GNU Make 4.1) checking if make --output-sync is supported... yes checking for make --output-sync value... none, default checking if find supports -delete... yes checking what type of tar was found... gnu checking that grep (/usr/bin/grep) -Fx handles empty lines in the pattern list correctly... yes checking for unzip... /usr/bin/unzip checking for zip... /usr/bin/zip checking for greadelf... [not found] checking for readelf... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/readelf checking for dot... [not found] checking for stat... /usr/bin/stat checking for time... time [builtin] checking for flock... /usr/bin/flock checking for dtrace... /usr/bin/dtrace checking for gpatch... [not found] checking for patch... /usr/bin/patch checking if date is a GNU compatible version... yes checking for ulimit... ulimit [builtin] checking bash version... 4.2.46 checking if bash supports pipefail... yes checking if bash supports errexit (-e)... yes checking for pkg-config... /usr/bin/pkg-config checking pkg-config is at least version 0.9.0... yes checking for default LOG value... checking for JMOD compression type... zip-6, default checking whether or not a JDK suitable for linking from the run-time image should be produced... enabled, from command line checking if packaged modules are kept... disabled, default checking for --with-extra-jlink-flags... <disabled>, default checking for --with-build-user... admin, from command line checking for --with-jdk-rc-name... OpenJDK Platform, default checking for --with-vendor-name... Eclipse Adoptium, from command line checking for --with-jdk-rc-company-name... Eclipse Adoptium, default checking for --with-vendor-url... https://adoptium.net/, from command line checking for --with-vendor-bug-url... https://github.com/adoptium/adoptium-support/issues, from command line checking for --with-vendor-vm-bug-url... https://github.com/adoptium/adoptium-support/issues, from command line checking for --with-version-string... <none>, default checking for --with-version-feature... 25, default checking for --with-version-date... 2026-08-18, default checking for --with-vendor-version-string... Temurin-25.0.4.1+1, from command line checking for --with-macosx-bundle-name-base... OpenJDK, default checking for --with-macosx-bundle-id-base... net.java.openjdk, default checking for --with-macosx-bundle-build-version... 1, default checking for version string... 25.0.4.1+1-LTS configure: Found potential Boot JDK using configure arguments checking for Boot JDK... /usr/lib/jvm/jdk24 checking Boot JDK version... openjdk version \"24.0.2\" 2025-07-15 OpenJDK Runtime Environment Temurin-24.0.2+12 (build 24.0.2+12) OpenJDK 64-Bit Server VM Temurin-24.0.2+12 (build 24.0.2+12, mixed mode, sharing) checking for java [Boot JDK]... $BOOT_JDK/bin/java checking for javac [Boot JDK]... $BOOT_JDK/bin/javac checking for javadoc [Boot JDK]... $BOOT_JDK/bin/javadoc checking for jar [Boot JDK]... $BOOT_JDK/bin/jar checking if Boot JDK jar supports --date=TIMESTAMP... true checking if Boot JDK is 32 or 64 bits... 64 checking for local Boot JDK Class Data Sharing (CDS)... yes, created checking for Build JDK... yes, will use output dir checking for docs-reference JDK... no, using interim javadoc for the docs-reference targets checking what source date to use... 1787011200, from 'version' checking if we should build headless-only (no GUI)... disabled, default checking if linker should clean out unused code (linktime-gc)... disabled, default checking for graphviz dot... no, cannot generate full docs or man pages checking for pandoc... yes checking for --enable-full-docs... disabled, from default 'auto' checking for cacerts file... default checking for cacerts source... /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/sbin/../security/certs checking for --enable-unlimited-crypto... enabled, default checking for jni library path... default configure: Using default toolchain gcc (GNU Compiler Collection) checking for gcc... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc checking resolved symbolic links for CC... no symlink configure: Using gcc C compiler version 14.2.0 [gcc (GCC) 14.2.0] checking whether the C compiler works... yes checking for C compiler default output file name... a.out checking for suffix of executables... checking whether we are cross compiling... no checking for suffix of object files... o checking whether /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc accepts -g... yes checking for g++... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++ checking resolved symbolic links for CXX... no symlink configure: Using gcc C++ compiler version 14.2.0 [g++ (GCC) 14.2.0] checking whether /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++ accepts -g... yes checking how to run the C preprocessor... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc -E checking how to run the C++ preprocessor... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++ -E configure: Using gcc linker version 2.43 [GNU ld (GNU Binutils) 2.43] configure: comparing linker version to minimum version 2.25 checking for ar... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/ar checking for strip... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/strip checking for nm... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/nm checking for gobjcopy... [not found] checking for objcopy... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/objcopy checking for gobjdump... [not found] checking for objdump... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/objdump checking for c++filt... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/c++filt checking for jtreg... [not found] checking for jtreg test harness... no, not found checking for jtreg jdk... no, using BOOT_JDK checking for jmh (Java Microbenchmark Harness)... no, disabled checking for jib... no checking for tidy... [not found] checking for ANSI C header files... yes checking for sys/types.h... yes checking for sys/stat.h... yes checking for stdlib.h... yes checking for string.h... yes checking for memory.h... yes checking for strings.h... yes checking for inttypes.h... yes checking for stdint.h... yes checking for unistd.h... yes checking stdio.h usability... yes checking stdio.h presence... yes checking for stdio.h... yes checking size of int *... 8 checking for target address size... 64 bits checking whether byte ordering is bigendian... no checking for --enable-branch-protection... disabled, default checking if CC supports \"-fdebug-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if CXX supports \"-fdebug-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if both CC and CXX support \"-fdebug-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking for --enable-warnings-as-errors... disabled, from command line checking if TARGET is x86... no checking if CC supports \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if CXX supports \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if both CC and CXX support \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking how to prevent absolute paths in output... using compiler options checking if CC supports \"-ffp-contract=off\"... yes checking if CXX supports \"-ffp-contract=off\"... yes checking if both CC and CXX support \"-ffp-contract=off\"... yes checking if BUILD is x86... no checking if BUILD_CC supports \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if BUILD_CXX supports \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if both BUILD_CC and BUILD_CXX support \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking how to prevent absolute paths in output... using compiler options checking if BUILD_CC supports \"-ffp-contract=off\"... yes checking if BUILD_CXX supports \"-ffp-contract=off\"... yes checking if both BUILD_CC and BUILD_CXX support \"-ffp-contract=off\"... yes checking how to run strip... --strip-debug checking what type of native debug symbols to use... external checking if we should add external native debug symbols to the shipped bundles... no checking if native coverage is available... yes checking for --enable-native-coverage... disabled, default checking for --with-jcov-modules... <disabled>, default checking if AddressSanitizer (asan) is available... yes checking for --enable-asan... disabled, default checking for --with-additional-ubsan-checks... <disabled>, default checking if UndefinedBehaviorSanitizer (ubsan) is available... yes checking for --enable-ubsan... disabled, default checking if LeakSanitizer (lsan) is available... yes checking for --enable-lsan... disabled, default checking if static analyzer is available... yes checking for --enable-static-analyzer... disabled, default checking if fallback linker enabled... disabled, default checking if static link of stdc++ is possible... yes checking how to link with libstdc++... static checking for which libjpeg to use... bundled checking for which giflib to use... bundled checking for PNG... yes checking for which libpng to use... bundled checking for compress in -lz... yes checking for which zlib to use... bundled checking for which lcms to use... bundled checking for which harfbuzz to use... bundled checking cups/cups.h usability... yes checking cups/cups.h presence... yes checking for cups/cups.h... yes checking cups/ppd.h usability... yes checking cups/ppd.h presence... yes checking for cups/ppd.h... yes checking fontconfig/fontconfig.h usability... yes checking fontconfig/fontconfig.h presence... yes checking for fontconfig/fontconfig.h... yes Using freetype: bundled checking for --enable-hsdis-bundling... disabled, default checking what hsdis backend to use... 'none', hsdis will not be built checking if hsdis should be bundled... no checking for --enable-libffi-bundling... disabled, default checking for cos in -lm... yes checking for dlopen in -ldl... yes checking for X... libraries /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/x86_64-linux-gnu/sysroot/usr/lib64, headers /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/x86_64-linux-gnu/sysroot/usr/include checking whether -R must be followed by a space... neither works checking for gethostbyname... yes checking for connect... yes checking for remove... yes checking for shmat... yes checking for IceConnectionNumber in -lICE... yes checking for X11/extensions/shape.h... yes checking for X11/extensions/Xrender.h... yes checking for X11/extensions/XTest.h... yes checking for X11/Intrinsic.h... yes checking for X11/extensions/Xrandr.h... yes checking for JVM features enabled by the user... 'dtrace' checking for JVM features disabled by the user... none checking if platform is supported by CDS... yes checking if JVM feature 'cds' is available... yes checking for dtrace tool and platform support... /usr/bin/dtrace checking sys/sdt.h usability... yes checking sys/sdt.h presence... yes checking for sys/sdt.h... yes checking if JVM feature 'dtrace' is available... yes checking if platform is supported by JVMCI... yes checking if JVM feature 'jvmci' is available... yes checking if platform is supported by Shenandoah... yes checking if JVM feature 'shenandoahgc' is available... yes checking if platform is supported by ZGC... yes checking if JVM feature 'zgc' is available... yes configure: Default JVM features explicitly enabled for 'server': 'dtrace' checking JVM features to use for variant 'server'... 'cds compiler1 compiler2 dtrace epsilongc g1gc jfr jni-check jvmci jvmti management parallelgc serialgc services shenandoahgc vm-structs zgc' checking what hotspot build time to use... 2026-08-18T00:00:00Z (from --with-source-date) checking if the jtreg failure handler is available... no (jtreg not present) checking if the jtreg failure handler should be built... disabled, from default 'auto' checking if the jtreg test thread factory is available... no (jtreg not present) checking if the jtreg test thread factory should be built... disabled, from default 'auto' checking if the CDS classlist generation should be enabled... enabled, from default 'auto' checking if any translations should be excluded... no checking if CDS archive is available... yes checking if a default CDS archive should be generated... enabled, from default 'auto' checking if CDS archive with compact object headers is available... yes checking if default CDS archives for compact object headers should be generated... enabled, from default 'auto' checking if CDS archive is available... yes checking if compatible cds region alignment enabled... disabled, default checking for --with-signing-hook... <disabled>, default checking for signing hook... none checking for --enable-java-warnings-as-errors... enabled, default checking for number of cores... 4 checking for memory size... 15988 MB checking for appropriate number of jobs to run in parallel... 4 checking whether to use javac server... enabled, default checking flags for boot jdk java command ... -Duser.language=en -Duser.country=US -Xlog:all=off:stdout -Xlog:all=warning:stderr -XX:+UnlockDiagnosticVMOptions -XX:-VerifySharedSpaces -XX:SharedArchiveFile=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/configure-support/classes.jsa -Xshare:auto checking flags for boot jdk java command for big workloads... -Xms64M -Xmx2048M checking flags for bootcycle boot jdk java command for big workloads... -Xms64M -Xmx2048M checking flags for boot jdk java command for small workloads... -XX:+UseSerialGC -Xms32M -Xmx512M -XX:TieredStopAtLevel=1 checking for --enable-icecc... disabled, default checking if precompiled headers are available... yes checking for --enable-precompiled-headers... disabled, from command line checking for ccache... /usr/local/bin/ccache checking if ccache is available... yes checking if ccache is enabled... disabled, from command line checking if build directory is on local disk... yes configure: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/configure-support/config.status config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/spec.gmk config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/bootcycle-spec.gmk config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/buildjdk-spec.gmk config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/compare.sh config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/Makefile ==================================================== A new configuration has been successfully created in /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release using configure arguments '--verbose --with-vendor-name='Eclipse Adoptium' --with-vendor-url=https://adoptium.net/ --with-vendor-bug-url=https://github.com/adoptium/adoptium-support/issues --with-vendor-vm-bug-url=https://github.com/adoptium/adoptium-support/issues --with-version-opt=LTS --without-version-pre --with-version-build=1 --with-vendor-version-string=Temurin-25.0.4.1+1 --with-boot-jdk=/usr/lib/jvm/jdk24 --with-devkit=/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01 --enable-linkable-runtime --with-debug-level=release --with-native-debug-symbols=external --with-source-date=version --disable-ccache --with-build-user=admin --with-jvm-variants=server --with-cacerts-src=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/sbin/../security/certs --disable-warnings-as-errors --disable-precompiled-headers --enable-dtrace --with-freetype=bundled --with-zlib=bundled'. Configuration summary: * Name: linux-x86_64-server-release * Debug level: release * HS debug level: product * JVM variants: server * JVM features: server: 'cds compiler1 compiler2 dtrace epsilongc g1gc jfr jni-check jvmci jvmti management parallelgc serialgc services shenandoahgc vm-structs zgc' * OpenJDK target: OS: linux, CPU architecture: x86, address length: 64 * Version string: 25.0.4.1+1-LTS (25.0.4.1) * Source date: 1787011200 (2026-08-18T00:00:00Z) Tools summary: * Boot JDK: openjdk version \"24.0.2\" 2025-07-15 OpenJDK Runtime Environment Temurin-24.0.2+12 (build 24.0.2+12) OpenJDK 64-Bit Server VM Temurin-24.0.2+12 (build 24.0.2+12, mixed mode, sharing) (at /usr/lib/jvm/jdk24) * Toolchain: gcc (GNU Compiler Collection) * Devkit: gcc-14.2.0 - Centos7.9.2009 (/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01) * C Compiler: Version 14.2.0 (at /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc) * C++ Compiler: Version 14.2.0 (at /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++) Build performance summary: * Build jobs: 4 * Memory limit: 15988 MB The following warnings were produced. Repeated here for convenience: WARNING: No UTF-8 locale found. This is not supported. Proceeding with the C locale, but the build might fail unexpectedly. WARNING: pandoc is version 3.8.2, not the recommended version 2.19.2"
+        }
+      ]
+    },
+    {
+      "type" : "framework",
+      "author" : "Eclipse Temurin",
+      "publisher" : "Eclipse Temurin",
+      "group" : "adoptium.net",
+      "name" : "STATIC-LIBS Component",
+      "version" : "25.0.4.1+1-LTS",
+      "description" : "Temurin STATIC-LIBS Component",
+      "hashes" : [
+        {
+          "alg" : "SHA-256",
+          "content" : "f3a5edff802a2d9c417f1f041334c091c29855aafe1a02f88c4701c98ea67c50"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "Filename",
+          "value" : "OpenJDK25U-static-libs-glibc_x64_linux_hotspot_25.0.4.1_1.tar.gz"
+        },
+        {
+          "name" : "JDK Variant",
+          "value" : "Temurin"
+        },
+        {
+          "name" : "SCM Ref",
+          "value" : "jdk-25.0.4.1+1_adopt"
+        },
+        {
+          "name" : "OpenJDK Source Commit",
+          "value" : "https://github.com/adoptium/jdk25u/commit/520406d871955300957ef01e406ac2acd0f9b75c"
+        },
+        {
+          "name" : "Temurin Build Ref",
+          "value" : "https://github.com/adoptium/temurin-build/commit/e6ba7dec3d07654074559310376a3ae89da5f4ac"
+        },
+        {
+          "name" : "Builder Job Reference",
+          "value" : "https://ci.adoptium.net/job/build-scripts/job/jobs/job/release/job/jobs/job/jdk25u/job/jdk25u-release-linux-x64-temurin/15/"
+        },
+        {
+          "name" : "Builder Name",
+          "value" : "build-azure-linux-x64-5858b5"
+        },
+        {
+          "name" : "Build Timestamp",
+          "value" : "2026-08-18 00:00:00"
+        },
+        {
+          "name" : "Build Workspace Directory",
+          "value" : "/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src"
+        },
+        {
+          "name" : "Build LC_ALL",
+          "value" : "C"
+        },
+        {
+          "name" : "Build Tools Summary",
+          "value" : "Tools summary: * Boot JDK: openjdk version \"24.0.2\" 2025-07-15 OpenJDK Runtime Environment Temurin-24.0.2+12 (build 24.0.2+12) OpenJDK 64-Bit Server VM Temurin-24.0.2+12 (build 24.0.2+12, mixed mode, sharing) (at /usr/lib/jvm/jdk24) * Toolchain: gcc (GNU Compiler Collection) * Devkit: gcc-14.2.0 - Centos7.9.2009 (/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01) * C Compiler: Version 14.2.0 (at /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc) * C++ Compiler: Version 14.2.0 (at /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++) Build performance summary: * Build jobs: 4 * Memory limit: 15988 MB The following warnings were produced. Repeated here for convenience: WARNING: No UTF-8 locale found. This is not supported. Proceeding with the C locale, but the build might fail unexpectedly. WARNING: pandoc is version 3.8.2, not the recommended version 2.19.2"
+        },
+        {
+          "name" : "Build Config",
+          "value" : "{ \"ADOPTIUM_DEVKIT_LOCATION\" : \"/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01\", \"ADOPT_PATCHES\" : \"true\", \"ALSA\" : \"true\", \"ASSEMBLE_EXPLODED_IMAGE\" : \"false\", \"OPENJDK_BUILD_REPO_BRANCH\" : \"master\", \"OPENJDK_BUILD_REPO_URI\" : \"https://github.com/adoptium/temurin-build.git\", \"BRANCH\" : \"dev\", \"BUILD_FULL_NAME\" : \"linux-x86_64--server-release\", \"BUILD_REPRODUCIBLE_DATE\" : \"\", \"BUILD_TIMESTAMP\" : \"2026-08-18 00:00:00\", \"BUILD_VARIANT\" : \"temurin\", \"CONTAINER_AS_ROOT\" : \"\", \"CLEAN_DOCKER_BUILD\" : \"false\", \"CLEAN_GIT_REPO\" : \"true\", \"CLEAN_LIBS\" : \"true\", \"CONTAINER_COMMAND\" : \"false\", \"CONTAINER_NAME\" : \"openjdk_container\", \"CONTAINER_IMAGE\" : \"ubuntu:18.04\", \"COPY_MACOSX_FREE_FONT_LIB_FOR_JDK_FLAG\" : \"false\", \"COPY_MACOSX_FREE_FONT_LIB_FOR_JRE_FLAG\" : \"false\", \"CREATE_DEBUG_IMAGE\" : \"true\", \"CREATE_JRE_IMAGE\" : \"true\", \"CREATE_SBOM\" : \"true\", \"CREATE_SOURCE_ARCHIVE\" : \"true\", \"CUSTOM_CACERTS\" : \"true\", \"CROSSCOMPILE\" : \"false\", \"DEBUG_DOCKER\" : \"false\", \"DEBUG_IMAGE_PATH\" : \"debug-image\", \"DISABLE_ADOPT_BRANCH_SAFETY\" : \"false\", \"DOCKER_FILE_PATH\" : \"\", \"DOCKER_SOURCE_VOLUME_NAME\" : \"openjdk-source-volume-jdk25u-temurin\", \"ENABLE_SBOM_STRACE\" : \"true\", \"FREETYPE\" : \"true\", \"FREETYPE_DIRECTORY\" : \"\", \"FREETYPE_FONT_BUILD_TYPE_PARAM\" : \"\", \"FREETYPE_FONT_VERSION\" : \"86bc8a95056c97a810986434a3f268cbe67f2902\", \"GRADLE_USER_HOME_DIR\" : \"\", \"KEEP_CONTAINER\" : \"false\", \"JDK_BOOT_DIR\" : \"/usr/lib/jvm/jdk24\", \"JDK_PATH\" : \"jdk\", \"JRE_PATH\" : \"jre\", \"TEST_IMAGE_PATH\" : \"test\", \"STATIC_LIBS_IMAGE_PATH\" : \"static-libs-graal\", \"JMODS_IMAGE_PATH\" : \"jmods\", \"JVM_VARIANT\" : \"server\", \"LOCAL_DEPENDENCY_CACHE_DIR\" : \"\", \"MACOSX_CODESIGN_IDENTITY\" : \"\", \"MAKE_ARGS_FOR_ANY_PLATFORM\" : \"product-images legacy-jre-image\", \"MAKE_EXPLODED\" : \"false\", \"MAKE_COMMAND_NAME\" : \"make\", \"NUM_PROCESSORS\" : \"1\", \"OPENJDK_BUILD_NUMBER\" : \"\", \"OPENJDK_CORE_VERSION\" : \"jdk25\", \"OPENJDK_FEATURE_NUMBER\" : \"25\", \"OPENJDK_FOREST_NAME\" : \"jdk25u\", \"OPENJDK_LOCAL_SOURCE_ARCHIVE\" : \"false\", \"OPENJDK_LOCAL_SOURCE_ARCHIVE_ABSPATH\" : \"\", \"OPENJDK_SOURCE_DIR\" : \"src\", \"OPENJDK_UPDATE_VERSION\" : \"\", \"OS_KERNEL_NAME\" : \"linux\", \"OS_FULL_VERSION\" : \"CentOS Linux 7 (Kernel: 6.8.0-1064-azure)\", \"OS_ARCHITECTURE\" : \"x86_64\", \"PATCHES\" : \"\", \"RELEASE\" : \"true\", \"REPOSITORY\" : \"https://github.com/adoptium/jdk25u\", \"REUSE_CONTAINER\" : \"true\", \"SHALLOW_CLONE_OPTION\" : \"\", \"SIGN\" : \"false\", \"TAG\" : \"jdk-25.0.4.1+1_adopt\", \"TARGET_DIR\" : \"target/\", \"TARGET_FILE_NAME\" : \"OpenJDK25U-jdk_x64_linux_hotspot_25.0.4.1_1.tar.gz\", \"TMP_CONTAINER_NAME\" : \"openjdk-copy-src\", \"TMP_SPACE_BUILD\" : \"false\", \"USE_ADOPTIUM_DEVKIT\" : \"gcc-14.2.0-Centos7.9.2009-b01\", \"USE_JEP319_CERTS\" : \"true\", \"USE_SSH\" : \"false\", \"USER_DEVKIT_LOCATION\" : \"\", \"USER_SUPPLIED_CONFIGURE_ARGS\" : \" --disable-warnings-as-errors --disable-precompiled-headers --enable-dtrace\", \"USER_SUPPLIED_MAKE_ARGS\" : \"\", \"USER_OPENJDK_BUILD_ROOT_DIRECTORY\" : \"\", \"VENDOR\" : \"Eclipse Adoptium\", \"VENDOR_URL\" : \"https://adoptium.net/\", \"VENDOR_BUG_URL\" : \"https://github.com/adoptium/adoptium-support/issues\", \"VENDOR_VM_BUG_URL\" : \"https://github.com/adoptium/adoptium-support/issues\", \"WORKING_DIR\" : \"./build/\", \"WORKSPACE_DIR\" : \"/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace\", \"Data Source\" : \"BUILD_CONFIG hashmap\"}"
+        },
+        {
+          "name" : "full_version_output",
+          "value" : "openjdk version \"25.0.4.1\" 2026-08-18 LTS OpenJDK Runtime Environment Temurin-25.0.4.1+1 (build 25.0.4.1+1-LTS) OpenJDK 64-Bit Server VM Temurin-25.0.4.1+1 (build 25.0.4.1+1-LTS, mixed mode, sharing)"
+        },
+        {
+          "name" : "makejdk_any_platform_args",
+          "value" : "--clean-git-repo --jdk-boot-dir /usr/lib/jvm/jdk24 --configure-args \" --disable-warnings-as-errors --disable-precompiled-headers --enable-dtrace\" --target-file-name OpenJDK25U-jdk_x64_linux_hotspot_25.0.4.1_1.tar.gz --release --clean-libs --tag jdk-25.0.4.1+1_adopt --create-source-archive --create-jre-image --create-sbom --enable-sbom-strace --use-adoptium-devkit gcc-14.2.0-Centos7.9.2009-b01 --use-jep319-certs --create-debug-image --build-variant temurin jdk25u"
+        },
+        {
+          "name" : "make_command_args",
+          "value" : "mkdir /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/./build//straceOutput && strace -o /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/./build//straceOutput/outputFile -ff -e trace=open,openat,execve make product-images legacy-jre-image test-image static-libs-graal-image"
+        },
+        {
+          "name" : "configure_args",
+          "value" : "--with-vendor-name=\"Eclipse Adoptium\" --with-vendor-url=https://adoptium.net/ --with-vendor-bug-url=https://github.com/adoptium/adoptium-support/issues --with-vendor-vm-bug-url=https://github.com/adoptium/adoptium-support/issues --with-version-opt=LTS --without-version-pre --with-version-build=1 --with-vendor-version-string=Temurin-25.0.4.1+1 --with-boot-jdk=/usr/lib/jvm/jdk24 --with-devkit=/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01 --enable-linkable-runtime --with-debug-level=release --with-native-debug-symbols=external --with-source-date=version --disable-ccache --with-build-user=admin --with-jvm-variants=server --with-cacerts-src=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/sbin/../security/certs --disable-warnings-as-errors --disable-precompiled-headers --enable-dtrace --with-freetype=bundled --with-zlib=bundled"
+        },
+        {
+          "name" : "configure_txt",
+          "value" : "Runnable configure script is not present Generating runnable configure script at /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/.configure-support/generated-configure.sh Using autoconf at /usr/bin/autoconf [autoconf (GNU Autoconf) 2.69] configure: Configuration created at Tue Aug 18 19:24:35 UTC 2026. checking for basename... /usr/bin/basename checking for dirname... /usr/bin/dirname checking for file... /usr/bin/file checking for ldd... /usr/bin/ldd checking for echo... echo [builtin] checking for tr... /usr/bin/tr checking for uname... /usr/bin/uname checking for wc... /usr/bin/wc checking for grep that handles long lines and -e... /usr/bin/grep checking for egrep... /usr/bin/grep -E checking for a sed that does not truncate output... /usr/bin/sed checking for locale... /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/repro_locale/locale checking for cygpath... [not found] checking for wslpath... [not found] checking for cmd.exe... [not found] checking for lsb_release... [not found] checking build system type... x86_64-pc-linux-gnu checking host system type... x86_64-pc-linux-gnu checking target system type... x86_64-pc-linux-gnu checking openjdk-build os-cpu... linux-x86_64 checking openjdk-build C library... gnu checking openjdk-target os-cpu... linux-x86_64 checking openjdk-target C library... gnu checking compilation type... native checking for top-level directory... /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src checking for bash... /usr/bin/bash checking for cat... /usr/bin/cat checking for chmod... /usr/bin/chmod checking for cp... /usr/bin/cp checking for cut... /usr/bin/cut checking for date... /usr/bin/date checking for gdiff... [not found] checking for diff... /usr/bin/diff checking for expr... /usr/bin/expr checking for find... /usr/bin/find checking for gunzip... /usr/bin/gunzip checking for pigz... /usr/bin/pigz checking for head... /usr/bin/head checking for ln... /usr/bin/ln checking for ls... /usr/bin/ls checking for gmkdir... [not found] checking for mkdir... /usr/bin/mkdir checking for mktemp... /usr/bin/mktemp checking for mv... /usr/bin/mv checking for gawk... /usr/bin/gawk checking for printf... printf [builtin] checking for rm... /usr/bin/rm checking for rmdir... /usr/bin/rmdir checking for sh... /usr/bin/sh checking for sort... /usr/bin/sort checking for tail... /usr/bin/tail checking for gtar... /usr/bin/gtar checking for tee... /usr/bin/tee checking for touch... /usr/bin/touch checking for xargs... /usr/bin/xargs checking for fgrep... /usr/bin/grep -F checking for cmake... /usr/local/bin/cmake checking for df... /usr/bin/df checking for git... /usr/local/bin/git checking for nice... /usr/bin/nice checking for greadlink... [not found] checking for readlink... /usr/bin/readlink checking for whoami... /usr/bin/whoami checking for cmp... /usr/bin/cmp checking for uniq... /usr/bin/uniq configure: CI environment variable set to true checking for build environment type... ci, default (calculated from 'auto') checking for locale to use... no UTF-8 locale found configure: The recommended locale is C.UTF-8, but en_US.UTF-8 is also accepted. checking if custom source is suppressed (openjdk-only)... disabled, default checking for --enable-debug... disabled, default checking which debug level to use... release checking which variants of the JVM to build... server checking if absolute paths should be allowed in the build output... no, release build checking for devkit... gcc-14.2.0 - Centos7.9.2009 in /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01 checking for toolchain path... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin checking for sysroot... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/x86_64-linux-gnu/sysroot checking for extra path... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin checking where to store configuration... in default location checking what configuration name to use... linux-x86_64-server-release checking for zypper... [not found] checking for apt-get... [not found] checking for yum... /usr/bin/yum checking for pandoc... /usr/local/bin/pandoc checking for pandoc version... 3.8.2 checking if the pandoc smart extension needs to be disabled for markdown... yes checking if the pandoc tex_math_dollars extension needs to be disabled for markdown... yes checking for gmake... /usr/local/bin/gmake configure: Testing potential make at /usr/local/bin/gmake, found using gmake in PATH configure: Using GNU make at /usr/local/bin/gmake (version: GNU Make 4.1) checking if make --output-sync is supported... yes checking for make --output-sync value... none, default checking if find supports -delete... yes checking what type of tar was found... gnu checking that grep (/usr/bin/grep) -Fx handles empty lines in the pattern list correctly... yes checking for unzip... /usr/bin/unzip checking for zip... /usr/bin/zip checking for greadelf... [not found] checking for readelf... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/readelf checking for dot... [not found] checking for stat... /usr/bin/stat checking for time... time [builtin] checking for flock... /usr/bin/flock checking for dtrace... /usr/bin/dtrace checking for gpatch... [not found] checking for patch... /usr/bin/patch checking if date is a GNU compatible version... yes checking for ulimit... ulimit [builtin] checking bash version... 4.2.46 checking if bash supports pipefail... yes checking if bash supports errexit (-e)... yes checking for pkg-config... /usr/bin/pkg-config checking pkg-config is at least version 0.9.0... yes checking for default LOG value... checking for JMOD compression type... zip-6, default checking whether or not a JDK suitable for linking from the run-time image should be produced... enabled, from command line checking if packaged modules are kept... disabled, default checking for --with-extra-jlink-flags... <disabled>, default checking for --with-build-user... admin, from command line checking for --with-jdk-rc-name... OpenJDK Platform, default checking for --with-vendor-name... Eclipse Adoptium, from command line checking for --with-jdk-rc-company-name... Eclipse Adoptium, default checking for --with-vendor-url... https://adoptium.net/, from command line checking for --with-vendor-bug-url... https://github.com/adoptium/adoptium-support/issues, from command line checking for --with-vendor-vm-bug-url... https://github.com/adoptium/adoptium-support/issues, from command line checking for --with-version-string... <none>, default checking for --with-version-feature... 25, default checking for --with-version-date... 2026-08-18, default checking for --with-vendor-version-string... Temurin-25.0.4.1+1, from command line checking for --with-macosx-bundle-name-base... OpenJDK, default checking for --with-macosx-bundle-id-base... net.java.openjdk, default checking for --with-macosx-bundle-build-version... 1, default checking for version string... 25.0.4.1+1-LTS configure: Found potential Boot JDK using configure arguments checking for Boot JDK... /usr/lib/jvm/jdk24 checking Boot JDK version... openjdk version \"24.0.2\" 2025-07-15 OpenJDK Runtime Environment Temurin-24.0.2+12 (build 24.0.2+12) OpenJDK 64-Bit Server VM Temurin-24.0.2+12 (build 24.0.2+12, mixed mode, sharing) checking for java [Boot JDK]... $BOOT_JDK/bin/java checking for javac [Boot JDK]... $BOOT_JDK/bin/javac checking for javadoc [Boot JDK]... $BOOT_JDK/bin/javadoc checking for jar [Boot JDK]... $BOOT_JDK/bin/jar checking if Boot JDK jar supports --date=TIMESTAMP... true checking if Boot JDK is 32 or 64 bits... 64 checking for local Boot JDK Class Data Sharing (CDS)... yes, created checking for Build JDK... yes, will use output dir checking for docs-reference JDK... no, using interim javadoc for the docs-reference targets checking what source date to use... 1787011200, from 'version' checking if we should build headless-only (no GUI)... disabled, default checking if linker should clean out unused code (linktime-gc)... disabled, default checking for graphviz dot... no, cannot generate full docs or man pages checking for pandoc... yes checking for --enable-full-docs... disabled, from default 'auto' checking for cacerts file... default checking for cacerts source... /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/sbin/../security/certs checking for --enable-unlimited-crypto... enabled, default checking for jni library path... default configure: Using default toolchain gcc (GNU Compiler Collection) checking for gcc... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc checking resolved symbolic links for CC... no symlink configure: Using gcc C compiler version 14.2.0 [gcc (GCC) 14.2.0] checking whether the C compiler works... yes checking for C compiler default output file name... a.out checking for suffix of executables... checking whether we are cross compiling... no checking for suffix of object files... o checking whether /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc accepts -g... yes checking for g++... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++ checking resolved symbolic links for CXX... no symlink configure: Using gcc C++ compiler version 14.2.0 [g++ (GCC) 14.2.0] checking whether /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++ accepts -g... yes checking how to run the C preprocessor... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc -E checking how to run the C++ preprocessor... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++ -E configure: Using gcc linker version 2.43 [GNU ld (GNU Binutils) 2.43] configure: comparing linker version to minimum version 2.25 checking for ar... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/ar checking for strip... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/strip checking for nm... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/nm checking for gobjcopy... [not found] checking for objcopy... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/objcopy checking for gobjdump... [not found] checking for objdump... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/objdump checking for c++filt... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/c++filt checking for jtreg... [not found] checking for jtreg test harness... no, not found checking for jtreg jdk... no, using BOOT_JDK checking for jmh (Java Microbenchmark Harness)... no, disabled checking for jib... no checking for tidy... [not found] checking for ANSI C header files... yes checking for sys/types.h... yes checking for sys/stat.h... yes checking for stdlib.h... yes checking for string.h... yes checking for memory.h... yes checking for strings.h... yes checking for inttypes.h... yes checking for stdint.h... yes checking for unistd.h... yes checking stdio.h usability... yes checking stdio.h presence... yes checking for stdio.h... yes checking size of int *... 8 checking for target address size... 64 bits checking whether byte ordering is bigendian... no checking for --enable-branch-protection... disabled, default checking if CC supports \"-fdebug-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if CXX supports \"-fdebug-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if both CC and CXX support \"-fdebug-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking for --enable-warnings-as-errors... disabled, from command line checking if TARGET is x86... no checking if CC supports \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if CXX supports \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if both CC and CXX support \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking how to prevent absolute paths in output... using compiler options checking if CC supports \"-ffp-contract=off\"... yes checking if CXX supports \"-ffp-contract=off\"... yes checking if both CC and CXX support \"-ffp-contract=off\"... yes checking if BUILD is x86... no checking if BUILD_CC supports \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if BUILD_CXX supports \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if both BUILD_CC and BUILD_CXX support \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking how to prevent absolute paths in output... using compiler options checking if BUILD_CC supports \"-ffp-contract=off\"... yes checking if BUILD_CXX supports \"-ffp-contract=off\"... yes checking if both BUILD_CC and BUILD_CXX support \"-ffp-contract=off\"... yes checking how to run strip... --strip-debug checking what type of native debug symbols to use... external checking if we should add external native debug symbols to the shipped bundles... no checking if native coverage is available... yes checking for --enable-native-coverage... disabled, default checking for --with-jcov-modules... <disabled>, default checking if AddressSanitizer (asan) is available... yes checking for --enable-asan... disabled, default checking for --with-additional-ubsan-checks... <disabled>, default checking if UndefinedBehaviorSanitizer (ubsan) is available... yes checking for --enable-ubsan... disabled, default checking if LeakSanitizer (lsan) is available... yes checking for --enable-lsan... disabled, default checking if static analyzer is available... yes checking for --enable-static-analyzer... disabled, default checking if fallback linker enabled... disabled, default checking if static link of stdc++ is possible... yes checking how to link with libstdc++... static checking for which libjpeg to use... bundled checking for which giflib to use... bundled checking for PNG... yes checking for which libpng to use... bundled checking for compress in -lz... yes checking for which zlib to use... bundled checking for which lcms to use... bundled checking for which harfbuzz to use... bundled checking cups/cups.h usability... yes checking cups/cups.h presence... yes checking for cups/cups.h... yes checking cups/ppd.h usability... yes checking cups/ppd.h presence... yes checking for cups/ppd.h... yes checking fontconfig/fontconfig.h usability... yes checking fontconfig/fontconfig.h presence... yes checking for fontconfig/fontconfig.h... yes Using freetype: bundled checking for --enable-hsdis-bundling... disabled, default checking what hsdis backend to use... 'none', hsdis will not be built checking if hsdis should be bundled... no checking for --enable-libffi-bundling... disabled, default checking for cos in -lm... yes checking for dlopen in -ldl... yes checking for X... libraries /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/x86_64-linux-gnu/sysroot/usr/lib64, headers /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/x86_64-linux-gnu/sysroot/usr/include checking whether -R must be followed by a space... neither works checking for gethostbyname... yes checking for connect... yes checking for remove... yes checking for shmat... yes checking for IceConnectionNumber in -lICE... yes checking for X11/extensions/shape.h... yes checking for X11/extensions/Xrender.h... yes checking for X11/extensions/XTest.h... yes checking for X11/Intrinsic.h... yes checking for X11/extensions/Xrandr.h... yes checking for JVM features enabled by the user... 'dtrace' checking for JVM features disabled by the user... none checking if platform is supported by CDS... yes checking if JVM feature 'cds' is available... yes checking for dtrace tool and platform support... /usr/bin/dtrace checking sys/sdt.h usability... yes checking sys/sdt.h presence... yes checking for sys/sdt.h... yes checking if JVM feature 'dtrace' is available... yes checking if platform is supported by JVMCI... yes checking if JVM feature 'jvmci' is available... yes checking if platform is supported by Shenandoah... yes checking if JVM feature 'shenandoahgc' is available... yes checking if platform is supported by ZGC... yes checking if JVM feature 'zgc' is available... yes configure: Default JVM features explicitly enabled for 'server': 'dtrace' checking JVM features to use for variant 'server'... 'cds compiler1 compiler2 dtrace epsilongc g1gc jfr jni-check jvmci jvmti management parallelgc serialgc services shenandoahgc vm-structs zgc' checking what hotspot build time to use... 2026-08-18T00:00:00Z (from --with-source-date) checking if the jtreg failure handler is available... no (jtreg not present) checking if the jtreg failure handler should be built... disabled, from default 'auto' checking if the jtreg test thread factory is available... no (jtreg not present) checking if the jtreg test thread factory should be built... disabled, from default 'auto' checking if the CDS classlist generation should be enabled... enabled, from default 'auto' checking if any translations should be excluded... no checking if CDS archive is available... yes checking if a default CDS archive should be generated... enabled, from default 'auto' checking if CDS archive with compact object headers is available... yes checking if default CDS archives for compact object headers should be generated... enabled, from default 'auto' checking if CDS archive is available... yes checking if compatible cds region alignment enabled... disabled, default checking for --with-signing-hook... <disabled>, default checking for signing hook... none checking for --enable-java-warnings-as-errors... enabled, default checking for number of cores... 4 checking for memory size... 15988 MB checking for appropriate number of jobs to run in parallel... 4 checking whether to use javac server... enabled, default checking flags for boot jdk java command ... -Duser.language=en -Duser.country=US -Xlog:all=off:stdout -Xlog:all=warning:stderr -XX:+UnlockDiagnosticVMOptions -XX:-VerifySharedSpaces -XX:SharedArchiveFile=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/configure-support/classes.jsa -Xshare:auto checking flags for boot jdk java command for big workloads... -Xms64M -Xmx2048M checking flags for bootcycle boot jdk java command for big workloads... -Xms64M -Xmx2048M checking flags for boot jdk java command for small workloads... -XX:+UseSerialGC -Xms32M -Xmx512M -XX:TieredStopAtLevel=1 checking for --enable-icecc... disabled, default checking if precompiled headers are available... yes checking for --enable-precompiled-headers... disabled, from command line checking for ccache... /usr/local/bin/ccache checking if ccache is available... yes checking if ccache is enabled... disabled, from command line checking if build directory is on local disk... yes configure: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/configure-support/config.status config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/spec.gmk config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/bootcycle-spec.gmk config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/buildjdk-spec.gmk config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/compare.sh config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/Makefile ==================================================== A new configuration has been successfully created in /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release using configure arguments '--verbose --with-vendor-name='Eclipse Adoptium' --with-vendor-url=https://adoptium.net/ --with-vendor-bug-url=https://github.com/adoptium/adoptium-support/issues --with-vendor-vm-bug-url=https://github.com/adoptium/adoptium-support/issues --with-version-opt=LTS --without-version-pre --with-version-build=1 --with-vendor-version-string=Temurin-25.0.4.1+1 --with-boot-jdk=/usr/lib/jvm/jdk24 --with-devkit=/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01 --enable-linkable-runtime --with-debug-level=release --with-native-debug-symbols=external --with-source-date=version --disable-ccache --with-build-user=admin --with-jvm-variants=server --with-cacerts-src=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/sbin/../security/certs --disable-warnings-as-errors --disable-precompiled-headers --enable-dtrace --with-freetype=bundled --with-zlib=bundled'. Configuration summary: * Name: linux-x86_64-server-release * Debug level: release * HS debug level: product * JVM variants: server * JVM features: server: 'cds compiler1 compiler2 dtrace epsilongc g1gc jfr jni-check jvmci jvmti management parallelgc serialgc services shenandoahgc vm-structs zgc' * OpenJDK target: OS: linux, CPU architecture: x86, address length: 64 * Version string: 25.0.4.1+1-LTS (25.0.4.1) * Source date: 1787011200 (2026-08-18T00:00:00Z) Tools summary: * Boot JDK: openjdk version \"24.0.2\" 2025-07-15 OpenJDK Runtime Environment Temurin-24.0.2+12 (build 24.0.2+12) OpenJDK 64-Bit Server VM Temurin-24.0.2+12 (build 24.0.2+12, mixed mode, sharing) (at /usr/lib/jvm/jdk24) * Toolchain: gcc (GNU Compiler Collection) * Devkit: gcc-14.2.0 - Centos7.9.2009 (/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01) * C Compiler: Version 14.2.0 (at /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc) * C++ Compiler: Version 14.2.0 (at /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++) Build performance summary: * Build jobs: 4 * Memory limit: 15988 MB The following warnings were produced. Repeated here for convenience: WARNING: No UTF-8 locale found. This is not supported. Proceeding with the C locale, but the build might fail unexpectedly. WARNING: pandoc is version 3.8.2, not the recommended version 2.19.2"
+        }
+      ]
+    },
+    {
+      "type" : "framework",
+      "author" : "Eclipse Temurin",
+      "publisher" : "Eclipse Temurin",
+      "group" : "adoptium.net",
+      "name" : "DEBUGIMAGE Component",
+      "version" : "25.0.4.1+1-LTS",
+      "description" : "Temurin DEBUGIMAGE Component",
+      "hashes" : [
+        {
+          "alg" : "SHA-256",
+          "content" : "6dcf472364469f7f570732a312cdf7b02ca832cf8d7b8bc2e1caf1ab0db54ab4"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "Filename",
+          "value" : "OpenJDK25U-debugimage_x64_linux_hotspot_25.0.4.1_1.tar.gz"
+        },
+        {
+          "name" : "JDK Variant",
+          "value" : "Temurin"
+        },
+        {
+          "name" : "SCM Ref",
+          "value" : "jdk-25.0.4.1+1_adopt"
+        },
+        {
+          "name" : "OpenJDK Source Commit",
+          "value" : "https://github.com/adoptium/jdk25u/commit/520406d871955300957ef01e406ac2acd0f9b75c"
+        },
+        {
+          "name" : "Temurin Build Ref",
+          "value" : "https://github.com/adoptium/temurin-build/commit/e6ba7dec3d07654074559310376a3ae89da5f4ac"
+        },
+        {
+          "name" : "Builder Job Reference",
+          "value" : "https://ci.adoptium.net/job/build-scripts/job/jobs/job/release/job/jobs/job/jdk25u/job/jdk25u-release-linux-x64-temurin/15/"
+        },
+        {
+          "name" : "Builder Name",
+          "value" : "build-azure-linux-x64-5858b5"
+        },
+        {
+          "name" : "Build Timestamp",
+          "value" : "2026-08-18 00:00:00"
+        },
+        {
+          "name" : "Build Workspace Directory",
+          "value" : "/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src"
+        },
+        {
+          "name" : "Build LC_ALL",
+          "value" : "C"
+        },
+        {
+          "name" : "Build Tools Summary",
+          "value" : "Tools summary: * Boot JDK: openjdk version \"24.0.2\" 2025-07-15 OpenJDK Runtime Environment Temurin-24.0.2+12 (build 24.0.2+12) OpenJDK 64-Bit Server VM Temurin-24.0.2+12 (build 24.0.2+12, mixed mode, sharing) (at /usr/lib/jvm/jdk24) * Toolchain: gcc (GNU Compiler Collection) * Devkit: gcc-14.2.0 - Centos7.9.2009 (/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01) * C Compiler: Version 14.2.0 (at /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc) * C++ Compiler: Version 14.2.0 (at /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++) Build performance summary: * Build jobs: 4 * Memory limit: 15988 MB The following warnings were produced. Repeated here for convenience: WARNING: No UTF-8 locale found. This is not supported. Proceeding with the C locale, but the build might fail unexpectedly. WARNING: pandoc is version 3.8.2, not the recommended version 2.19.2"
+        },
+        {
+          "name" : "Build Config",
+          "value" : "{ \"ADOPTIUM_DEVKIT_LOCATION\" : \"/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01\", \"ADOPT_PATCHES\" : \"true\", \"ALSA\" : \"true\", \"ASSEMBLE_EXPLODED_IMAGE\" : \"false\", \"OPENJDK_BUILD_REPO_BRANCH\" : \"master\", \"OPENJDK_BUILD_REPO_URI\" : \"https://github.com/adoptium/temurin-build.git\", \"BRANCH\" : \"dev\", \"BUILD_FULL_NAME\" : \"linux-x86_64--server-release\", \"BUILD_REPRODUCIBLE_DATE\" : \"\", \"BUILD_TIMESTAMP\" : \"2026-08-18 00:00:00\", \"BUILD_VARIANT\" : \"temurin\", \"CONTAINER_AS_ROOT\" : \"\", \"CLEAN_DOCKER_BUILD\" : \"false\", \"CLEAN_GIT_REPO\" : \"true\", \"CLEAN_LIBS\" : \"true\", \"CONTAINER_COMMAND\" : \"false\", \"CONTAINER_NAME\" : \"openjdk_container\", \"CONTAINER_IMAGE\" : \"ubuntu:18.04\", \"COPY_MACOSX_FREE_FONT_LIB_FOR_JDK_FLAG\" : \"false\", \"COPY_MACOSX_FREE_FONT_LIB_FOR_JRE_FLAG\" : \"false\", \"CREATE_DEBUG_IMAGE\" : \"true\", \"CREATE_JRE_IMAGE\" : \"true\", \"CREATE_SBOM\" : \"true\", \"CREATE_SOURCE_ARCHIVE\" : \"true\", \"CUSTOM_CACERTS\" : \"true\", \"CROSSCOMPILE\" : \"false\", \"DEBUG_DOCKER\" : \"false\", \"DEBUG_IMAGE_PATH\" : \"debug-image\", \"DISABLE_ADOPT_BRANCH_SAFETY\" : \"false\", \"DOCKER_FILE_PATH\" : \"\", \"DOCKER_SOURCE_VOLUME_NAME\" : \"openjdk-source-volume-jdk25u-temurin\", \"ENABLE_SBOM_STRACE\" : \"true\", \"FREETYPE\" : \"true\", \"FREETYPE_DIRECTORY\" : \"\", \"FREETYPE_FONT_BUILD_TYPE_PARAM\" : \"\", \"FREETYPE_FONT_VERSION\" : \"86bc8a95056c97a810986434a3f268cbe67f2902\", \"GRADLE_USER_HOME_DIR\" : \"\", \"KEEP_CONTAINER\" : \"false\", \"JDK_BOOT_DIR\" : \"/usr/lib/jvm/jdk24\", \"JDK_PATH\" : \"jdk\", \"JRE_PATH\" : \"jre\", \"TEST_IMAGE_PATH\" : \"test\", \"STATIC_LIBS_IMAGE_PATH\" : \"static-libs-graal\", \"JMODS_IMAGE_PATH\" : \"jmods\", \"JVM_VARIANT\" : \"server\", \"LOCAL_DEPENDENCY_CACHE_DIR\" : \"\", \"MACOSX_CODESIGN_IDENTITY\" : \"\", \"MAKE_ARGS_FOR_ANY_PLATFORM\" : \"product-images legacy-jre-image\", \"MAKE_EXPLODED\" : \"false\", \"MAKE_COMMAND_NAME\" : \"make\", \"NUM_PROCESSORS\" : \"1\", \"OPENJDK_BUILD_NUMBER\" : \"\", \"OPENJDK_CORE_VERSION\" : \"jdk25\", \"OPENJDK_FEATURE_NUMBER\" : \"25\", \"OPENJDK_FOREST_NAME\" : \"jdk25u\", \"OPENJDK_LOCAL_SOURCE_ARCHIVE\" : \"false\", \"OPENJDK_LOCAL_SOURCE_ARCHIVE_ABSPATH\" : \"\", \"OPENJDK_SOURCE_DIR\" : \"src\", \"OPENJDK_UPDATE_VERSION\" : \"\", \"OS_KERNEL_NAME\" : \"linux\", \"OS_FULL_VERSION\" : \"CentOS Linux 7 (Kernel: 6.8.0-1064-azure)\", \"OS_ARCHITECTURE\" : \"x86_64\", \"PATCHES\" : \"\", \"RELEASE\" : \"true\", \"REPOSITORY\" : \"https://github.com/adoptium/jdk25u\", \"REUSE_CONTAINER\" : \"true\", \"SHALLOW_CLONE_OPTION\" : \"\", \"SIGN\" : \"false\", \"TAG\" : \"jdk-25.0.4.1+1_adopt\", \"TARGET_DIR\" : \"target/\", \"TARGET_FILE_NAME\" : \"OpenJDK25U-jdk_x64_linux_hotspot_25.0.4.1_1.tar.gz\", \"TMP_CONTAINER_NAME\" : \"openjdk-copy-src\", \"TMP_SPACE_BUILD\" : \"false\", \"USE_ADOPTIUM_DEVKIT\" : \"gcc-14.2.0-Centos7.9.2009-b01\", \"USE_JEP319_CERTS\" : \"true\", \"USE_SSH\" : \"false\", \"USER_DEVKIT_LOCATION\" : \"\", \"USER_SUPPLIED_CONFIGURE_ARGS\" : \" --disable-warnings-as-errors --disable-precompiled-headers --enable-dtrace\", \"USER_SUPPLIED_MAKE_ARGS\" : \"\", \"USER_OPENJDK_BUILD_ROOT_DIRECTORY\" : \"\", \"VENDOR\" : \"Eclipse Adoptium\", \"VENDOR_URL\" : \"https://adoptium.net/\", \"VENDOR_BUG_URL\" : \"https://github.com/adoptium/adoptium-support/issues\", \"VENDOR_VM_BUG_URL\" : \"https://github.com/adoptium/adoptium-support/issues\", \"WORKING_DIR\" : \"./build/\", \"WORKSPACE_DIR\" : \"/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace\", \"Data Source\" : \"BUILD_CONFIG hashmap\"}"
+        },
+        {
+          "name" : "full_version_output",
+          "value" : "openjdk version \"25.0.4.1\" 2026-08-18 LTS OpenJDK Runtime Environment Temurin-25.0.4.1+1 (build 25.0.4.1+1-LTS) OpenJDK 64-Bit Server VM Temurin-25.0.4.1+1 (build 25.0.4.1+1-LTS, mixed mode, sharing)"
+        },
+        {
+          "name" : "makejdk_any_platform_args",
+          "value" : "--clean-git-repo --jdk-boot-dir /usr/lib/jvm/jdk24 --configure-args \" --disable-warnings-as-errors --disable-precompiled-headers --enable-dtrace\" --target-file-name OpenJDK25U-jdk_x64_linux_hotspot_25.0.4.1_1.tar.gz --release --clean-libs --tag jdk-25.0.4.1+1_adopt --create-source-archive --create-jre-image --create-sbom --enable-sbom-strace --use-adoptium-devkit gcc-14.2.0-Centos7.9.2009-b01 --use-jep319-certs --create-debug-image --build-variant temurin jdk25u"
+        },
+        {
+          "name" : "make_command_args",
+          "value" : "mkdir /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/./build//straceOutput && strace -o /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/./build//straceOutput/outputFile -ff -e trace=open,openat,execve make product-images legacy-jre-image test-image static-libs-graal-image"
+        },
+        {
+          "name" : "configure_args",
+          "value" : "--with-vendor-name=\"Eclipse Adoptium\" --with-vendor-url=https://adoptium.net/ --with-vendor-bug-url=https://github.com/adoptium/adoptium-support/issues --with-vendor-vm-bug-url=https://github.com/adoptium/adoptium-support/issues --with-version-opt=LTS --without-version-pre --with-version-build=1 --with-vendor-version-string=Temurin-25.0.4.1+1 --with-boot-jdk=/usr/lib/jvm/jdk24 --with-devkit=/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01 --enable-linkable-runtime --with-debug-level=release --with-native-debug-symbols=external --with-source-date=version --disable-ccache --with-build-user=admin --with-jvm-variants=server --with-cacerts-src=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/sbin/../security/certs --disable-warnings-as-errors --disable-precompiled-headers --enable-dtrace --with-freetype=bundled --with-zlib=bundled"
+        },
+        {
+          "name" : "configure_txt",
+          "value" : "Runnable configure script is not present Generating runnable configure script at /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/.configure-support/generated-configure.sh Using autoconf at /usr/bin/autoconf [autoconf (GNU Autoconf) 2.69] configure: Configuration created at Tue Aug 18 19:24:35 UTC 2026. checking for basename... /usr/bin/basename checking for dirname... /usr/bin/dirname checking for file... /usr/bin/file checking for ldd... /usr/bin/ldd checking for echo... echo [builtin] checking for tr... /usr/bin/tr checking for uname... /usr/bin/uname checking for wc... /usr/bin/wc checking for grep that handles long lines and -e... /usr/bin/grep checking for egrep... /usr/bin/grep -E checking for a sed that does not truncate output... /usr/bin/sed checking for locale... /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/repro_locale/locale checking for cygpath... [not found] checking for wslpath... [not found] checking for cmd.exe... [not found] checking for lsb_release... [not found] checking build system type... x86_64-pc-linux-gnu checking host system type... x86_64-pc-linux-gnu checking target system type... x86_64-pc-linux-gnu checking openjdk-build os-cpu... linux-x86_64 checking openjdk-build C library... gnu checking openjdk-target os-cpu... linux-x86_64 checking openjdk-target C library... gnu checking compilation type... native checking for top-level directory... /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src checking for bash... /usr/bin/bash checking for cat... /usr/bin/cat checking for chmod... /usr/bin/chmod checking for cp... /usr/bin/cp checking for cut... /usr/bin/cut checking for date... /usr/bin/date checking for gdiff... [not found] checking for diff... /usr/bin/diff checking for expr... /usr/bin/expr checking for find... /usr/bin/find checking for gunzip... /usr/bin/gunzip checking for pigz... /usr/bin/pigz checking for head... /usr/bin/head checking for ln... /usr/bin/ln checking for ls... /usr/bin/ls checking for gmkdir... [not found] checking for mkdir... /usr/bin/mkdir checking for mktemp... /usr/bin/mktemp checking for mv... /usr/bin/mv checking for gawk... /usr/bin/gawk checking for printf... printf [builtin] checking for rm... /usr/bin/rm checking for rmdir... /usr/bin/rmdir checking for sh... /usr/bin/sh checking for sort... /usr/bin/sort checking for tail... /usr/bin/tail checking for gtar... /usr/bin/gtar checking for tee... /usr/bin/tee checking for touch... /usr/bin/touch checking for xargs... /usr/bin/xargs checking for fgrep... /usr/bin/grep -F checking for cmake... /usr/local/bin/cmake checking for df... /usr/bin/df checking for git... /usr/local/bin/git checking for nice... /usr/bin/nice checking for greadlink... [not found] checking for readlink... /usr/bin/readlink checking for whoami... /usr/bin/whoami checking for cmp... /usr/bin/cmp checking for uniq... /usr/bin/uniq configure: CI environment variable set to true checking for build environment type... ci, default (calculated from 'auto') checking for locale to use... no UTF-8 locale found configure: The recommended locale is C.UTF-8, but en_US.UTF-8 is also accepted. checking if custom source is suppressed (openjdk-only)... disabled, default checking for --enable-debug... disabled, default checking which debug level to use... release checking which variants of the JVM to build... server checking if absolute paths should be allowed in the build output... no, release build checking for devkit... gcc-14.2.0 - Centos7.9.2009 in /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01 checking for toolchain path... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin checking for sysroot... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/x86_64-linux-gnu/sysroot checking for extra path... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin checking where to store configuration... in default location checking what configuration name to use... linux-x86_64-server-release checking for zypper... [not found] checking for apt-get... [not found] checking for yum... /usr/bin/yum checking for pandoc... /usr/local/bin/pandoc checking for pandoc version... 3.8.2 checking if the pandoc smart extension needs to be disabled for markdown... yes checking if the pandoc tex_math_dollars extension needs to be disabled for markdown... yes checking for gmake... /usr/local/bin/gmake configure: Testing potential make at /usr/local/bin/gmake, found using gmake in PATH configure: Using GNU make at /usr/local/bin/gmake (version: GNU Make 4.1) checking if make --output-sync is supported... yes checking for make --output-sync value... none, default checking if find supports -delete... yes checking what type of tar was found... gnu checking that grep (/usr/bin/grep) -Fx handles empty lines in the pattern list correctly... yes checking for unzip... /usr/bin/unzip checking for zip... /usr/bin/zip checking for greadelf... [not found] checking for readelf... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/readelf checking for dot... [not found] checking for stat... /usr/bin/stat checking for time... time [builtin] checking for flock... /usr/bin/flock checking for dtrace... /usr/bin/dtrace checking for gpatch... [not found] checking for patch... /usr/bin/patch checking if date is a GNU compatible version... yes checking for ulimit... ulimit [builtin] checking bash version... 4.2.46 checking if bash supports pipefail... yes checking if bash supports errexit (-e)... yes checking for pkg-config... /usr/bin/pkg-config checking pkg-config is at least version 0.9.0... yes checking for default LOG value... checking for JMOD compression type... zip-6, default checking whether or not a JDK suitable for linking from the run-time image should be produced... enabled, from command line checking if packaged modules are kept... disabled, default checking for --with-extra-jlink-flags... <disabled>, default checking for --with-build-user... admin, from command line checking for --with-jdk-rc-name... OpenJDK Platform, default checking for --with-vendor-name... Eclipse Adoptium, from command line checking for --with-jdk-rc-company-name... Eclipse Adoptium, default checking for --with-vendor-url... https://adoptium.net/, from command line checking for --with-vendor-bug-url... https://github.com/adoptium/adoptium-support/issues, from command line checking for --with-vendor-vm-bug-url... https://github.com/adoptium/adoptium-support/issues, from command line checking for --with-version-string... <none>, default checking for --with-version-feature... 25, default checking for --with-version-date... 2026-08-18, default checking for --with-vendor-version-string... Temurin-25.0.4.1+1, from command line checking for --with-macosx-bundle-name-base... OpenJDK, default checking for --with-macosx-bundle-id-base... net.java.openjdk, default checking for --with-macosx-bundle-build-version... 1, default checking for version string... 25.0.4.1+1-LTS configure: Found potential Boot JDK using configure arguments checking for Boot JDK... /usr/lib/jvm/jdk24 checking Boot JDK version... openjdk version \"24.0.2\" 2025-07-15 OpenJDK Runtime Environment Temurin-24.0.2+12 (build 24.0.2+12) OpenJDK 64-Bit Server VM Temurin-24.0.2+12 (build 24.0.2+12, mixed mode, sharing) checking for java [Boot JDK]... $BOOT_JDK/bin/java checking for javac [Boot JDK]... $BOOT_JDK/bin/javac checking for javadoc [Boot JDK]... $BOOT_JDK/bin/javadoc checking for jar [Boot JDK]... $BOOT_JDK/bin/jar checking if Boot JDK jar supports --date=TIMESTAMP... true checking if Boot JDK is 32 or 64 bits... 64 checking for local Boot JDK Class Data Sharing (CDS)... yes, created checking for Build JDK... yes, will use output dir checking for docs-reference JDK... no, using interim javadoc for the docs-reference targets checking what source date to use... 1787011200, from 'version' checking if we should build headless-only (no GUI)... disabled, default checking if linker should clean out unused code (linktime-gc)... disabled, default checking for graphviz dot... no, cannot generate full docs or man pages checking for pandoc... yes checking for --enable-full-docs... disabled, from default 'auto' checking for cacerts file... default checking for cacerts source... /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/sbin/../security/certs checking for --enable-unlimited-crypto... enabled, default checking for jni library path... default configure: Using default toolchain gcc (GNU Compiler Collection) checking for gcc... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc checking resolved symbolic links for CC... no symlink configure: Using gcc C compiler version 14.2.0 [gcc (GCC) 14.2.0] checking whether the C compiler works... yes checking for C compiler default output file name... a.out checking for suffix of executables... checking whether we are cross compiling... no checking for suffix of object files... o checking whether /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc accepts -g... yes checking for g++... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++ checking resolved symbolic links for CXX... no symlink configure: Using gcc C++ compiler version 14.2.0 [g++ (GCC) 14.2.0] checking whether /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++ accepts -g... yes checking how to run the C preprocessor... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc -E checking how to run the C++ preprocessor... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++ -E configure: Using gcc linker version 2.43 [GNU ld (GNU Binutils) 2.43] configure: comparing linker version to minimum version 2.25 checking for ar... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/ar checking for strip... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/strip checking for nm... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/nm checking for gobjcopy... [not found] checking for objcopy... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/objcopy checking for gobjdump... [not found] checking for objdump... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/objdump checking for c++filt... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/c++filt checking for jtreg... [not found] checking for jtreg test harness... no, not found checking for jtreg jdk... no, using BOOT_JDK checking for jmh (Java Microbenchmark Harness)... no, disabled checking for jib... no checking for tidy... [not found] checking for ANSI C header files... yes checking for sys/types.h... yes checking for sys/stat.h... yes checking for stdlib.h... yes checking for string.h... yes checking for memory.h... yes checking for strings.h... yes checking for inttypes.h... yes checking for stdint.h... yes checking for unistd.h... yes checking stdio.h usability... yes checking stdio.h presence... yes checking for stdio.h... yes checking size of int *... 8 checking for target address size... 64 bits checking whether byte ordering is bigendian... no checking for --enable-branch-protection... disabled, default checking if CC supports \"-fdebug-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if CXX supports \"-fdebug-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if both CC and CXX support \"-fdebug-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking for --enable-warnings-as-errors... disabled, from command line checking if TARGET is x86... no checking if CC supports \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if CXX supports \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if both CC and CXX support \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking how to prevent absolute paths in output... using compiler options checking if CC supports \"-ffp-contract=off\"... yes checking if CXX supports \"-ffp-contract=off\"... yes checking if both CC and CXX support \"-ffp-contract=off\"... yes checking if BUILD is x86... no checking if BUILD_CC supports \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if BUILD_CXX supports \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if both BUILD_CC and BUILD_CXX support \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking how to prevent absolute paths in output... using compiler options checking if BUILD_CC supports \"-ffp-contract=off\"... yes checking if BUILD_CXX supports \"-ffp-contract=off\"... yes checking if both BUILD_CC and BUILD_CXX support \"-ffp-contract=off\"... yes checking how to run strip... --strip-debug checking what type of native debug symbols to use... external checking if we should add external native debug symbols to the shipped bundles... no checking if native coverage is available... yes checking for --enable-native-coverage... disabled, default checking for --with-jcov-modules... <disabled>, default checking if AddressSanitizer (asan) is available... yes checking for --enable-asan... disabled, default checking for --with-additional-ubsan-checks... <disabled>, default checking if UndefinedBehaviorSanitizer (ubsan) is available... yes checking for --enable-ubsan... disabled, default checking if LeakSanitizer (lsan) is available... yes checking for --enable-lsan... disabled, default checking if static analyzer is available... yes checking for --enable-static-analyzer... disabled, default checking if fallback linker enabled... disabled, default checking if static link of stdc++ is possible... yes checking how to link with libstdc++... static checking for which libjpeg to use... bundled checking for which giflib to use... bundled checking for PNG... yes checking for which libpng to use... bundled checking for compress in -lz... yes checking for which zlib to use... bundled checking for which lcms to use... bundled checking for which harfbuzz to use... bundled checking cups/cups.h usability... yes checking cups/cups.h presence... yes checking for cups/cups.h... yes checking cups/ppd.h usability... yes checking cups/ppd.h presence... yes checking for cups/ppd.h... yes checking fontconfig/fontconfig.h usability... yes checking fontconfig/fontconfig.h presence... yes checking for fontconfig/fontconfig.h... yes Using freetype: bundled checking for --enable-hsdis-bundling... disabled, default checking what hsdis backend to use... 'none', hsdis will not be built checking if hsdis should be bundled... no checking for --enable-libffi-bundling... disabled, default checking for cos in -lm... yes checking for dlopen in -ldl... yes checking for X... libraries /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/x86_64-linux-gnu/sysroot/usr/lib64, headers /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/x86_64-linux-gnu/sysroot/usr/include checking whether -R must be followed by a space... neither works checking for gethostbyname... yes checking for connect... yes checking for remove... yes checking for shmat... yes checking for IceConnectionNumber in -lICE... yes checking for X11/extensions/shape.h... yes checking for X11/extensions/Xrender.h... yes checking for X11/extensions/XTest.h... yes checking for X11/Intrinsic.h... yes checking for X11/extensions/Xrandr.h... yes checking for JVM features enabled by the user... 'dtrace' checking for JVM features disabled by the user... none checking if platform is supported by CDS... yes checking if JVM feature 'cds' is available... yes checking for dtrace tool and platform support... /usr/bin/dtrace checking sys/sdt.h usability... yes checking sys/sdt.h presence... yes checking for sys/sdt.h... yes checking if JVM feature 'dtrace' is available... yes checking if platform is supported by JVMCI... yes checking if JVM feature 'jvmci' is available... yes checking if platform is supported by Shenandoah... yes checking if JVM feature 'shenandoahgc' is available... yes checking if platform is supported by ZGC... yes checking if JVM feature 'zgc' is available... yes configure: Default JVM features explicitly enabled for 'server': 'dtrace' checking JVM features to use for variant 'server'... 'cds compiler1 compiler2 dtrace epsilongc g1gc jfr jni-check jvmci jvmti management parallelgc serialgc services shenandoahgc vm-structs zgc' checking what hotspot build time to use... 2026-08-18T00:00:00Z (from --with-source-date) checking if the jtreg failure handler is available... no (jtreg not present) checking if the jtreg failure handler should be built... disabled, from default 'auto' checking if the jtreg test thread factory is available... no (jtreg not present) checking if the jtreg test thread factory should be built... disabled, from default 'auto' checking if the CDS classlist generation should be enabled... enabled, from default 'auto' checking if any translations should be excluded... no checking if CDS archive is available... yes checking if a default CDS archive should be generated... enabled, from default 'auto' checking if CDS archive with compact object headers is available... yes checking if default CDS archives for compact object headers should be generated... enabled, from default 'auto' checking if CDS archive is available... yes checking if compatible cds region alignment enabled... disabled, default checking for --with-signing-hook... <disabled>, default checking for signing hook... none checking for --enable-java-warnings-as-errors... enabled, default checking for number of cores... 4 checking for memory size... 15988 MB checking for appropriate number of jobs to run in parallel... 4 checking whether to use javac server... enabled, default checking flags for boot jdk java command ... -Duser.language=en -Duser.country=US -Xlog:all=off:stdout -Xlog:all=warning:stderr -XX:+UnlockDiagnosticVMOptions -XX:-VerifySharedSpaces -XX:SharedArchiveFile=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/configure-support/classes.jsa -Xshare:auto checking flags for boot jdk java command for big workloads... -Xms64M -Xmx2048M checking flags for bootcycle boot jdk java command for big workloads... -Xms64M -Xmx2048M checking flags for boot jdk java command for small workloads... -XX:+UseSerialGC -Xms32M -Xmx512M -XX:TieredStopAtLevel=1 checking for --enable-icecc... disabled, default checking if precompiled headers are available... yes checking for --enable-precompiled-headers... disabled, from command line checking for ccache... /usr/local/bin/ccache checking if ccache is available... yes checking if ccache is enabled... disabled, from command line checking if build directory is on local disk... yes configure: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/configure-support/config.status config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/spec.gmk config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/bootcycle-spec.gmk config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/buildjdk-spec.gmk config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/compare.sh config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/Makefile ==================================================== A new configuration has been successfully created in /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release using configure arguments '--verbose --with-vendor-name='Eclipse Adoptium' --with-vendor-url=https://adoptium.net/ --with-vendor-bug-url=https://github.com/adoptium/adoptium-support/issues --with-vendor-vm-bug-url=https://github.com/adoptium/adoptium-support/issues --with-version-opt=LTS --without-version-pre --with-version-build=1 --with-vendor-version-string=Temurin-25.0.4.1+1 --with-boot-jdk=/usr/lib/jvm/jdk24 --with-devkit=/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01 --enable-linkable-runtime --with-debug-level=release --with-native-debug-symbols=external --with-source-date=version --disable-ccache --with-build-user=admin --with-jvm-variants=server --with-cacerts-src=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/sbin/../security/certs --disable-warnings-as-errors --disable-precompiled-headers --enable-dtrace --with-freetype=bundled --with-zlib=bundled'. Configuration summary: * Name: linux-x86_64-server-release * Debug level: release * HS debug level: product * JVM variants: server * JVM features: server: 'cds compiler1 compiler2 dtrace epsilongc g1gc jfr jni-check jvmci jvmti management parallelgc serialgc services shenandoahgc vm-structs zgc' * OpenJDK target: OS: linux, CPU architecture: x86, address length: 64 * Version string: 25.0.4.1+1-LTS (25.0.4.1) * Source date: 1787011200 (2026-08-18T00:00:00Z) Tools summary: * Boot JDK: openjdk version \"24.0.2\" 2025-07-15 OpenJDK Runtime Environment Temurin-24.0.2+12 (build 24.0.2+12) OpenJDK 64-Bit Server VM Temurin-24.0.2+12 (build 24.0.2+12, mixed mode, sharing) (at /usr/lib/jvm/jdk24) * Toolchain: gcc (GNU Compiler Collection) * Devkit: gcc-14.2.0 - Centos7.9.2009 (/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01) * C Compiler: Version 14.2.0 (at /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc) * C++ Compiler: Version 14.2.0 (at /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++) Build performance summary: * Build jobs: 4 * Memory limit: 15988 MB The following warnings were produced. Repeated here for convenience: WARNING: No UTF-8 locale found. This is not supported. Proceeding with the C locale, but the build might fail unexpectedly. WARNING: pandoc is version 3.8.2, not the recommended version 2.19.2"
+        }
+      ]
+    },
+    {
+      "type" : "framework",
+      "author" : "Eclipse Temurin",
+      "publisher" : "Eclipse Temurin",
+      "group" : "adoptium.net",
+      "name" : "TESTIMAGE Component",
+      "version" : "25.0.4.1+1-LTS",
+      "description" : "Temurin TESTIMAGE Component",
+      "hashes" : [
+        {
+          "alg" : "SHA-256",
+          "content" : "c8fed293cb322fb52919c117e684a77d01b35f43e8581dc4947f9aabb117d8f2"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "Filename",
+          "value" : "OpenJDK25U-testimage_x64_linux_hotspot_25.0.4.1_1.tar.gz"
+        },
+        {
+          "name" : "JDK Variant",
+          "value" : "Temurin"
+        },
+        {
+          "name" : "SCM Ref",
+          "value" : "jdk-25.0.4.1+1_adopt"
+        },
+        {
+          "name" : "OpenJDK Source Commit",
+          "value" : "https://github.com/adoptium/jdk25u/commit/520406d871955300957ef01e406ac2acd0f9b75c"
+        },
+        {
+          "name" : "Temurin Build Ref",
+          "value" : "https://github.com/adoptium/temurin-build/commit/e6ba7dec3d07654074559310376a3ae89da5f4ac"
+        },
+        {
+          "name" : "Builder Job Reference",
+          "value" : "https://ci.adoptium.net/job/build-scripts/job/jobs/job/release/job/jobs/job/jdk25u/job/jdk25u-release-linux-x64-temurin/15/"
+        },
+        {
+          "name" : "Builder Name",
+          "value" : "build-azure-linux-x64-5858b5"
+        },
+        {
+          "name" : "Build Timestamp",
+          "value" : "2026-08-18 00:00:00"
+        },
+        {
+          "name" : "Build Workspace Directory",
+          "value" : "/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src"
+        },
+        {
+          "name" : "Build LC_ALL",
+          "value" : "C"
+        },
+        {
+          "name" : "Build Tools Summary",
+          "value" : "Tools summary: * Boot JDK: openjdk version \"24.0.2\" 2025-07-15 OpenJDK Runtime Environment Temurin-24.0.2+12 (build 24.0.2+12) OpenJDK 64-Bit Server VM Temurin-24.0.2+12 (build 24.0.2+12, mixed mode, sharing) (at /usr/lib/jvm/jdk24) * Toolchain: gcc (GNU Compiler Collection) * Devkit: gcc-14.2.0 - Centos7.9.2009 (/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01) * C Compiler: Version 14.2.0 (at /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc) * C++ Compiler: Version 14.2.0 (at /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++) Build performance summary: * Build jobs: 4 * Memory limit: 15988 MB The following warnings were produced. Repeated here for convenience: WARNING: No UTF-8 locale found. This is not supported. Proceeding with the C locale, but the build might fail unexpectedly. WARNING: pandoc is version 3.8.2, not the recommended version 2.19.2"
+        },
+        {
+          "name" : "Build Config",
+          "value" : "{ \"ADOPTIUM_DEVKIT_LOCATION\" : \"/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01\", \"ADOPT_PATCHES\" : \"true\", \"ALSA\" : \"true\", \"ASSEMBLE_EXPLODED_IMAGE\" : \"false\", \"OPENJDK_BUILD_REPO_BRANCH\" : \"master\", \"OPENJDK_BUILD_REPO_URI\" : \"https://github.com/adoptium/temurin-build.git\", \"BRANCH\" : \"dev\", \"BUILD_FULL_NAME\" : \"linux-x86_64--server-release\", \"BUILD_REPRODUCIBLE_DATE\" : \"\", \"BUILD_TIMESTAMP\" : \"2026-08-18 00:00:00\", \"BUILD_VARIANT\" : \"temurin\", \"CONTAINER_AS_ROOT\" : \"\", \"CLEAN_DOCKER_BUILD\" : \"false\", \"CLEAN_GIT_REPO\" : \"true\", \"CLEAN_LIBS\" : \"true\", \"CONTAINER_COMMAND\" : \"false\", \"CONTAINER_NAME\" : \"openjdk_container\", \"CONTAINER_IMAGE\" : \"ubuntu:18.04\", \"COPY_MACOSX_FREE_FONT_LIB_FOR_JDK_FLAG\" : \"false\", \"COPY_MACOSX_FREE_FONT_LIB_FOR_JRE_FLAG\" : \"false\", \"CREATE_DEBUG_IMAGE\" : \"true\", \"CREATE_JRE_IMAGE\" : \"true\", \"CREATE_SBOM\" : \"true\", \"CREATE_SOURCE_ARCHIVE\" : \"true\", \"CUSTOM_CACERTS\" : \"true\", \"CROSSCOMPILE\" : \"false\", \"DEBUG_DOCKER\" : \"false\", \"DEBUG_IMAGE_PATH\" : \"debug-image\", \"DISABLE_ADOPT_BRANCH_SAFETY\" : \"false\", \"DOCKER_FILE_PATH\" : \"\", \"DOCKER_SOURCE_VOLUME_NAME\" : \"openjdk-source-volume-jdk25u-temurin\", \"ENABLE_SBOM_STRACE\" : \"true\", \"FREETYPE\" : \"true\", \"FREETYPE_DIRECTORY\" : \"\", \"FREETYPE_FONT_BUILD_TYPE_PARAM\" : \"\", \"FREETYPE_FONT_VERSION\" : \"86bc8a95056c97a810986434a3f268cbe67f2902\", \"GRADLE_USER_HOME_DIR\" : \"\", \"KEEP_CONTAINER\" : \"false\", \"JDK_BOOT_DIR\" : \"/usr/lib/jvm/jdk24\", \"JDK_PATH\" : \"jdk\", \"JRE_PATH\" : \"jre\", \"TEST_IMAGE_PATH\" : \"test\", \"STATIC_LIBS_IMAGE_PATH\" : \"static-libs-graal\", \"JMODS_IMAGE_PATH\" : \"jmods\", \"JVM_VARIANT\" : \"server\", \"LOCAL_DEPENDENCY_CACHE_DIR\" : \"\", \"MACOSX_CODESIGN_IDENTITY\" : \"\", \"MAKE_ARGS_FOR_ANY_PLATFORM\" : \"product-images legacy-jre-image\", \"MAKE_EXPLODED\" : \"false\", \"MAKE_COMMAND_NAME\" : \"make\", \"NUM_PROCESSORS\" : \"1\", \"OPENJDK_BUILD_NUMBER\" : \"\", \"OPENJDK_CORE_VERSION\" : \"jdk25\", \"OPENJDK_FEATURE_NUMBER\" : \"25\", \"OPENJDK_FOREST_NAME\" : \"jdk25u\", \"OPENJDK_LOCAL_SOURCE_ARCHIVE\" : \"false\", \"OPENJDK_LOCAL_SOURCE_ARCHIVE_ABSPATH\" : \"\", \"OPENJDK_SOURCE_DIR\" : \"src\", \"OPENJDK_UPDATE_VERSION\" : \"\", \"OS_KERNEL_NAME\" : \"linux\", \"OS_FULL_VERSION\" : \"CentOS Linux 7 (Kernel: 6.8.0-1064-azure)\", \"OS_ARCHITECTURE\" : \"x86_64\", \"PATCHES\" : \"\", \"RELEASE\" : \"true\", \"REPOSITORY\" : \"https://github.com/adoptium/jdk25u\", \"REUSE_CONTAINER\" : \"true\", \"SHALLOW_CLONE_OPTION\" : \"\", \"SIGN\" : \"false\", \"TAG\" : \"jdk-25.0.4.1+1_adopt\", \"TARGET_DIR\" : \"target/\", \"TARGET_FILE_NAME\" : \"OpenJDK25U-jdk_x64_linux_hotspot_25.0.4.1_1.tar.gz\", \"TMP_CONTAINER_NAME\" : \"openjdk-copy-src\", \"TMP_SPACE_BUILD\" : \"false\", \"USE_ADOPTIUM_DEVKIT\" : \"gcc-14.2.0-Centos7.9.2009-b01\", \"USE_JEP319_CERTS\" : \"true\", \"USE_SSH\" : \"false\", \"USER_DEVKIT_LOCATION\" : \"\", \"USER_SUPPLIED_CONFIGURE_ARGS\" : \" --disable-warnings-as-errors --disable-precompiled-headers --enable-dtrace\", \"USER_SUPPLIED_MAKE_ARGS\" : \"\", \"USER_OPENJDK_BUILD_ROOT_DIRECTORY\" : \"\", \"VENDOR\" : \"Eclipse Adoptium\", \"VENDOR_URL\" : \"https://adoptium.net/\", \"VENDOR_BUG_URL\" : \"https://github.com/adoptium/adoptium-support/issues\", \"VENDOR_VM_BUG_URL\" : \"https://github.com/adoptium/adoptium-support/issues\", \"WORKING_DIR\" : \"./build/\", \"WORKSPACE_DIR\" : \"/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace\", \"Data Source\" : \"BUILD_CONFIG hashmap\"}"
+        },
+        {
+          "name" : "full_version_output",
+          "value" : "openjdk version \"25.0.4.1\" 2026-08-18 LTS OpenJDK Runtime Environment Temurin-25.0.4.1+1 (build 25.0.4.1+1-LTS) OpenJDK 64-Bit Server VM Temurin-25.0.4.1+1 (build 25.0.4.1+1-LTS, mixed mode, sharing)"
+        },
+        {
+          "name" : "makejdk_any_platform_args",
+          "value" : "--clean-git-repo --jdk-boot-dir /usr/lib/jvm/jdk24 --configure-args \" --disable-warnings-as-errors --disable-precompiled-headers --enable-dtrace\" --target-file-name OpenJDK25U-jdk_x64_linux_hotspot_25.0.4.1_1.tar.gz --release --clean-libs --tag jdk-25.0.4.1+1_adopt --create-source-archive --create-jre-image --create-sbom --enable-sbom-strace --use-adoptium-devkit gcc-14.2.0-Centos7.9.2009-b01 --use-jep319-certs --create-debug-image --build-variant temurin jdk25u"
+        },
+        {
+          "name" : "make_command_args",
+          "value" : "mkdir /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/./build//straceOutput && strace -o /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/./build//straceOutput/outputFile -ff -e trace=open,openat,execve make product-images legacy-jre-image test-image static-libs-graal-image"
+        },
+        {
+          "name" : "configure_args",
+          "value" : "--with-vendor-name=\"Eclipse Adoptium\" --with-vendor-url=https://adoptium.net/ --with-vendor-bug-url=https://github.com/adoptium/adoptium-support/issues --with-vendor-vm-bug-url=https://github.com/adoptium/adoptium-support/issues --with-version-opt=LTS --without-version-pre --with-version-build=1 --with-vendor-version-string=Temurin-25.0.4.1+1 --with-boot-jdk=/usr/lib/jvm/jdk24 --with-devkit=/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01 --enable-linkable-runtime --with-debug-level=release --with-native-debug-symbols=external --with-source-date=version --disable-ccache --with-build-user=admin --with-jvm-variants=server --with-cacerts-src=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/sbin/../security/certs --disable-warnings-as-errors --disable-precompiled-headers --enable-dtrace --with-freetype=bundled --with-zlib=bundled"
+        },
+        {
+          "name" : "configure_txt",
+          "value" : "Runnable configure script is not present Generating runnable configure script at /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/.configure-support/generated-configure.sh Using autoconf at /usr/bin/autoconf [autoconf (GNU Autoconf) 2.69] configure: Configuration created at Tue Aug 18 19:24:35 UTC 2026. checking for basename... /usr/bin/basename checking for dirname... /usr/bin/dirname checking for file... /usr/bin/file checking for ldd... /usr/bin/ldd checking for echo... echo [builtin] checking for tr... /usr/bin/tr checking for uname... /usr/bin/uname checking for wc... /usr/bin/wc checking for grep that handles long lines and -e... /usr/bin/grep checking for egrep... /usr/bin/grep -E checking for a sed that does not truncate output... /usr/bin/sed checking for locale... /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/repro_locale/locale checking for cygpath... [not found] checking for wslpath... [not found] checking for cmd.exe... [not found] checking for lsb_release... [not found] checking build system type... x86_64-pc-linux-gnu checking host system type... x86_64-pc-linux-gnu checking target system type... x86_64-pc-linux-gnu checking openjdk-build os-cpu... linux-x86_64 checking openjdk-build C library... gnu checking openjdk-target os-cpu... linux-x86_64 checking openjdk-target C library... gnu checking compilation type... native checking for top-level directory... /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src checking for bash... /usr/bin/bash checking for cat... /usr/bin/cat checking for chmod... /usr/bin/chmod checking for cp... /usr/bin/cp checking for cut... /usr/bin/cut checking for date... /usr/bin/date checking for gdiff... [not found] checking for diff... /usr/bin/diff checking for expr... /usr/bin/expr checking for find... /usr/bin/find checking for gunzip... /usr/bin/gunzip checking for pigz... /usr/bin/pigz checking for head... /usr/bin/head checking for ln... /usr/bin/ln checking for ls... /usr/bin/ls checking for gmkdir... [not found] checking for mkdir... /usr/bin/mkdir checking for mktemp... /usr/bin/mktemp checking for mv... /usr/bin/mv checking for gawk... /usr/bin/gawk checking for printf... printf [builtin] checking for rm... /usr/bin/rm checking for rmdir... /usr/bin/rmdir checking for sh... /usr/bin/sh checking for sort... /usr/bin/sort checking for tail... /usr/bin/tail checking for gtar... /usr/bin/gtar checking for tee... /usr/bin/tee checking for touch... /usr/bin/touch checking for xargs... /usr/bin/xargs checking for fgrep... /usr/bin/grep -F checking for cmake... /usr/local/bin/cmake checking for df... /usr/bin/df checking for git... /usr/local/bin/git checking for nice... /usr/bin/nice checking for greadlink... [not found] checking for readlink... /usr/bin/readlink checking for whoami... /usr/bin/whoami checking for cmp... /usr/bin/cmp checking for uniq... /usr/bin/uniq configure: CI environment variable set to true checking for build environment type... ci, default (calculated from 'auto') checking for locale to use... no UTF-8 locale found configure: The recommended locale is C.UTF-8, but en_US.UTF-8 is also accepted. checking if custom source is suppressed (openjdk-only)... disabled, default checking for --enable-debug... disabled, default checking which debug level to use... release checking which variants of the JVM to build... server checking if absolute paths should be allowed in the build output... no, release build checking for devkit... gcc-14.2.0 - Centos7.9.2009 in /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01 checking for toolchain path... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin checking for sysroot... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/x86_64-linux-gnu/sysroot checking for extra path... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin checking where to store configuration... in default location checking what configuration name to use... linux-x86_64-server-release checking for zypper... [not found] checking for apt-get... [not found] checking for yum... /usr/bin/yum checking for pandoc... /usr/local/bin/pandoc checking for pandoc version... 3.8.2 checking if the pandoc smart extension needs to be disabled for markdown... yes checking if the pandoc tex_math_dollars extension needs to be disabled for markdown... yes checking for gmake... /usr/local/bin/gmake configure: Testing potential make at /usr/local/bin/gmake, found using gmake in PATH configure: Using GNU make at /usr/local/bin/gmake (version: GNU Make 4.1) checking if make --output-sync is supported... yes checking for make --output-sync value... none, default checking if find supports -delete... yes checking what type of tar was found... gnu checking that grep (/usr/bin/grep) -Fx handles empty lines in the pattern list correctly... yes checking for unzip... /usr/bin/unzip checking for zip... /usr/bin/zip checking for greadelf... [not found] checking for readelf... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/readelf checking for dot... [not found] checking for stat... /usr/bin/stat checking for time... time [builtin] checking for flock... /usr/bin/flock checking for dtrace... /usr/bin/dtrace checking for gpatch... [not found] checking for patch... /usr/bin/patch checking if date is a GNU compatible version... yes checking for ulimit... ulimit [builtin] checking bash version... 4.2.46 checking if bash supports pipefail... yes checking if bash supports errexit (-e)... yes checking for pkg-config... /usr/bin/pkg-config checking pkg-config is at least version 0.9.0... yes checking for default LOG value... checking for JMOD compression type... zip-6, default checking whether or not a JDK suitable for linking from the run-time image should be produced... enabled, from command line checking if packaged modules are kept... disabled, default checking for --with-extra-jlink-flags... <disabled>, default checking for --with-build-user... admin, from command line checking for --with-jdk-rc-name... OpenJDK Platform, default checking for --with-vendor-name... Eclipse Adoptium, from command line checking for --with-jdk-rc-company-name... Eclipse Adoptium, default checking for --with-vendor-url... https://adoptium.net/, from command line checking for --with-vendor-bug-url... https://github.com/adoptium/adoptium-support/issues, from command line checking for --with-vendor-vm-bug-url... https://github.com/adoptium/adoptium-support/issues, from command line checking for --with-version-string... <none>, default checking for --with-version-feature... 25, default checking for --with-version-date... 2026-08-18, default checking for --with-vendor-version-string... Temurin-25.0.4.1+1, from command line checking for --with-macosx-bundle-name-base... OpenJDK, default checking for --with-macosx-bundle-id-base... net.java.openjdk, default checking for --with-macosx-bundle-build-version... 1, default checking for version string... 25.0.4.1+1-LTS configure: Found potential Boot JDK using configure arguments checking for Boot JDK... /usr/lib/jvm/jdk24 checking Boot JDK version... openjdk version \"24.0.2\" 2025-07-15 OpenJDK Runtime Environment Temurin-24.0.2+12 (build 24.0.2+12) OpenJDK 64-Bit Server VM Temurin-24.0.2+12 (build 24.0.2+12, mixed mode, sharing) checking for java [Boot JDK]... $BOOT_JDK/bin/java checking for javac [Boot JDK]... $BOOT_JDK/bin/javac checking for javadoc [Boot JDK]... $BOOT_JDK/bin/javadoc checking for jar [Boot JDK]... $BOOT_JDK/bin/jar checking if Boot JDK jar supports --date=TIMESTAMP... true checking if Boot JDK is 32 or 64 bits... 64 checking for local Boot JDK Class Data Sharing (CDS)... yes, created checking for Build JDK... yes, will use output dir checking for docs-reference JDK... no, using interim javadoc for the docs-reference targets checking what source date to use... 1787011200, from 'version' checking if we should build headless-only (no GUI)... disabled, default checking if linker should clean out unused code (linktime-gc)... disabled, default checking for graphviz dot... no, cannot generate full docs or man pages checking for pandoc... yes checking for --enable-full-docs... disabled, from default 'auto' checking for cacerts file... default checking for cacerts source... /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/sbin/../security/certs checking for --enable-unlimited-crypto... enabled, default checking for jni library path... default configure: Using default toolchain gcc (GNU Compiler Collection) checking for gcc... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc checking resolved symbolic links for CC... no symlink configure: Using gcc C compiler version 14.2.0 [gcc (GCC) 14.2.0] checking whether the C compiler works... yes checking for C compiler default output file name... a.out checking for suffix of executables... checking whether we are cross compiling... no checking for suffix of object files... o checking whether /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc accepts -g... yes checking for g++... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++ checking resolved symbolic links for CXX... no symlink configure: Using gcc C++ compiler version 14.2.0 [g++ (GCC) 14.2.0] checking whether /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++ accepts -g... yes checking how to run the C preprocessor... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc -E checking how to run the C++ preprocessor... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++ -E configure: Using gcc linker version 2.43 [GNU ld (GNU Binutils) 2.43] configure: comparing linker version to minimum version 2.25 checking for ar... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/ar checking for strip... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/strip checking for nm... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/nm checking for gobjcopy... [not found] checking for objcopy... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/objcopy checking for gobjdump... [not found] checking for objdump... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/objdump checking for c++filt... /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/c++filt checking for jtreg... [not found] checking for jtreg test harness... no, not found checking for jtreg jdk... no, using BOOT_JDK checking for jmh (Java Microbenchmark Harness)... no, disabled checking for jib... no checking for tidy... [not found] checking for ANSI C header files... yes checking for sys/types.h... yes checking for sys/stat.h... yes checking for stdlib.h... yes checking for string.h... yes checking for memory.h... yes checking for strings.h... yes checking for inttypes.h... yes checking for stdint.h... yes checking for unistd.h... yes checking stdio.h usability... yes checking stdio.h presence... yes checking for stdio.h... yes checking size of int *... 8 checking for target address size... 64 bits checking whether byte ordering is bigendian... no checking for --enable-branch-protection... disabled, default checking if CC supports \"-fdebug-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if CXX supports \"-fdebug-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if both CC and CXX support \"-fdebug-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking for --enable-warnings-as-errors... disabled, from command line checking if TARGET is x86... no checking if CC supports \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if CXX supports \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if both CC and CXX support \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking how to prevent absolute paths in output... using compiler options checking if CC supports \"-ffp-contract=off\"... yes checking if CXX supports \"-ffp-contract=off\"... yes checking if both CC and CXX support \"-ffp-contract=off\"... yes checking if BUILD is x86... no checking if BUILD_CC supports \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if BUILD_CXX supports \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking if both BUILD_CC and BUILD_CXX support \"-fmacro-prefix-map=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/=\"... yes checking how to prevent absolute paths in output... using compiler options checking if BUILD_CC supports \"-ffp-contract=off\"... yes checking if BUILD_CXX supports \"-ffp-contract=off\"... yes checking if both BUILD_CC and BUILD_CXX support \"-ffp-contract=off\"... yes checking how to run strip... --strip-debug checking what type of native debug symbols to use... external checking if we should add external native debug symbols to the shipped bundles... no checking if native coverage is available... yes checking for --enable-native-coverage... disabled, default checking for --with-jcov-modules... <disabled>, default checking if AddressSanitizer (asan) is available... yes checking for --enable-asan... disabled, default checking for --with-additional-ubsan-checks... <disabled>, default checking if UndefinedBehaviorSanitizer (ubsan) is available... yes checking for --enable-ubsan... disabled, default checking if LeakSanitizer (lsan) is available... yes checking for --enable-lsan... disabled, default checking if static analyzer is available... yes checking for --enable-static-analyzer... disabled, default checking if fallback linker enabled... disabled, default checking if static link of stdc++ is possible... yes checking how to link with libstdc++... static checking for which libjpeg to use... bundled checking for which giflib to use... bundled checking for PNG... yes checking for which libpng to use... bundled checking for compress in -lz... yes checking for which zlib to use... bundled checking for which lcms to use... bundled checking for which harfbuzz to use... bundled checking cups/cups.h usability... yes checking cups/cups.h presence... yes checking for cups/cups.h... yes checking cups/ppd.h usability... yes checking cups/ppd.h presence... yes checking for cups/ppd.h... yes checking fontconfig/fontconfig.h usability... yes checking fontconfig/fontconfig.h presence... yes checking for fontconfig/fontconfig.h... yes Using freetype: bundled checking for --enable-hsdis-bundling... disabled, default checking what hsdis backend to use... 'none', hsdis will not be built checking if hsdis should be bundled... no checking for --enable-libffi-bundling... disabled, default checking for cos in -lm... yes checking for dlopen in -ldl... yes checking for X... libraries /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/x86_64-linux-gnu/sysroot/usr/lib64, headers /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/x86_64-linux-gnu/sysroot/usr/include checking whether -R must be followed by a space... neither works checking for gethostbyname... yes checking for connect... yes checking for remove... yes checking for shmat... yes checking for IceConnectionNumber in -lICE... yes checking for X11/extensions/shape.h... yes checking for X11/extensions/Xrender.h... yes checking for X11/extensions/XTest.h... yes checking for X11/Intrinsic.h... yes checking for X11/extensions/Xrandr.h... yes checking for JVM features enabled by the user... 'dtrace' checking for JVM features disabled by the user... none checking if platform is supported by CDS... yes checking if JVM feature 'cds' is available... yes checking for dtrace tool and platform support... /usr/bin/dtrace checking sys/sdt.h usability... yes checking sys/sdt.h presence... yes checking for sys/sdt.h... yes checking if JVM feature 'dtrace' is available... yes checking if platform is supported by JVMCI... yes checking if JVM feature 'jvmci' is available... yes checking if platform is supported by Shenandoah... yes checking if JVM feature 'shenandoahgc' is available... yes checking if platform is supported by ZGC... yes checking if JVM feature 'zgc' is available... yes configure: Default JVM features explicitly enabled for 'server': 'dtrace' checking JVM features to use for variant 'server'... 'cds compiler1 compiler2 dtrace epsilongc g1gc jfr jni-check jvmci jvmti management parallelgc serialgc services shenandoahgc vm-structs zgc' checking what hotspot build time to use... 2026-08-18T00:00:00Z (from --with-source-date) checking if the jtreg failure handler is available... no (jtreg not present) checking if the jtreg failure handler should be built... disabled, from default 'auto' checking if the jtreg test thread factory is available... no (jtreg not present) checking if the jtreg test thread factory should be built... disabled, from default 'auto' checking if the CDS classlist generation should be enabled... enabled, from default 'auto' checking if any translations should be excluded... no checking if CDS archive is available... yes checking if a default CDS archive should be generated... enabled, from default 'auto' checking if CDS archive with compact object headers is available... yes checking if default CDS archives for compact object headers should be generated... enabled, from default 'auto' checking if CDS archive is available... yes checking if compatible cds region alignment enabled... disabled, default checking for --with-signing-hook... <disabled>, default checking for signing hook... none checking for --enable-java-warnings-as-errors... enabled, default checking for number of cores... 4 checking for memory size... 15988 MB checking for appropriate number of jobs to run in parallel... 4 checking whether to use javac server... enabled, default checking flags for boot jdk java command ... -Duser.language=en -Duser.country=US -Xlog:all=off:stdout -Xlog:all=warning:stderr -XX:+UnlockDiagnosticVMOptions -XX:-VerifySharedSpaces -XX:SharedArchiveFile=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/configure-support/classes.jsa -Xshare:auto checking flags for boot jdk java command for big workloads... -Xms64M -Xmx2048M checking flags for bootcycle boot jdk java command for big workloads... -Xms64M -Xmx2048M checking flags for boot jdk java command for small workloads... -XX:+UseSerialGC -Xms32M -Xmx512M -XX:TieredStopAtLevel=1 checking for --enable-icecc... disabled, default checking if precompiled headers are available... yes checking for --enable-precompiled-headers... disabled, from command line checking for ccache... /usr/local/bin/ccache checking if ccache is available... yes checking if ccache is enabled... disabled, from command line checking if build directory is on local disk... yes configure: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/configure-support/config.status config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/spec.gmk config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/bootcycle-spec.gmk config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/buildjdk-spec.gmk config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/compare.sh config.status: creating /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release/Makefile ==================================================== A new configuration has been successfully created in /home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/workspace/build/src/build/linux-x86_64-server-release using configure arguments '--verbose --with-vendor-name='Eclipse Adoptium' --with-vendor-url=https://adoptium.net/ --with-vendor-bug-url=https://github.com/adoptium/adoptium-support/issues --with-vendor-vm-bug-url=https://github.com/adoptium/adoptium-support/issues --with-version-opt=LTS --without-version-pre --with-version-build=1 --with-vendor-version-string=Temurin-25.0.4.1+1 --with-boot-jdk=/usr/lib/jvm/jdk24 --with-devkit=/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01 --enable-linkable-runtime --with-debug-level=release --with-native-debug-symbols=external --with-source-date=version --disable-ccache --with-build-user=admin --with-jvm-variants=server --with-cacerts-src=/home/adoptopenjdk/workspace/build-scripts/jobs/release/jobs/jdk25u/jdk25u-release-linux-x64-temurin/sbin/../security/certs --disable-warnings-as-errors --disable-precompiled-headers --enable-dtrace --with-freetype=bundled --with-zlib=bundled'. Configuration summary: * Name: linux-x86_64-server-release * Debug level: release * HS debug level: product * JVM variants: server * JVM features: server: 'cds compiler1 compiler2 dtrace epsilongc g1gc jfr jni-check jvmci jvmti management parallelgc serialgc services shenandoahgc vm-structs zgc' * OpenJDK target: OS: linux, CPU architecture: x86, address length: 64 * Version string: 25.0.4.1+1-LTS (25.0.4.1) * Source date: 1787011200 (2026-08-18T00:00:00Z) Tools summary: * Boot JDK: openjdk version \"24.0.2\" 2025-07-15 OpenJDK Runtime Environment Temurin-24.0.2+12 (build 24.0.2+12) OpenJDK 64-Bit Server VM Temurin-24.0.2+12 (build 24.0.2+12, mixed mode, sharing) (at /usr/lib/jvm/jdk24) * Toolchain: gcc (GNU Compiler Collection) * Devkit: gcc-14.2.0 - Centos7.9.2009 (/usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01) * C Compiler: Version 14.2.0 (at /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/gcc) * C++ Compiler: Version 14.2.0 (at /usr/local/devkit/gcc-14.2.0-Centos7.9.2009-b01/bin/g++) Build performance summary: * Build jobs: 4 * Memory limit: 15988 MB The following warnings were produced. Repeated here for convenience: WARNING: No UTF-8 locale found. This is not supported. Proceeding with the C locale, but the build might fail unexpectedly. WARNING: pandoc is version 3.8.2, not the recommended version 2.19.2"
+        }
+      ]
+    }
+  ],
+  "formulation" : [
+    {
+      "bom-ref" : "CycloneDX",
+      "components" : [
+        {
+          "type" : "framework",
+          "name" : "CycloneDX jar SHAs",
+          "properties" : [
+            {
+              "name" : "commons-codec.jar",
+              "value" : "f9f6cb103f2ddc3c99a9d80ada2ae7bf0685111fd6bffccb72033d1da4e6ff23"
+            },
+            {
+              "name" : "commons-collections4.jar",
+              "value" : "1df8b9430b5c8ed143d7815e403e33ef5371b2400aadbe9bda0883762e0846d1"
+            },
+            {
+              "name" : "commons-io.jar",
+              "value" : "f41f7baacd716896447ace9758621f62c1c6b0a91d89acee488da26fc477c84f"
+            },
+            {
+              "name" : "commons-lang3.jar",
+              "value" : "6ee731df5c8e5a2976a1ca023b6bb320ea8d3539fbe64c8a1d5cb765127c33b4"
+            },
+            {
+              "name" : "cyclonedx-core-java.jar",
+              "value" : "4931d0aed28763ae9fa1c574e26b7636879abdc101ff81ce3c63ad905c99937c"
+            },
+            {
+              "name" : "github-package-url.jar",
+              "value" : "e45551727707acc0c56ac62d56964332ea0f138d6cc3656d988b9369150f5247"
+            },
+            {
+              "name" : "jackson-annotations.jar",
+              "value" : "873a606e23507969f9bbbea939d5e19274a88775ea5a169ba7e2d795aa5156e1"
+            },
+            {
+              "name" : "jackson-core.jar",
+              "value" : "721a189241dab0525d9e858e5cb604d3ecc0ede081e2de77d6f34fa5779a5b46"
+            },
+            {
+              "name" : "jackson-databind.jar",
+              "value" : "c04993f33c0f845342653784f14f38373d005280e6359db5f808701cfae73c0c"
+            },
+            {
+              "name" : "jackson-dataformat-xml.jar",
+              "value" : "517add5f3848517894b319a93a7ebfc1c21737b2c17c9acccd38fea97d6adc6f"
+            },
+            {
+              "name" : "json-schema-validator.jar",
+              "value" : "de015f79d4a63d22c002bad76bb30c039cafa205465eef8770e2c6b85880ded7"
+            },
+            {
+              "name" : "stax2-api.jar",
+              "value" : "a61c48d553efad78bc01fffc4ac528bebbae64cbaec170b2a5e39cf61eb51abe"
+            },
+            {
+              "name" : "temurin-gen-cdxa.jar",
+              "value" : "20b96400fda2964171c786540e067be86e7276ea67376949107870b71a4c2abb"
+            },
+            {
+              "name" : "temurin-gen-sbom.jar",
+              "value" : "ac624cd11e4c193bce0435e79da3a947f42b6de398ec55d74300449144ad0360"
+            },
+            {
+              "name" : "woodstox-core.jar",
+              "value" : "81266920a1cdc47306a8a2b4726c99ec89b3fbf31c2470e4f5e477d9d857ca9f"
+            }
+          ]
+        },
+        {
+          "type" : "framework",
+          "name" : "CycloneDX jar versions",
+          "properties" : [
+            {
+              "name" : "commons-codec.jar",
+              "value" : "1.17.1"
+            },
+            {
+              "name" : "commons-collections4.jar",
+              "value" : "4.4"
+            },
+            {
+              "name" : "commons-io.jar",
+              "value" : "2.16.1"
+            },
+            {
+              "name" : "commons-lang3.jar",
+              "value" : "3.17.0"
+            },
+            {
+              "name" : "cyclonedx-core-java.jar",
+              "value" : "10.1.0"
+            },
+            {
+              "name" : "github-package-url.jar",
+              "value" : "1.5.0"
+            },
+            {
+              "name" : "jackson-annotations.jar",
+              "value" : "2.17.2"
+            },
+            {
+              "name" : "jackson-core.jar",
+              "value" : "2.17.2"
+            },
+            {
+              "name" : "jackson-databind.jar",
+              "value" : "2.17.2"
+            },
+            {
+              "name" : "jackson-dataformat-xml.jar",
+              "value" : "2.17.2"
+            },
+            {
+              "name" : "json-schema-validator.jar",
+              "value" : "1.5.1"
+            },
+            {
+              "name" : "stax2-api.jar",
+              "value" : "4.2.2"
+            },
+            {
+              "name" : "woodstox-core.jar",
+              "value" : "7.1.0"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "bom-ref" : "formula_temurin_build_script_25.0.4.1+1-LTS",
+      "workflows" : [
+        {
+          "bom-ref" : "workflow_temurin_build_script_25.0.4.1+1-LTS",
+          "uid" : "workflow_temurin_build_script_25.0.4.1+1-LTS",
+          "name" : "Temurin Build Script",
+          "taskTypes" : [
+            "clone",
+            "build"
+          ],
+          "steps" : [
+            {
+              "name" : "clone repo",
+              "description" : "clone repository",
+              "commands" : [
+                {
+                  "executed" : "git clone https://github.com/adoptium/temurin-build.git"
+                }
+              ]
+            },
+            {
+              "name" : "cd into repository",
+              "description" : "cd into temurin-build and checkout commit",
+              "commands" : [
+                {
+                  "executed" : "cd temurin-build"
+                },
+                {
+                  "executed" : "git checkout e6ba7dec3d07654074559310376a3ae89da5f4ac"
+                }
+              ]
+            },
+            {
+              "name" : "makejdk",
+              "description" : "execute makejdk-any-platform.sh",
+              "commands" : [
+                {
+                  "executed" : "bash ./makejdk-any-platform.sh --build-reproducible-date '2026-08-18 00:00:00' --clean-git-repo --jdk-boot-dir download --configure-args ' --disable-warnings-as-errors --disable-precompiled-headers --enable-dtrace' --target-file-name OpenJDK25U-jdk_x64_linux_hotspot_25.0.4.1_1.tar.gz --release --clean-libs --tag jdk-25.0.4.1+1_adopt --create-source-archive --create-jre-image --create-sbom --enable-sbom-strace --use-adoptium-devkit gcc-14.2.0-Centos7.9.2009-b01 --use-jep319-certs --create-debug-image --build-variant temurin jdk25u"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "bom-ref" : "formula_temurin_reproducible_verification_25.0.4.1+1-LTS",
+      "workflows" : [
+        {
+          "bom-ref" : "workflow_temurin_reproducible_verification_25.0.4.1+1-LTS",
+          "uid" : "workflow_temurin_reproducible_verification_25.0.4.1+1-LTS",
+          "name" : "Temurin Reproducible Verification",
+          "taskTypes" : [
+            "clone",
+            "test"
+          ],
+          "steps" : [
+            {
+              "name" : "clone repo",
+              "description" : "clone repository",
+              "commands" : [
+                {
+                  "executed" : "git clone https://github.com/adoptium/temurin-build.git"
+                }
+              ]
+            },
+            {
+              "name" : "execute verification",
+              "description" : "run reproducible build compare script",
+              "commands" : [
+                {
+                  "executed" : "temurin-build/tooling/reproducible/linux_repro_build_compare.sh --sbom-url 'SBOM_FILE_OR_URL' --jdk-url 'JDK_FILE_OR_URL' --reproducible-verification --user-devkit-location 'ADOPTIUM_DEVKIT_FILE_OR_URL' --build-workspace 'FULL_PATH_TO_AN_EXISTING_BUILD_FOLDER'"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "bom-ref" : "Build Dependencies",
+      "components" : [
+        {
+          "type" : "framework",
+          "name" : "Build tool package dependencies",
+          "properties" : [
+            {
+              "name" : "bash-4.2.46-35.el7_9.x86_64",
+              "value" : "bash-4.2.46-35.el7_9.x86_64"
+            },
+            {
+              "name" : "glibc-2.17-326.el7_9.3.x86_64glibc-2.17-326.el7_9.3.i686",
+              "value" : "glibc-2.17-326.el7_9.3.x86_64glibc-2.17-326.el7_9.3.i686"
+            },
+            {
+              "name" : "setup-2.8.71-11.el7.noarch",
+              "value" : "setup-2.8.71-11.el7.noarch"
+            },
+            {
+              "name" : "libacl-2.2.51-15.el7.x86_64",
+              "value" : "libacl-2.2.51-15.el7.x86_64"
+            },
+            {
+              "name" : "libattr-2.4.46-13.el7.x86_64",
+              "value" : "libattr-2.4.46-13.el7.x86_64"
+            },
+            {
+              "name" : "binutils-2.27-44.base.el7_9.1.x86_64",
+              "value" : "binutils-2.27-44.base.el7_9.1.x86_64"
+            },
+            {
+              "name" : "bzip2-libs-1.0.6-13.el7.x86_64",
+              "value" : "bzip2-libs-1.0.6-13.el7.x86_64"
+            },
+            {
+              "name" : "glibc-2.17-326.el7_9.3.x86_64",
+              "value" : "glibc-2.17-326.el7_9.3.x86_64"
+            },
+            {
+              "name" : "libcap-2.22-11.el7.x86_64",
+              "value" : "libcap-2.22-11.el7.x86_64"
+            },
+            {
+              "name" : "libcom_err-1.42.9-19.el7.x86_64",
+              "value" : "libcom_err-1.42.9-19.el7.x86_64"
+            },
+            {
+              "name" : "openssl-libs-1.0.2k-26.el7_9.x86_64",
+              "value" : "openssl-libs-1.0.2k-26.el7_9.x86_64"
+            },
+            {
+              "name" : "krb5-libs-1.15.1-55.el7_9.x86_64",
+              "value" : "krb5-libs-1.15.1-55.el7_9.x86_64"
+            },
+            {
+              "name" : "keyutils-libs-1.5.8-3.el7.x86_64",
+              "value" : "keyutils-libs-1.5.8-3.el7.x86_64"
+            },
+            {
+              "name" : "pcre-8.32-17.el7.x86_64",
+              "value" : "pcre-8.32-17.el7.x86_64"
+            },
+            {
+              "name" : "python-libs-2.7.5-94.el7_9.x86_64",
+              "value" : "python-libs-2.7.5-94.el7_9.x86_64"
+            },
+            {
+              "name" : "libselinux-2.5-15.el7.x86_64",
+              "value" : "libselinux-2.5-15.el7.x86_64"
+            },
+            {
+              "name" : "ncurses-libs-5.9-14.20130511.el7_4.x86_64",
+              "value" : "ncurses-libs-5.9-14.20130511.el7_4.x86_64"
+            },
+            {
+              "name" : "zlib-1.2.7-21.el7_9.x86_64",
+              "value" : "zlib-1.2.7-21.el7_9.x86_64"
+            },
+            {
+              "name" : "coreutils-8.22-24.el7_9.2.x86_64",
+              "value" : "coreutils-8.22-24.el7_9.2.x86_64"
+            },
+            {
+              "name" : "systemtap-sdt-devel-4.0-13.el7.x86_64",
+              "value" : "systemtap-sdt-devel-4.0-13.el7.x86_64"
+            },
+            {
+              "name" : "findutils-4.5.11-6.el7.x86_64",
+              "value" : "findutils-4.5.11-6.el7.x86_64"
+            },
+            {
+              "name" : "gawk-4.0.2-4.el7_3.1.x86_64",
+              "value" : "gawk-4.0.2-4.el7_3.1.x86_64"
+            },
+            {
+              "name" : "grep-2.20-3.el7.x86_64",
+              "value" : "grep-2.20-3.el7.x86_64"
+            },
+            {
+              "name" : "sed-4.2.2-7.el7.x86_64",
+              "value" : "sed-4.2.2-7.el7.x86_64"
+            },
+            {
+              "name" : "zip-3.0-11.el7.x86_64",
+              "value" : "zip-3.0-11.el7.x86_64"
+            },
+            {
+              "name" : "glibc-common-2.17-326.el7_9.3.x86_64",
+              "value" : "glibc-common-2.17-326.el7_9.3.x86_64"
+            },
+            {
+              "name" : "pyparsing-1.5.6-9.el7.noarch",
+              "value" : "pyparsing-1.5.6-9.el7.noarch"
+            },
+            {
+              "name" : "tzdata-2024a-1.el7.noarch",
+              "value" : "tzdata-2024a-1.el7.noarch"
+            }
+          ]
+        },
+        {
+          "type" : "framework",
+          "name" : "Build tool non-package dependencies",
+          "properties" : [
+            {
+              "name" : "OpenJDK Runtime Environment Temurin-24.0.2+12 (build 24.0.2+12)",
+              "value" : "OpenJDK Runtime Environment Temurin-24.0.2+12 (build 24.0.2+12)"
+            },
+            {
+              "name" : "git version 2.15.0",
+              "value" : "git version 2.15.0"
+            },
+            {
+              "name" : "GNU Make 4.1",
+              "value" : "GNU Make 4.1"
+            },
+            {
+              "name" : "pandoc 3.8.2",
+              "value" : "pandoc 3.8.2"
+            },
+            {
+              "name" : "GNU assembler (GNU Binutils) 2.43",
+              "value" : "GNU assembler (GNU Binutils) 2.43"
+            },
+            {
+              "name" : "GNU ld (GNU Binutils) 2.43",
+              "value" : "GNU ld (GNU Binutils) 2.43"
+            },
+            {
+              "name" : "GNU C17 (GCC) version 14.2.0 (x86_64-linux-gnu)",
+              "value" : "GNU C17 (GCC) version 14.2.0 (x86_64-linux-gnu)"
+            },
+            {
+              "name" : "GNU C++17 (GCC) version 14.2.0 (x86_64-linux-gnu)",
+              "value" : "GNU C++17 (GCC) version 14.2.0 (x86_64-linux-gnu)"
+            },
+            {
+              "name" : "GNU ld version 2.27-44.base.el7_9.1",
+              "value" : "GNU ld version 2.27-44.base.el7_9.1"
+            },
+            {
+              "name" : "GNU ar (GNU Binutils) 2.43",
+              "value" : "GNU ar (GNU Binutils) 2.43"
+            },
+            {
+              "name" : "g++ (GCC) 14.2.0",
+              "value" : "g++ (GCC) 14.2.0"
+            },
+            {
+              "name" : "gcc (GCC) 14.2.0",
+              "value" : "gcc (GCC) 14.2.0"
+            },
+            {
+              "name" : "GNU nm (GNU Binutils) 2.43",
+              "value" : "GNU nm (GNU Binutils) 2.43"
+            },
+            {
+              "name" : "GNU objcopy (GNU Binutils) 2.43",
+              "value" : "GNU objcopy (GNU Binutils) 2.43"
+            },
+            {
+              "name" : "GNU strip (GNU Binutils) 2.43",
+              "value" : "GNU strip (GNU Binutils) 2.43"
+            },
+            {
+              "name" : "GNU C Library (GNU libc) stable release version 2.17, by Roland McGrath et al.",
+              "value" : "GNU C Library (GNU libc) stable release version 2.17, by Roland McGrath et al."
+            },
+            {
+              "name" : "Native POSIX Threads Library by Ulrich Drepper et al",
+              "value" : "Native POSIX Threads Library by Ulrich Drepper et al"
+            },
+            {
+              "name" : "DEVKIT_NAME",
+              "value" : "\"gcc-14.2.0 - Centos7.9.2009\""
+            },
+            {
+              "name" : "ADOPTIUM_DEVKIT",
+              "value" : "gcc-14.2.0-Centos7.9.2009-b01-x86_64-linux-gnu"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "signature" : {
+    "algorithm" : "RS512",
+    "value" : "YVMIxw3fARo5sY5sNt4ZZUozrEp1869_UFL-xxw95y0uDl8SHtXyVz0awGwmH07zI3x8WbblktitwDym0vUo2RtnFIk9T94wM-bs6jPHYm_8932UaqUtLRIV7bnjVLBRar62S9iNsVwCtp_OdlWa1bkz19maZIDdIZTm9yJpHb3Fq-6pHPt4s8VLXytFIjzhvbh1Di6ueFb9tBelbVm5r6vLybnUYAE2oLEQYYS_PVMI1aK8wylzxJNcsd9_JsePN2XfWqoXla6GUZ8EaY-yKp9BquJqE5KVoX77G96gV-pUCurkUCUhbsb8qeV0UD1q2QVsNWpQBnDBjE3wrsx2YXVB7h21wvzxjrDmLfelPRai1HVijhNimlRQ_wlAPfkX1dMN0mRFZjPsNhl16YPRobRYnf0GXdzYJD_VHq2V0smYIBTrOBk5d2nzjZhI9js2J9PFpbzw76t1La7vJiRDwpNNGgfH_xcfxnpM0-cH1fQ_kD1uVAd2DrTpqpWuUu8ZrcWfQwUKtz-sBWv3qJRTPZGeNhBwO5oL9Idb-kJ2XSpA1OngfjiFYkx6CqFj_M6Ih3YwDx5J6uPJ708JiqxZEzn2Bu1nXkp6wVSWWYo0bSX_ThFKzTlBZWa9EhKksv8Da6j1WS_YMniBXxy7ukKRFiFfMT7JGC7Mw4dLsbLeryU"
+  }
+}

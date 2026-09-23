@@ -51,6 +51,13 @@ source records. It also identifies special licensing conditions in the DNG SDK
 declared by Skiko's macOS JVM build. Its compatibility has not been established;
 this requires resolution in addition to finishing the artifact/JDK inventory.
 
+[The collected CI evidence](../licenses/native-evidence/ci-2026-09-23/README.md)
+now includes 52 external runtime artifacts per platform and the complete JDK
+legal directories from Windows x64, Linux x64 and macOS ARM64, matched against
+official Temurin archives. Vendor SBOMs and verified source-archive provenance
+are retained too. These are evidence records, not approved native inventories;
+the DNG question and complete native component review remain open.
+
 `:app:checkNativeDistributionLicenses` fails explicitly when an inventory is
 missing or no longer matches the resolved artifacts. Every jlink/jpackage task
 depends on this check. Native image/installer tasks additionally refuse execution
