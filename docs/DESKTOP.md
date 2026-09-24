@@ -50,6 +50,37 @@ for confirmation and the saved previous value remains in history. History shows
 its version timestamp and offers individual copy buttons while hidden fields
 remain masked. Clipboard expiry applies to those copies too.
 
+The editor checks inputs while typing and marks each affected field with its
+own message: a missing or too long title (at most 4096 characters), more than
+100 tags or a tag longer than 256 characters, field values or notes above the
+field limit, an invalid expiry date, an empty or invalid port, and a duplicate
+or too long custom field name. **Speichern** with open problems saves nothing
+and shows one summary line above the buttons.
+
+The expiry date accepts `2026-12-31`, `31.12.2026`, `1.2.2026` and `31.12.26`.
+Two-digit years mean 2000–2099. Impossible dates such as `29.02.2027` are
+refused. Below the field, a valid date is shown in the stored ISO form.
+**+1 Jahr** sets the date one year after the entered date, or after today if no
+valid date is entered (29 February becomes 28 February). **Löschen** removes the
+expiry date.
+
+Ports can be cleared and edited freely; only whole numbers from 1 to 65535 are
+accepted. A port is required for transfer, server and each enabled mail
+endpoint, since there is no implicit protocol default. The copy buttons for
+SSH/SFTP commands are unavailable while the port is invalid, and an invalid
+port draft counts as an unsaved change.
+
+File dialogs offer a filter for the expected type and keep **All files**
+available: vaults and encrypted exports (`*.keyrook`), backups
+(`*.keyrook.bak`), key files (`*.key`), imports by chosen format (`*.json`,
+`*.csv` or `*.xml`), plaintext exports (`*.json` or `*.csv`), SSH public keys
+(`*.pub`) and passphrase wordlists (`*.txt`). Save dialogs suggest a file name
+and add the filter's extension when it is missing; with **All files** selected
+the name is used exactly as typed. If the resulting file already exists, the
+dialog says so and stays open. Independently of this check, every export,
+restore, key-file and vault creation writes only new files and never replaces
+an existing one.
+
 Full-text search includes current titles, tags, notes, field names and visible values, customer/project names and expiry dates. Space-separated terms must all match the same record, without case sensitivity. **Verborgene Felder durchsuchen** explicitly includes hidden current values; matching values are never exposed in result rows. History is excluded. Searches run in the background over an independently owned snapshot, are canceled when replaced or locked, and do not create a persistent plaintext index. Queries are limited to 256 characters.
 
 Filter the list by type, customer, project, tag and expiry. Expiry options separate past dates, today through the next 30 days (inclusive), and records without an expiry date. Sort by title, latest modification or earliest expiry; undated records appear last in expiry order. Customer selection limits compatible projects. **Filter zurücksetzen** restores the active list, title order and default filters, and clears the search and hidden-field search option.

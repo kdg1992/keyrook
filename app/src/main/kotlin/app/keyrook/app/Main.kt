@@ -25,7 +25,6 @@ import java.awt.Desktop
 import java.net.URI
 import java.nio.file.Path
 import java.util.concurrent.Executors
-import javax.swing.JFileChooser
 import javax.swing.SwingUtilities
 
 fun main(args: Array<String>) {
@@ -38,13 +37,8 @@ fun main(args: Array<String>) {
     }
 }
 
-private fun chooseFile(save: Boolean): Path? {
-    val chooser = JFileChooser().apply {
-        fileFilter = javax.swing.filechooser.FileNameExtensionFilter(UiText.text("credentials.vaultFilter"), "keyrook")
-    }
-    val result = if (save) chooser.showSaveDialog(null) else chooser.showOpenDialog(null)
-    return if (result == JFileChooser.APPROVE_OPTION) chooser.selectedFile.toPath() else null
-}
+private fun chooseFile(save: Boolean): Path? =
+    if (save) chooseNewFile(DialogFile.VAULT, "vault.keyrook") else chooseOpenFile(DialogFile.VAULT)
 
 @Composable
 internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore = remember { SettingsStore.platform() }) {
@@ -428,6 +422,14 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
     var values by remember(initialData) { mutableStateOf(originalValues) }
     var hidden by remember(initialData) { mutableStateOf(originalHidden) }
     var error by remember { mutableStateOf(false) }
+    var rejected by remember { mutableStateOf(false) }
+    var attempted by remember { mutableStateOf(false) }
+    var titleEdited by remember { mutableStateOf(false) }
+    var portDrafts by remember(initialData) { mutableStateOf(emptyMap<PortSlot, String>()) }
+    fun editPort(slot: PortSlot, text: String, apply: (Int) -> Unit) {
+        portDrafts = portDrafts + (slot to text)
+        parsePort(text)?.let(apply)
+    }
     var customerId by remember { mutableStateOf(source?.customerId) }
     var projectId by remember { mutableStateOf(source?.projectId) }
     var history by remember { mutableStateOf(false) }
@@ -446,12 +448,18 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
     var confirmDiscard by remember { mutableStateOf(false) }
     val titleFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { titleFocus.requestFocus() }
+    val shownPorts = editorPorts(data, portDrafts)
+    val validation = validateEditor(title, tags, notes, expires, values, shownPorts)
     val dirty = title != source?.title.orEmpty() || tags != source?.tags?.joinToString(", ").orEmpty() ||
         notes != originalNotes || expires != source?.expiresOn.orEmpty() || customerId != source?.customerId ||
         projectId != source?.projectId || values != originalValues || hidden != originalHidden ||
-        data != initialData || type != (source?.data?.type() ?: EntryType.WEB) || customLabel.isNotEmpty()
+        data != initialData || type != (source?.data?.type() ?: EntryType.WEB) || customLabel.isNotEmpty() ||
+        shownPorts.values.any { parsePort(it) == null }
     fun saveDraft() {
         if (busy || confirmDiscard || confirmRemoveTotp) return
+        attempted = true
+        rejected = false
+        if (!validateEditor(title, tags, notes, expires, values, editorPorts(data, portDrafts)).valid) return
         var candidate: Entry? = null
         try {
             candidate = editedEntry(source, data, title, tags, notes, expires, values, hidden).copy(customerId = customerId, projectId = projectId)
@@ -463,7 +471,7 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
                 })))
             context.validate()
             onSave(candidate)
-        } catch (_: Exception) { candidate?.let { Vault(entries = listOf(it)).close() }; error = true }
+        } catch (_: Exception) { candidate?.let { Vault(entries = listOf(it)).close() }; rejected = true }
     }
     fun requestCancel() {
         if (busy) return
@@ -487,7 +495,10 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
                 }
             }
         }
-        OutlinedTextField(title, { title = it }, label = { Text(UiText.text("editor.title")) }, enabled = !busy, modifier = Modifier.fillMaxWidth().focusRequester(titleFocus))
+        val titleError = validation.title?.takeIf { attempted || titleEdited || it.problem != InputProblem.TITLE_REQUIRED }
+        OutlinedTextField(title, { title = it; titleEdited = true }, label = { Text(UiText.text("editor.title")) }, enabled = !busy,
+            isError = titleError != null, modifier = Modifier.fillMaxWidth().focusRequester(titleFocus))
+        FieldError(titleError)
         Row {
             Choice(UiText.text("common.customer"), customerId, vault.customers.map { it.id to it.name }, !busy) {
                 customerId = it
@@ -504,15 +515,15 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
                 else confirmRemoveTotp = true
             }) { Text(UiText.text(if (current.totp == null) "editor.addTotp" else "editor.removeTotp")) }
             is EntryData.Transfer -> {
-                OutlinedTextField(current.port.toString(), { value -> value.toIntOrNull()?.let { data = current.copy(port = it) } }, label = { Text(UiText.text("editor.port")) }, enabled = !busy)
+                PortField(shownPorts[PortSlot.TRANSFER].orEmpty(), !busy, { value -> editPort(PortSlot.TRANSFER, value) { data = current.copy(port = it) } })
                 Row { TransferProtocol.entries.forEach { protocol -> TextButton(enabled = !busy, onClick = { data = current.copy(protocol = protocol) }) { Text(if (protocol == current.protocol) "• $protocol" else "$protocol") } } }
-                if (current.protocol == TransferProtocol.SFTP) CommandCopyButton("SFTP", busy) {
+                if (current.protocol == TransferProtocol.SFTP) CommandCopyButton("SFTP", busy || PortSlot.TRANSFER in validation.ports) {
                     ConnectionCommands.sftp(values[0], current.port, values[1])
                 }
             }
             is EntryData.Server -> {
-                OutlinedTextField(current.port.toString(), { value -> value.toIntOrNull()?.let { data = current.copy(port = it) } }, label = { Text(UiText.text("editor.port")) }, enabled = !busy)
-                CommandCopyButton("SSH", busy) { ConnectionCommands.ssh(values[0], current.port, values[1]) }
+                PortField(shownPorts[PortSlot.SERVER].orEmpty(), !busy, { value -> editPort(PortSlot.SERVER, value) { data = current.copy(port = it) } })
+                CommandCopyButton("SSH", busy || PortSlot.SERVER in validation.ports) { ConnectionCommands.ssh(values[0], current.port, values[1]) }
             }
             is EntryData.Email -> {
                 listOf("IMAP" to current.imap, "POP3" to current.pop3, "SMTP" to current.smtp).forEach { (name, endpoint) ->
@@ -521,13 +532,16 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
                         "POP3" -> current.copy(pop3 = next)
                         else -> current.copy(smtp = next)
                     })
+                    val slot = PortSlot.valueOf(name)
                     Row {
                         Checkbox(endpoint != null, enabled = !busy, onCheckedChange = { enabled ->
+                            portDrafts = portDrafts - slot
                             update(if (enabled) MailEndpoint(newField(), if (name == "IMAP") 993 else if (name == "POP3") 995 else 465, MailEncryption.TLS) else null)
                         })
                         Text(name)
                         if (endpoint != null) {
-                            OutlinedTextField(endpoint.port.toString(), { value -> value.toIntOrNull()?.let { update(endpoint.copy(port = it)) } }, label = { Text(UiText.text("editor.port")) }, enabled = !busy, modifier = Modifier.width(110.dp))
+                            PortField(shownPorts[slot].orEmpty(), !busy, { value -> editPort(slot, value) { update(endpoint.copy(port = it)) } },
+                                Modifier.width(160.dp))
                             Choice(UiText.text("editor.encryption"), endpoint.encryption.name, MailEncryption.entries.map { it.name to if (it == MailEncryption.NONE) UiText.text("editor.encryptionNone") else it.name }, !busy, nullable = false) {
                                 it?.let { update(endpoint.copy(encryption = MailEncryption.valueOf(it))) }
                             }
@@ -537,9 +551,14 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
             }
             is EntryData.Domain -> Choice(UiText.text("editor.registrarLogin"), current.registrarLoginId, vault.entries.filter { it.id != source?.id && it.deletedAt == null }.map { it.id to it.title }, !busy) { data = current.copy(registrarLoginId = it) }
             is EntryData.Custom -> {
+                val labelError = customFieldNameError(customLabel, current.values.keys)
                 Row {
-                    OutlinedTextField(customLabel, { customLabel = it }, label = { Text(UiText.text("editor.newField")) }, enabled = !busy)
-                    Button(enabled = !busy && customLabel.isNotBlank() && customLabel !in current.values && current.values.size < 100, onClick = {
+                    Column {
+                        OutlinedTextField(customLabel, { customLabel = it }, label = { Text(UiText.text("editor.newField")) }, enabled = !busy,
+                            isError = labelError != null)
+                        FieldError(labelError)
+                    }
+                    Button(enabled = !busy && customLabel.isNotBlank() && labelError == null && current.values.size < 100, onClick = {
                         replaceData(current.copy(values = current.values + (customLabel to newField())))
                         customLabel = ""
                     }) { Text(UiText.text("editor.addField")) }
@@ -588,7 +607,7 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
         data.labels().forEachIndexed { index, label ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(values[index], { value -> values = values.toMutableList().also { it[index] = value } },
-                    label = { Text(label) }, enabled = !busy, modifier = Modifier.weight(1f),
+                    label = { Text(label) }, enabled = !busy, isError = index in validation.values, modifier = Modifier.weight(1f),
                     visualTransformation = if (hidden[index]) PasswordVisualTransformation() else VisualTransformation.None)
                 Column {
                     Checkbox(hidden[index], enabled = !busy, onCheckedChange = { value -> hidden = hidden.toMutableList().also { it[index] = value } })
@@ -604,6 +623,7 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
                     }.isFailure
                 }) { Text(UiText.text("common.open")) }
             }
+            FieldError(validation.values[index])
             if (data is EntryData.Custom) {
                 val current = data as EntryData.Custom
                 Row {
@@ -617,11 +637,17 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
                 values = values.toMutableList().also { it[index] = generated }
             }
         }
-        OutlinedTextField(tags, { tags = it }, label = { Text(UiText.text("editor.tags")) }, enabled = !busy, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(tags, { tags = it }, label = { Text(UiText.text("editor.tags")) }, enabled = !busy,
+            isError = validation.tags != null, modifier = Modifier.fillMaxWidth())
+        FieldError(validation.tags)
         Text(UiText.text("editor.clipboard"))
-        OutlinedTextField(notes, { notes = it }, label = { Text(UiText.text("editor.notes")) }, enabled = !busy, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(expires, { expires = it }, label = { Text(UiText.text("editor.expiry")) }, enabled = !busy)
-        if (error) Text(UiText.text("editor.invalid"), color = MaterialTheme.colors.error)
+        OutlinedTextField(notes, { notes = it }, label = { Text(UiText.text("editor.notes")) }, enabled = !busy,
+            isError = validation.notes != null, modifier = Modifier.fillMaxWidth())
+        FieldError(validation.notes)
+        ExpiryField(expires, !busy) { expires = it }
+        if (attempted && !validation.valid) Text(UiText.text("editor.invalid"), color = MaterialTheme.colors.error)
+        else if (rejected) Text(UiText.text("editor.rejected"), color = MaterialTheme.colors.error)
+        if (error) Text(UiText.text("editor.actionFailed"), color = MaterialTheme.colors.error)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(enabled = !busy, onClick = ::saveDraft) { Text(UiText.text("common.save")) }
             TextButton(enabled = !busy, onClick = ::requestCancel) { Text(UiText.text("common.cancel")) }

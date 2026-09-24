@@ -10,7 +10,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import app.keyrook.core.crypto.Secret
 import app.keyrook.core.ssh.SshKeyMaterial
 import app.keyrook.core.ssh.SshKeyService
-import javax.swing.JFileChooser
 import javax.swing.SwingUtilities
 
 @Composable
@@ -28,9 +27,8 @@ internal fun SshImportExport(busy: Boolean, publicKey: String, onBusy: (Boolean)
     Row {
         TextButton(enabled = !busy, onClick = { expanded = !expanded }) { Text(UiText.text("import.ssh.open")) }
         TextButton(enabled = !busy && publicKey.isNotBlank(), onClick = {
-            val chooser = JFileChooser()
-            if (chooser.showSaveDialog(null) == JFileChooser.APPROVE_OPTION && alive.get()) {
-                val path = chooser.selectedFile.toPath()
+            val path = chooseNewFile(DialogFile.PUBLIC_KEY, suggestedPublicKeyName(publicKey))
+            if (path != null && alive.get()) {
                 onBusy(true)
                 Thread({
                     val success = runCatching {

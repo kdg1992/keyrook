@@ -7,7 +7,6 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import app.keyrook.core.generator.PasswordGenerator
 import app.keyrook.core.generator.PasswordOptions
-import javax.swing.JFileChooser
 import javax.swing.SwingUtilities
 
 @Composable
@@ -63,9 +62,8 @@ internal fun GeneratorTools(busy: Boolean, onBusy: (Boolean) -> Unit, generated:
                 phraseError = true
                 return@Button
             }
-            val chooser = JFileChooser()
-            if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION && alive.get()) {
-                val path = chooser.selectedFile.toPath()
+            val path = chooseOpenFile(DialogFile.WORD_LIST)
+            if (path != null && alive.get()) {
                 loading = true
                 onBusy(true)
                 Thread({

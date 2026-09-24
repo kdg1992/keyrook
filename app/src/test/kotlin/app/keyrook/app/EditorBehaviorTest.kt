@@ -59,8 +59,22 @@ class EditorBehaviorTest {
         assertThrows(IllegalArgumentException::class.java) {
             editedEntry(null, data, "Title", "x".repeat(257), "", "", emptyList(), emptyList())
         }
-        assertThrows(java.time.format.DateTimeParseException::class.java) {
+        assertThrows(IllegalArgumentException::class.java) {
             editedEntry(null, data, "Title", "", "", "2026-02-30", emptyList(), emptyList())
         }
+        assertThrows(IllegalArgumentException::class.java) {
+            editedEntry(null, data, "Title", "", "", "30.02.2026", emptyList(), emptyList())
+        }
+    }
+
+    @Test fun `German expiry input is stored as ISO date`() {
+        val data = EntryData.Custom(emptyMap())
+        val entry = editedEntry(null, data, "Title", "", "", " 31.12.26 ", emptyList(), emptyList())
+        Vault(entries = listOf(entry)).use { vault ->
+            vault.validate()
+            assertEquals("2026-12-31", entry.expiresOn)
+        }
+        val cleared = editedEntry(null, data, "Title", "", "", "  ", emptyList(), emptyList())
+        Vault(entries = listOf(cleared)).use { assertNull(cleared.expiresOn) }
     }
 }

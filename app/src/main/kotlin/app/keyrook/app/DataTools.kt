@@ -29,7 +29,7 @@ internal fun DataTools(controller: VaultController, settings: SettingsStore, bus
     Row(Modifier.horizontalScroll(rememberScrollState())) {
         TextButton(enabled = !busy, onClick = {
             operation {
-                selectPath(directory = true)?.let { folder ->
+                onEdt { chooseFolder() }?.let { folder ->
                     val selection = askBackupConfiguration(folder)
                     if (applyBackupConfiguration(controller, selection, settings, settingsFailed)) {
                         val policy = selection!!.policy
@@ -66,7 +66,7 @@ internal fun DataTools(controller: VaultController, settings: SettingsStore, bus
         } }) { Text(UiText.text("integrity.action")) }
         TextButton(enabled = !busy, onClick = { operation { restoreBackup(); controller.session.snapshot() } }) { Text(UiText.text("transfer.restore")) }
         TextButton(enabled = !busy, onClick = { operation {
-            selectPath(save = true)?.let { target ->
+            onEdt { chooseNewFile(DialogFile.VAULT, "keyrook-export.keyrook") }?.let { target ->
                 askCredentials(UiText.text("transfer.exportPassword"), confirm = true)?.use { credentials ->
                     controller.session.snapshot().use {
                         ensureOperationCurrent()
@@ -128,12 +128,12 @@ private fun askBackupConfiguration(folder: Path): BackupConfiguration? {
 }
 
 private fun restoreBackup() {
-    val source = selectPath() ?: return
+    val source = onEdt { chooseOpenFile(DialogFile.BACKUP) } ?: return
     askCredentials(UiText.text("transfer.backupPassword"))?.use { credentials ->
         val service = BackupService(source.toAbsolutePath().parent)
         val preview = service.preview(source, credentials)
         if (!confirm(UiText.text("transfer.preview", preview.entries, preview.revision, preview.modifiedAt))) return
-        val target = selectPath(save = true) ?: return
+        val target = onEdt { chooseNewFile(DialogFile.VAULT, "keyrook-restored.keyrook") } ?: return
         ensureOperationCurrent()
         service.restoreToNew(source, target, credentials, preview)
         inform(UiText.text("transfer.restored"))
@@ -141,14 +141,15 @@ private fun restoreBackup() {
 }
 
 /** Import choices are identified by type, never by their translated label. */
-internal enum class ImportFormat(private val labelKey: String) {
-    KEYROOK_JSON("transfer.format.keyrookJson"), MAPPED_CSV("transfer.csvMapping"), KEEPASS_CSV("transfer.format.keepassCsv"),
-    BITWARDEN_JSON("transfer.format.bitwardenJson"), KEEPASS_XML("transfer.format.keepassXml");
+internal enum class ImportFormat(private val labelKey: String, val fileType: DialogFile) {
+    KEYROOK_JSON("transfer.format.keyrookJson", DialogFile.JSON), MAPPED_CSV("transfer.csvMapping", DialogFile.CSV),
+    KEEPASS_CSV("transfer.format.keepassCsv", DialogFile.CSV), BITWARDEN_JSON("transfer.format.bitwardenJson", DialogFile.JSON),
+    KEEPASS_XML("transfer.format.keepassXml", DialogFile.XML);
     val label: String get() = UiText.text(labelKey)
 }
 
-internal enum class PlaintextFormat(private val labelKey: String) {
-    JSON("transfer.format.json"), CSV("transfer.format.csv");
+internal enum class PlaintextFormat(private val labelKey: String, val fileType: DialogFile) {
+    JSON("transfer.format.json", DialogFile.JSON), CSV("transfer.format.csv", DialogFile.CSV);
     val label: String get() = UiText.text(labelKey)
 }
 
@@ -174,7 +175,7 @@ internal fun exportTransfer(format: PlaintextFormat, vault: Vault, consent: Plai
 
 private fun importData(controller: VaultController) {
     val format = choose(UiText.text("transfer.importFormat"), ImportFormat.entries, ImportFormat::label) ?: return
-    val path = selectPath() ?: return
+    val path = onEdt { chooseOpenFile(format.fileType) } ?: return
     val bytes = readTransfer(path)
     val imported = try {
         importTransfer(format, bytes, selectMapping = { columns -> onEdt { askCsvMapping(columns) } }) ?: return
@@ -197,7 +198,7 @@ private fun importData(controller: VaultController) {
 private fun exportPlaintext(controller: VaultController) {
     if (!confirm(UiText.text("transfer.plainWarning"))) return
     val format = choose(UiText.text("transfer.plainFormat"), PlaintextFormat.entries, PlaintextFormat::label) ?: return
-    val target = selectPath(save = true) ?: return
+    val target = onEdt { chooseNewFile(format.fileType, "keyrook-export.${format.fileType.extension}") } ?: return
     if (!confirm(UiText.text("transfer.plainConfirm"))) return
     controller.session.snapshot().use { vault ->
         val consent = PlaintextConsent(true, true)
@@ -304,11 +305,6 @@ private fun askCredentials(title: String, confirm: Boolean = false, replacing: B
     } finally { chars.fill('\u0000'); repeated.fill('\u0000'); keyBytes?.fill(0) }
 }
 
-private fun selectPath(save: Boolean = false, directory: Boolean = false): Path? = onEdt {
-    val picker = JFileChooser().apply { if (directory) fileSelectionMode = JFileChooser.DIRECTORIES_ONLY }
-    val result = if (save) picker.showSaveDialog(null) else picker.showOpenDialog(null)
-    if (result == JFileChooser.APPROVE_OPTION) picker.selectedFile.toPath() else null
-}
 private fun confirm(message: String): Boolean = onEdt {
     JOptionPane.showConfirmDialog(null, message, "Keyrook", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION
 }
