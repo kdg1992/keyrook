@@ -14,14 +14,21 @@ import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
-/** Ownership checks are best effort: AWT has no atomic OS clipboard compare-and-clear. */
+/**
+ * Ownership checks are best effort: AWT has no atomic OS clipboard compare-and-clear. Scheduler delays can pause while
+ * the machine is suspended, so expiry is checked at least every [CHECK_MILLIS] against [ElapsedTime] instead of relying
+ * on a single delay.
+ */
 internal class ClipboardGuard(
     private val clipboard: Clipboard,
     private val timer: ScheduledExecutorService = ScheduledThreadPoolExecutor(1) {
         Thread(it, "clipboard-expiry").apply { isDaemon = true }
     }.apply { removeOnCancelPolicy = true },
+    private val nanoTime: () -> Long = System::nanoTime,
+    private val wallMillis: () -> Long = System::currentTimeMillis,
 ) : AutoCloseable {
     private var current: OwnedSelection? = null
+    private var copied: ElapsedTime? = null
     private var expiration: ScheduledFuture<*>? = null
     private var expirySeconds = 20L
     private var closing = false
@@ -47,11 +54,22 @@ internal class ClipboardGuard(
         expiration?.cancel(false)
         current?.erase()
         current = selection
+        copied = ElapsedTime(nanoTime, wallMillis)
         try {
-            expiration = timer.schedule({ clearOwned(selection) }, expirySeconds, TimeUnit.SECONDS)
+            expiration = timer.schedule({ expireIfDue(selection) }, CHECK_MILLIS, TimeUnit.MILLISECONDS)
         } catch (failure: RuntimeException) {
             clearOwned(selection)
             throw failure
+        }
+    }
+
+    @Synchronized private fun expireIfDue(selection: OwnedSelection) {
+        if (current !== selection) return
+        if (copied?.reached(expirySeconds * 1_000_000_000L) != false) return clearOwned(selection)
+        try {
+            expiration = timer.schedule({ expireIfDue(selection) }, CHECK_MILLIS, TimeUnit.MILLISECONDS)
+        } catch (_: RuntimeException) {
+            clearOwned(selection)
         }
     }
 
@@ -86,6 +104,7 @@ internal class ClipboardGuard(
         selection.erase()
         if (current !== selection) return
         current = null
+        copied = null
         expiration?.cancel(false)
         expiration = null
         if (closing) timer.shutdown()
@@ -113,6 +132,7 @@ internal class ClipboardGuard(
     }
 
     private companion object {
+        const val CHECK_MILLIS = 1_000L
         val OWNERSHIP_FLAVOR = DataFlavor("${DataFlavor.javaJVMLocalObjectMimeType};class=java.lang.Object", "Keyrook clipboard ownership")
     }
 }

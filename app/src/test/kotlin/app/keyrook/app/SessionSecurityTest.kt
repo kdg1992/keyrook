@@ -43,6 +43,68 @@ class SessionSecurityTest {
         assertFalse(inactivity.expired(1))
     }
 
+    @Test fun `suspend gap expires the deadline immediately and activity resets it`() {
+        var nanos = 0L
+        var wall = 1_700_000_000_000L
+        val inactivity = InactivityDeadline({ wall }, { nanos })
+        fun awake(millis: Long) { nanos += millis * 1_000_000; wall += millis }
+        awake(60_000)
+        wall += 29_000
+        awake(500)
+        assertFalse(inactivity.expired(5), "A gap below the suspend threshold only counts toward the timeout")
+        wall += ElapsedTime.SUSPEND_GAP_MILLIS
+        awake(500)
+        assertTrue(inactivity.expired(5), "The first check after a suspend expires regardless of remaining time")
+        assertTrue(inactivity.expired(5))
+        inactivity.activity()
+        assertFalse(inactivity.expired(5))
+        awake(299_999)
+        assertFalse(inactivity.expired(5))
+        awake(1)
+        assertTrue(inactivity.expired(5))
+    }
+
+    @Test fun `wall clock time elapsed during a short suspend counts toward the timeout`() {
+        var nanos = 0L
+        var wall = 1_700_000_000_000L
+        val inactivity = InactivityDeadline({ wall }, { nanos })
+        nanos += 50_000_000_000
+        wall += 50_000
+        assertFalse(inactivity.expired(1))
+        wall += 10_000
+        assertTrue(inactivity.expired(1))
+    }
+
+    @Test fun `backward wall clock steps never extend the monotonic deadline`() {
+        var nanos = 0L
+        var wall = 1_700_000_000_000L
+        val inactivity = InactivityDeadline({ wall }, { nanos })
+        nanos += 240_000_000_000
+        wall -= 3_600_000
+        assertFalse(inactivity.expired(5))
+        nanos += 59_999_999_999
+        wall += 59_999
+        assertFalse(inactivity.expired(5))
+        nanos += 1
+        assertTrue(inactivity.expired(5))
+    }
+
+    @Test fun `small forward wall clock adjustments only advance the timeout by their size`() {
+        var nanos = 0L
+        var wall = 1_700_000_000_000L
+        val inactivity = InactivityDeadline({ wall }, { nanos })
+        fun awake(millis: Long) { nanos += millis * 1_000_000; wall += millis }
+        awake(60_000)
+        wall += 2_000
+        assertFalse(inactivity.expired(5))
+        awake(237_000)
+        assertFalse(inactivity.expired(5))
+        awake(999)
+        assertFalse(inactivity.expired(5))
+        awake(1)
+        assertTrue(inactivity.expired(5), "Five wall-clock minutes have passed")
+    }
+
     @Test fun `lock discards late plaintext result and never calls its UI publisher`() {
         val epochs = SessionEpoch()
         val operation = epochs.capture()
