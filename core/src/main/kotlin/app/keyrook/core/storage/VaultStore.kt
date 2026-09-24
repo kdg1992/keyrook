@@ -42,18 +42,18 @@ internal interface StorageOperations {
 private object NioOperations : StorageOperations
 
 /** Cooperating writers use a persistent, empty sidecar lock; it must not be deleted while in use. */
-class VaultStore internal constructor(private val codec: VaultCodec, private val operations: StorageOperations) {
+class VaultStore internal constructor(private val codec: VaultCodec, private val operations: StorageOperations) : VaultRepository {
     constructor(codec: VaultCodec = VaultCodec()) : this(codec, NioOperations)
 
-    fun load(path: Path, credentials: Credentials, allowExpensive: Boolean = false): LoadedVault {
+    override fun load(path: Path, credentials: Credentials, allowExpensive: Boolean): LoadedVault {
         val bytes = readBounded(resolve(path))
         val vault = codec.decrypt(bytes, credentials, allowExpensive)
         return LoadedVault(vault, stamp(bytes, vault), VaultHeader.parse(bytes, allowExpensive).kdf)
     }
 
     /** expected=null creates a new vault; updates must advance revision by exactly one. */
-    fun save(path: Path, vault: Vault, credentials: Credentials, expected: FileStamp? = null,
-             parameters: KdfParameters = KdfParameters(), allowExpensive: Boolean = false): SaveResult {
+    override fun save(path: Path, vault: Vault, credentials: Credentials, expected: FileStamp?,
+                      parameters: KdfParameters, allowExpensive: Boolean): SaveResult {
         val target = resolve(path)
         val lockPath = target.resolveSibling(".${target.fileName}.lock")
         val attributes = if (Files.getFileAttributeView(target.parent, PosixFileAttributeView::class.java) != null)
