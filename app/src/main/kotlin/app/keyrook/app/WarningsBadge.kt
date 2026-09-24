@@ -74,7 +74,7 @@ internal fun WarningsBadge(findings: List<EntryHealth>?, onClick: () -> Unit) {
                 else -> HealthIssue.entries.forEach { issue ->
                     val count = counts.count(issue)
                     if (count > 0) WarningChip(UiText.text("health.badge.${issue.name.lowercase()}", count),
-                        severe = issue == HealthIssue.EXPIRED)
+                        severe = severeIssue(issue))
                 }
             }
         }

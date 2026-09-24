@@ -354,8 +354,8 @@ that are not masked are shown; a masked username or host stays hidden in the
 list. Long values are shortened. The expiry date is shown with a marker: expired
 dates, and dates from today through the next 30 days (the same window as the
 vault health check), are highlighted. Entries with a short or repetitive, a
-reused or an old password carry a marker naming that reason (see
-[Warning list](#warning-list)).
+reused or an old password, or one found by a breach check, carry a marker naming
+that reason (see [Warning list](#warning-list)).
 
 ## Backups and encrypted export
 
@@ -482,16 +482,48 @@ the window stays responsive. Its result appears in three places:
 
 - **Warnliste** (**Warnings**) in the header shows how many entries are
   affected per reason, for example *2 abgelaufen*, *1 laufen ab*, *3 schwach*,
-  *2 mehrfach*, *4 alt*, *2 doppelt* (or *keine*; *wird geprüft* while the check runs). Expired entries
-  are marked in the error color.
+  *2 mehrfach*, *4 alt*, *2 doppelt*, *1 geleakt* (or *keine*; *wird geprüft* while the check runs). Expired entries
+  and passwords found in known breaches are marked in the error color.
 - List cards and the detail view mark entries with a short or repetitive, a
-  reused or an old password. Possible duplicates appear in the warning list only. The expiry badge on the cards covers expired and expiring
+  reused or an old password, or one found in known breaches. Possible duplicates appear in the warning list only. The expiry badge on the cards covers expired and expiring
   entries. Markers name the reason only; no password or part of one is shown.
 - Clicking **Warnliste** opens the list with a summary, the affected entry
   titles and their reasons. Clicking a title (or focusing it and pressing Enter)
   closes the list and selects that entry. If the current search or filters hide
   it, they are reset to all active entries (keeping the sort order) first.
   While an editor is open or work is running, titles cannot be selected.
+
+### Breach check
+
+The local checks do not know which passwords have appeared in data breaches.
+**Passwörter mit bekannten Datenlecks abgleichen …** (**Check passwords against
+known breaches …**) at the top of the warning list compares them with the
+[Pwned Passwords](https://haveibeenpwned.com/Passwords) service of Have I Been
+Pwned. This is optional and never happens on its own:
+
+1. After the click, Keyrook hashes the non-empty passwords of active entries
+   locally (password fields, SSH key passphrases and custom fields named
+   `password`, `passwort` or `passphrase`; not the history or trash). Nothing
+   is sent yet.
+2. A question explains what will be sent and asks for consent, every time:
+   only the first 5 characters of each password's SHA-1 hash go to
+   `api.pwnedpasswords.com`, it names how many passwords and requests are
+   involved, that the service sees your IP address and that nothing is stored.
+   **Abbrechen** (**Cancel**) has the focus; Enter alone does not start the
+   check.
+3. After **… Anfragen senden** (**Send … requests**) the list shows the
+   progress and an **Abbrechen** (**Cancel**) button. Canceling, a failed
+   request or an invalid answer ends the run without results.
+4. Affected entries get the reason *Passwort in bekannten Datenlecks*
+   (*password in known breaches*) with the number of times the service has
+   seen that password, a *geleakt* (*breached*) count in the header and a
+   marker on their card and in the detail view.
+
+The results are kept in memory only and disappear when the vault is locked or
+the window closes; an edited or trashed entry loses its marker until the next
+check. A password without this marker may still be weak or known to attackers.
+What exactly is sent and what the service can learn is described in
+[SECURITY.md](SECURITY.md#breach-check).
 
 ## Locking and current boundaries
 
@@ -536,7 +568,9 @@ Under **Sicherheit**, **Beim Start automatisch nach Updates suchen** (**Check
 for updates on start**) is off by default. When enabled, the same request is
 sent once from the next start on, in the background and independently of
 whether a vault is open; a notice appears only if a newer version exists and can
-be dismissed. Without a click or this option Keyrook makes no network request.
+be dismissed. Without a click or this option, and apart from the
+[breach check](#breach-check) that also needs a confirmation every time,
+Keyrook makes no network request.
 The exact request and the reasons why automatic installation is intentionally
 absent are described in [SECURITY.md](SECURITY.md#update-check).
 

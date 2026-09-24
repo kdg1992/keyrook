@@ -30,7 +30,7 @@ Core packages, from bottom to top:
 | `storage` (`VaultStore.kt`, `VaultRepository.kt`) | Atomic file replacement, sidecar lock, `FileStamp` concurrency tokens |
 | `backup` (`BackupService.kt`) | Ciphertext copies, rotation, authenticated preview, restore to a new file |
 | `service` (`VaultSession.kt`) | Owns the unlocked document and credentials; serializes create/open/save/lock |
-| `transfer`, `ssh`, `generator`, `security` | Import/export, SSH key handling, password generation, local warning list |
+| `transfer`, `ssh`, `generator`, `security` | Import/export, SSH key handling, password generation, local warning list, network-free hashing and range matching of the breach check (`BreachCheck.kt`; the requests are made in `app`, `BreachChecks.kt`) |
 | `otp` (`Totp.kt`) | RFC 6238 TOTP code generation from Base32 secrets and `otpauth://totp` URIs |
 | `settings` (`SettingsCodec.kt`, `WindowGeometry.kt`) | Parsing and bounds of the non-secret preferences file, including window placement; the file itself is read and written in `app` |
 | `update` (`ReleaseCheck.kt`) | Network-free validation of a release document and version comparison; the request itself is made in `app` (`UpdateCheck.kt`) |
@@ -146,8 +146,10 @@ are the part later extensions are expected to reuse.
 None of the following is implemented. Version 1 opens no network listener,
 starts no local server, registers no IPC endpoint or native messaging host and
 makes no outbound connection apart from explicit browser links opened through
-`Desktop.browse` and the opt-in update check (one HTTPS request to
-`api.github.com`, see [SECURITY.md](SECURITY.md#update-check)). Each section names the intended integration point, the
+`Desktop.browse`, the opt-in update check (one HTTPS request to
+`api.github.com`, see [SECURITY.md](SECURITY.md#update-check)) and the
+user-confirmed breach check (hash-prefix requests to `api.pwnedpasswords.com`,
+see [SECURITY.md](SECURITY.md#breach-check)). Each section names the intended integration point, the
 boundary it must respect and what must not be done.
 
 ### Server synchronization and multi-user roles

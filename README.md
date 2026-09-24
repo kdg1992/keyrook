@@ -25,6 +25,10 @@ Keyrook – Offline, encrypted credential vault for hosting providers and sysadm
 - Clipboard ownership with expiry, inactivity and OS-session locking,
   configurable window lock policy, failed-attempt delays and a local
   expiry/weak/reused-password warning list.
+- Optional check of passwords against known breaches (Have I Been Pwned
+  Pwned Passwords, k-anonymity): only the first 5 characters of each SHA-1
+  hash are sent, after a confirmation on every run; results stay in memory
+  until lock.
 - Automatic encrypted backups with retention, restore preview and a read-only
   integrity check of the vault and its backups.
 - Encrypted export; import from Keyrook JSON/CSV, mapped CSV, KeePass CSV,
@@ -32,8 +36,8 @@ Keyrook – Offline, encrypted credential vault for hosting providers and sysadm
 - Keyboard navigation and shortcuts, themed in-window dialogs, light/dark
   appearance, German and English interface, remembered window placement.
 - Update check on request or, opt-in, at start; it only reports new releases.
-  Keyrook never downloads or installs updates, and without a click or that
-  option it makes no network request.
+  Keyrook never downloads or installs updates. Apart from these two
+  user-started features it makes no network request.
 
 Details are in [desktop usage](docs/DESKTOP.md). Keyrook is not independently
 audited; see [security properties and limitations](docs/SECURITY.md) and the

@@ -38,7 +38,10 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
     var reveal by state::reveal
     var warningsOpen by state::warningsOpen
     var confirmClose by state::confirmClose
-    val warnings = vaultWarnings(vault, controller)
+    val breachReport = state.breaches.report
+    val breached = remember(vault, breachReport) { vault?.let { breachReport?.current(it) }.orEmpty() }
+    val localWarnings = vaultWarnings(vault, controller)
+    val warnings = remember(localWarnings, breached) { withBreaches(localWarnings, breached) }
     val warningsByEntry = remember(warnings) { warningIssues(warnings.orEmpty()) }
     val updates = rememberUpdateChecks(settings)
     remember { runCatching { SecretClipboard.configure(settings.current().clipboardSeconds) } }
@@ -179,6 +182,6 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
                 }
             }
         }
-        AppDialogs(state, warnings, updates, mac, onCloseAnswered)
+        AppDialogs(state, warnings, breached, updates, mac, onCloseAnswered)
     }
 }

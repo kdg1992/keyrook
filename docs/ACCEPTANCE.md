@@ -340,6 +340,18 @@ Keyrook cannot remove copies held there.
 6. Enable **Check for updates on start** and restart. Expected: exactly one
    request to `api.github.com` at start, independent of unlocking, and no
    notice while 1.0.0 is the latest release.
+7. With network monitoring still running, open **Warnings** and click **Check
+   passwords against known breaches …**. Expected: a question naming
+   `api.pwnedpasswords.com`, the number of passwords and requests, the IP
+   address and that nothing is stored, with the focus on **Cancel**; no
+   connection yet. Press Escape. Expected: no connection.
+8. Start the check again and confirm. Expected: only HTTPS connections to
+   `api.pwnedpasswords.com`, a progress display with **Cancel**, and entries
+   with a known breached synthetic password (for example `password`) marked
+   *password in known breaches*. Start once more. Expected: the question
+   appears again.
+9. Lock and unlock. Expected: the breach markers are gone and no request is
+   sent until the check is started and confirmed again.
 
 ## 7. Keyboard-only flow and language switch
 
