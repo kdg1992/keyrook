@@ -8,6 +8,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.Required
 import java.time.Instant
 import java.time.LocalDate
+import java.util.Collections
+import java.util.IdentityHashMap
 import java.util.UUID
 
 @Serializable
@@ -122,18 +124,43 @@ data class Vault(
         }
     }
 
-    override fun close() {
-        entries.forEach { entry ->
-            entry.notes.close()
-            entry.data.fields().forEach { it.value.close() }
-            entry.history.forEach { item -> item.data.fields().forEach { it.value.close() } }
+    /**
+     * Returns a copy without the given trashed entries and their history. Remaining SSH server and
+     * registrar-login references to them are cleared. Secrets owned only by removed entries are erased
+     * immediately; the result shares all remaining objects with this vault, so the caller keeps ownership.
+     */
+    fun purgeEntries(ids: Set<String>, now: Instant = Instant.now()): Vault {
+        require(ids.isNotEmpty())
+        val byId = entries.associateBy { it.id }
+        require(ids.all { byId[it]?.deletedAt != null }) { "Only trashed entries can be purged" }
+        val (removed, kept) = entries.partition { it.id in ids }
+        val remaining = kept.map { entry ->
+            val data = when (val current = entry.data) {
+                is EntryData.Ssh -> if (current.serverIds.any { it in ids })
+                    current.copy(serverIds = current.serverIds.filterNot { it in ids }) else current
+                is EntryData.Domain -> if (current.registrarLoginId?.let { it in ids } == true)
+                    current.copy(registrarLoginId = null) else current
+                else -> current
+            }
+            if (data === entry.data) entry
+            else entry.copy(data = data, modifiedAt = maxOf(now, Instant.parse(entry.modifiedAt)).toString())
         }
+        val retained = Collections.newSetFromMap(IdentityHashMap<Secret, Boolean>())
+        remaining.forEach { retained.addAll(secrets(it)) }
+        removed.forEach { entry -> secrets(entry).filterNot { it in retained }.forEach(Secret::close) }
+        return copy(entries = remaining)
+    }
+
+    override fun close() {
+        entries.forEach { entry -> secrets(entry).forEach(Secret::close) }
     }
 
     companion object {
         /** Current decrypted document schema; older schemas are only accepted through registered migrations. */
         const val SCHEMA_VERSION = 1
         const val MAX_FIELD_CHARS = 262_144
+        private fun secrets(entry: Entry): List<Secret> = listOf(entry.notes) + entry.data.fields().map { it.value } +
+            entry.history.flatMap { item -> item.data.fields().map { it.value } }
         private fun uuid(value: String) { require(UUID.fromString(value).toString() == value) }
         private fun uniqueIds(ids: List<String>): Set<String> {
             ids.forEach { uuid(it) }
