@@ -7,11 +7,18 @@ import kotlinx.serialization.json.Json
 import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
 
-/** Plaintext application preferences. Holds vault and backup paths and choices only, never credentials, key-file paths or vault content. */
+/**
+ * Plaintext application preferences. Holds vault and backup paths and choices only, never credentials, key-file paths or vault content.
+ *
+ * Compatibility: a new preference is added as an optional field with a default, so files written before it existed still decode
+ * within the same [SettingsCodec.VERSION]. Unknown keys stay rejected. A change that alters or removes an existing field needs a
+ * version bump instead. [language] was added this way.
+ */
 @Serializable
 data class SettingsDocument(
     val version: Int = SettingsCodec.VERSION,
     val theme: String? = null,
+    val language: String? = null,
     val inactivityMinutes: Int? = null,
     val clipboardSeconds: Long? = null,
     val lastVaultPath: String? = null,

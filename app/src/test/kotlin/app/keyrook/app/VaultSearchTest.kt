@@ -6,6 +6,7 @@ import app.keyrook.core.crypto.Secret
 import app.keyrook.core.model.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import java.util.Locale
 import java.util.UUID
 
 class VaultSearchTest {
@@ -26,9 +27,11 @@ class VaultSearchTest {
             val id = vault.entries.single().id
             listOf("SYNTHETIC", "console.example.invalid", "serviceuser", "quarterly", "customer monitoring",
                 "production QUARTERLY", "2027-04-01", "Web-Login").forEach { query ->
-                assertEquals(setOf(id), VaultSearch.find(vault, query), query)
+                assertEquals(setOf(id), VaultSearch.find(vault, query, locale = Locale.GERMAN), query)
             }
             assertTrue(VaultSearch.find(vault, "quarterly missing").isEmpty())
+            assertEquals(setOf(id), VaultSearch.find(vault, "web LOGIN", locale = Locale.ENGLISH))
+            assertTrue(VaultSearch.find(vault, "Web-Login", locale = Locale.ENGLISH).isEmpty())
         }
     }
 

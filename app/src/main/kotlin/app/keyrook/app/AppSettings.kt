@@ -25,6 +25,7 @@ internal data class AppSettings(
     val clipboardSeconds: Long = 20,
     val lastVaultPath: Path? = null,
     val backups: Map<String, StoredBackup> = emptyMap(),
+    val language: AppLanguage = AppLanguage.SYSTEM,
 ) {
     fun backupFor(vault: Path): StoredBackup? = backups[vaultKey(vault)]
 
@@ -35,7 +36,7 @@ internal data class AppSettings(
     }
 
     fun toDocument() = SettingsDocument(
-        theme = theme.name, inactivityMinutes = inactivityMinutes, clipboardSeconds = clipboardSeconds,
+        theme = theme.name, language = language.name, inactivityMinutes = inactivityMinutes, clipboardSeconds = clipboardSeconds,
         lastVaultPath = lastVaultPath?.toString(),
         backups = backups.mapValues { (_, value) ->
             BackupSettingsDocument(value.folder.toString(), value.policy.latest, value.policy.daily, value.enabled)
@@ -61,6 +62,7 @@ internal data class AppSettings(
                 clipboardSeconds = document.clipboardSeconds?.takeIf { it in CLIPBOARD_SECOND_CHOICES } ?: defaults.clipboardSeconds,
                 lastVaultPath = storedPath(document.lastVaultPath),
                 backups = backups,
+                language = AppLanguage.entries.find { it.name == document.language } ?: defaults.language,
             )
         }
 

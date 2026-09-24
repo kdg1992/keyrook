@@ -22,7 +22,7 @@ class DesktopSmokeTest {
                     assertEquals(800, image.height)
                     image.encodeToData().use { encoded -> assertTrue(encoded != null && encoded.size > 1000) }
                 }
-            } finally { scene.close() }
+            } finally { scene.close(); UiText.select(AppLanguage.GERMAN) }
         }
     }
 }

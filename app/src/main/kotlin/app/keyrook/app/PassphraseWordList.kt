@@ -9,8 +9,7 @@ import kotlin.math.log2
 
 internal const val MAX_WORD_LIST_BYTES = 6_500_000
 
-internal class InvalidWordListException : IllegalArgumentException(
-    "Wortliste ungültig: UTF-8, 1024–65536 verschiedene Wörter, je 2–32 Buchstaben pro Zeile, höchstens 6,5 MB.")
+internal class InvalidWordListException : IllegalArgumentException(UiText.text("generator.wordListInvalid"))
 
 /** Vocabulary is public; the owned input and decoder buffers are erased on every exit path. */
 internal fun parsePassphraseWordList(bytes: ByteArray): List<String> {

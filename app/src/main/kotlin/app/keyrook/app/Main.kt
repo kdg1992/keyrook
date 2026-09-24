@@ -30,14 +30,17 @@ import javax.swing.SwingUtilities
 
 fun main(args: Array<String>) {
     if (args.isNotEmpty()) kotlin.system.exitProcess(runRuntimeCheck(args))
+    val settings = SettingsStore.platform()
+    // Select the language before the first composition so no text is rendered in the wrong language.
+    UiText.select(settings.current().language)
     application {
-        Window(onCloseRequest = ::exitApplication, title = "Keyrook") { KeyrookApp(window) }
+        Window(onCloseRequest = ::exitApplication, title = "Keyrook") { KeyrookApp(window, settings) }
     }
 }
 
 private fun chooseFile(save: Boolean): Path? {
     val chooser = JFileChooser().apply {
-        fileFilter = javax.swing.filechooser.FileNameExtensionFilter("Keyrook (*.keyrook)", "keyrook")
+        fileFilter = javax.swing.filechooser.FileNameExtensionFilter(UiText.text("credentials.vaultFilter"), "keyrook")
     }
     val result = if (save) chooser.showSaveDialog(null) else chooser.showOpenDialog(null)
     return if (result == JFileChooser.APPROVE_OPTION) chooser.selectedFile.toPath() else null
@@ -50,7 +53,7 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
     var vault by remember { mutableStateOf<Vault?>(null) }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
-    var preferences by remember { mutableStateOf(settings.current()) }
+    var preferences by remember { mutableStateOf(settings.current().also { UiText.select(it.language) }) }
     val systemDark = isSystemInDarkTheme()
     val dark = when (preferences.theme) { ThemeMode.SYSTEM -> systemDark; ThemeMode.LIGHT -> false; ThemeMode.DARK -> true }
     var about by remember { mutableStateOf(false) }
@@ -66,10 +69,11 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
     val rootFocus = remember { FocusRequester() }
     LaunchedEffect(vault?.id) { rootFocus.requestFocus() }
     val mac = remember { System.getProperty("os.name").startsWith("Mac", ignoreCase = true) }
-    val shortcutPrefix = if (mac) "⌘" else "Strg+"
+    val shortcutPrefix = if (mac) "⌘" else UiText.text("shell.ctrlPrefix")
     fun updatePreferences(change: (AppSettings) -> AppSettings) {
         val saved = settings.update(change)
         preferences = settings.current()
+        UiText.select(preferences.language)
         if (!saved) message = UiText.text("settings.saveFailed")
     }
     fun lockNow() {
@@ -169,9 +173,12 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
                     if (vault != null || (busy && !locking)) Button(onClick = ::lockNow) { Text(UiText.text("shell.lock", shortcutPrefix)) }
                 }
                 if (showSettings) {
-                    Row {
+                    Row(Modifier.horizontalScroll(rememberScrollState())) {
                         Choice(UiText.text("shell.theme"), preferences.theme.name, ThemeMode.entries.map { it.name to UiText.text("shell.theme.${it.name.lowercase()}") }, nullable = false) {
                             it?.let { value -> updatePreferences { current -> current.copy(theme = ThemeMode.valueOf(value)) } }
+                        }
+                        Choice(UiText.text("shell.language"), preferences.language.name, AppLanguage.entries.map { it.name to UiText.text("shell.language.${it.name.lowercase()}") }, nullable = false) {
+                            it?.let { value -> updatePreferences { current -> current.copy(language = AppLanguage.valueOf(value)) } }
                         }
                         Choice(UiText.text("shell.lockMinutes"), preferences.inactivityMinutes.toString(), LOCK_MINUTE_CHOICES.map { it.toString() to it.toString() }, nullable = false) {
                             it?.toInt()?.let { value -> updatePreferences { current -> current.copy(inactivityMinutes = value) } }
@@ -518,7 +525,7 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
                         Text(name)
                         if (endpoint != null) {
                             OutlinedTextField(endpoint.port.toString(), { value -> value.toIntOrNull()?.let { update(endpoint.copy(port = it)) } }, label = { Text(UiText.text("editor.port")) }, enabled = !busy, modifier = Modifier.width(110.dp))
-                            Choice(UiText.text("editor.encryption"), endpoint.encryption.name, MailEncryption.entries.map { it.name to it.name }, !busy, nullable = false) {
+                            Choice(UiText.text("editor.encryption"), endpoint.encryption.name, MailEncryption.entries.map { it.name to if (it == MailEncryption.NONE) UiText.text("editor.encryptionNone") else it.name }, !busy, nullable = false) {
                                 it?.let { update(endpoint.copy(encryption = MailEncryption.valueOf(it))) }
                             }
                         }
