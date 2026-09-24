@@ -22,15 +22,25 @@ import app.keyrook.core.ssh.SshKeyService
 import java.awt.Desktop
 import javax.swing.SwingUtilities
 
+/**
+ * Edits [source], or creates a new entry when it is null. A new entry can start from [template]: its type, field
+ * layout, tags, customer and project are preset, and every value starts empty. Switching to another type starts
+ * that type blank.
+ */
 @Composable
 internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcuts: ShortcutActions, settings: SettingsStore? = null,
-                   onCancel: () -> Unit, onSave: (Entry) -> Unit) {
-    var type by remember { mutableStateOf(source?.data?.type() ?: EntryType.WEB) }
-    val initialData = remember(type) { source?.data ?: blankData(type) }
+                   template: EntryTemplate? = null, onCancel: () -> Unit, onSave: (Entry) -> Unit) {
+    val preset = template?.takeIf { source == null }
+    val initialType = source?.data?.type() ?: preset?.type?.entryType() ?: EntryType.WEB
+    var type by remember { mutableStateOf(initialType) }
+    val initialData = remember(type) {
+        source?.data ?: preset?.takeIf { it.type.entryType() == type }?.newData() ?: blankData(type)
+    }
     var data by remember(initialData) { mutableStateOf(initialData) }
     DisposableEffect(initialData) { onDispose { if (source == null) initialData.fields().forEach { it.value.close() } } }
     var title by remember { mutableStateOf(source?.title.orEmpty()) }
-    var tags by remember { mutableStateOf(editorTags(source)) }
+    val initialTags = remember { if (source != null) editorTags(source) else preset?.tags?.joinToString(", ").orEmpty() }
+    var tags by remember { mutableStateOf(initialTags) }
     val originalNotes = remember { source?.notes?.useChars { String(it) }.orEmpty() }
     var notes by remember { mutableStateOf(originalNotes) }
     var expires by remember { mutableStateOf(source?.expiresOn.orEmpty()) }
@@ -47,8 +57,10 @@ internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcu
         portDrafts = portDrafts + (slot to text)
         parsePort(text)?.let(apply)
     }
-    var customerId by remember { mutableStateOf(source?.customerId) }
-    var projectId by remember { mutableStateOf(source?.projectId) }
+    val initialCustomer = source?.customerId ?: preset?.customerId?.takeIf { id -> vault.customers.any { it.id == id } }
+    val initialProject = source?.projectId ?: preset?.projectId?.takeIf { id -> vault.projects.any { it.id == id } }
+    var customerId by remember { mutableStateOf(initialCustomer) }
+    var projectId by remember { mutableStateOf(initialProject) }
     var history by remember { mutableStateOf(false) }
     var confirmRemoveTotp by remember { mutableStateOf(false) }
     var customLabel by remember { mutableStateOf("") }
@@ -67,10 +79,10 @@ internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcu
     LaunchedEffect(Unit) { titleFocus.requestFocus() }
     val shownPorts = editorPorts(data, portDrafts)
     val validation = validateEditor(title, tags, notes, expires, values, shownPorts, data.totpSlot(initialData, originalValues))
-    val dirty = title != source?.title.orEmpty() || tags != editorTags(source) ||
-        notes != originalNotes || expires != source?.expiresOn.orEmpty() || customerId != source?.customerId ||
-        projectId != source?.projectId || values != originalValues || hidden != originalHidden ||
-        data != initialData || type != (source?.data?.type() ?: EntryType.WEB) || customLabel.isNotEmpty() ||
+    val dirty = title != source?.title.orEmpty() || tags != initialTags ||
+        notes != originalNotes || expires != source?.expiresOn.orEmpty() || customerId != initialCustomer ||
+        projectId != initialProject || values != originalValues || hidden != originalHidden ||
+        data != initialData || type != initialType || customLabel.isNotEmpty() ||
         shownPorts.values.any { parsePort(it) == null }
     fun saveDraft() {
         if (busy || confirmDiscard || confirmRemoveTotp) return
@@ -104,8 +116,11 @@ internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcu
     val alive = remember { java.util.concurrent.atomic.AtomicBoolean(true) }
     DisposableEffect(Unit) { onDispose { alive.set(false); ownedFields.forEach { it.close() } } }
     Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(if (source == null) UiText.text("editor.new") else UiText.text("editor.edit"), Modifier.semantics { heading() },
-            style = MaterialTheme.typography.h5)
+        Text(when {
+            source != null -> UiText.text("editor.edit")
+            preset != null -> UiText.text("template.editorTitle", preset.name)
+            else -> UiText.text("editor.new")
+        }, Modifier.semantics { heading() }, style = MaterialTheme.typography.h5)
         if (source == null) {
             Row(Modifier.horizontalScroll(rememberScrollState())) {
                 EntryType.entries.forEach { candidate ->

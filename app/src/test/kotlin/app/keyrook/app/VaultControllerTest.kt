@@ -249,4 +249,39 @@ class VaultControllerTest {
             }
         }
     }
+
+    @Test fun `an entry layout is saved as a template without values and templates can be deleted`() {
+        VaultController().use { controller ->
+            controller.unlock(directory.resolve("templates.keyrook"), "synthetic-master-passphrase".toCharArray(), null, true,
+                app.keyrook.core.crypto.KdfParameters(iterations = 1)).close()
+            val data = blankData(EntryType.WEB)
+            val entry = editedEntry(null, data, "Shop", "ops, shop", "Notes-SENTINEL", "",
+                listOf("https://shop.invalid", "User-SENTINEL", "Password-SENTINEL", "Totp-SENTINEL"), listOf(false, true, true, true))
+            data.fields().forEach { it.value.close() }
+            Vault(entries = listOf(entry)).use { controller.save(entry).close() }
+            val template = controller.saveTemplate(entry.id, " Shop-Vorlage ").use { it.templates.single() }
+            assertEquals("Shop-Vorlage", template.name)
+            assertEquals(TemplateType.WEB, template.type)
+            assertEquals(listOf("url", "username", "password", "totp"), template.fields.map { it.name })
+            assertEquals(listOf(false, true, true, true), template.fields.map { it.hidden })
+            assertEquals(listOf("ops", "shop"), template.tags)
+            assertFalse(template.toString().contains("SENTINEL"))
+            assertEquals(EntryType.WEB, template.type.entryType())
+            assertThrows(IllegalArgumentException::class.java) { controller.saveTemplate(entry.id, " ") }
+            assertThrows(IllegalArgumentException::class.java) { controller.saveTemplate(java.util.UUID.randomUUID().toString(), "x") }
+            controller.deleteTemplate(template.id).use { assertTrue(it.templates.isEmpty()) }
+            assertThrows(IllegalArgumentException::class.java) { controller.deleteTemplate(template.id) }
+        }
+    }
+
+    @Test fun `every template type maps to the editor type of the same name`() {
+        TemplateType.entries.forEach { type ->
+            val data = EntryTemplate(java.util.UUID.randomUUID().toString(), "t", type,
+                (type.fieldNames.orEmpty() - type.optionalFields).map { TemplateField(it) }).newData()
+            assertEquals(type.entryType(), data.type())
+            data.fields().forEach { it.value.close() }
+        }
+        assertEquals(null, templateName("  "))
+        assertEquals("Name", templateName(" Name "))
+    }
 }

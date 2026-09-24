@@ -6,7 +6,10 @@ import app.keyrook.core.crypto.AuthenticationException
 import app.keyrook.core.crypto.Credentials
 import app.keyrook.core.crypto.Secret
 import app.keyrook.core.crypto.KdfParameters
+import app.keyrook.core.model.Customer
 import app.keyrook.core.model.Entry
+import app.keyrook.core.model.EntryTemplate
+import app.keyrook.core.model.OrganizationMetadata
 import app.keyrook.core.model.ReservedTags
 import app.keyrook.core.model.Vault
 import app.keyrook.core.model.pinEntries
@@ -170,13 +173,43 @@ class VaultController(internal val session: VaultSession = VaultSession(),
         current.copy(customers = current.customers.map { if (it.id == id) it.copy(name = name.trim()) else it })
     }
 
-    fun updateProject(id: String, name: String, customerId: String?): Vault = updateOrganization { current ->
+    /**
+     * Replaces the name and metadata of customer [id]. Blank metadata is stored as unset; [notes] are copied into
+     * a new secret and the caller keeps erasing its array. Invalid values fail without saving.
+     */
+    fun updateCustomer(id: String, name: String, metadata: CustomerMetadata, notes: CharArray): Vault = updateOrganization { current ->
+        require(name.isNotBlank() && name.length <= 4096)
+        val customer = current.customers.single { it.id == id }
+        require(notes.size <= Vault.MAX_FIELD_CHARS)
+        val updated = Customer(customer.id, name.trim(), OrganizationMetadata.normalize(metadata.contactName),
+            OrganizationMetadata.normalize(metadata.contactEmail), OrganizationMetadata.normalize(metadata.phone),
+            OrganizationMetadata.normalize(metadata.website), Secret(notes))
+        current.copy(customers = current.customers.map { if (it.id == id) updated else it })
+    }
+
+    fun updateProject(id: String, name: String, customerId: String?): Vault =
+        updateProject(id, name, customerId, description = null, notes = null)
+
+    /**
+     * Renames project [id] and moves it to [customerId]. A non-null [description] replaces the description (blank
+     * clears it); non-null [notes] replace the notes, copied into a new secret; null keeps either unchanged.
+     */
+    fun updateProject(id: String, name: String, customerId: String?, description: String?, notes: CharArray?): Vault = updateOrganization { current ->
         require(name.isNotBlank() && name.length <= 4096)
         val project = current.projects.single { it.id == id }
         require(customerId == null || current.customers.any { it.id == customerId })
+        require(notes == null || notes.size <= Vault.MAX_FIELD_CHARS)
         val now = java.time.Instant.now().toString()
+        val updated = project.copy(name = name.trim(), customerId = customerId,
+            description = if (description == null) project.description else OrganizationMetadata.normalize(description),
+            notes = notes?.let(::Secret) ?: project.notes)
         current.copy(
-            projects = current.projects.map { if (it.id == id) it.copy(name = name.trim(), customerId = customerId) else it },
+            projects = current.projects.map { if (it.id == id) updated else it },
+            // Templates of a moved project follow it to the new customer, like its entries.
+            templates = current.templates.map {
+                if (project.customerId != customerId && customerId != null && it.projectId == id && it.customerId != customerId)
+                    it.copy(customerId = customerId) else it
+            },
             // Moving a project carries its entries, including trash, to its new customer atomically.
             // Removing only the project's customer preserves existing entry assignments.
             entries = current.entries.map {
@@ -193,26 +226,75 @@ class VaultController(internal val session: VaultSession = VaultSession(),
         require(current.projects.none { it.customerId == id } && current.entries.none { it.customerId == id }) {
             "Customer is still in use"
         }
-        current.copy(customers = current.customers.filterNot { it.id == id })
+        // Templates only preset a customer; removing it clears the preset instead of blocking the removal.
+        current.copy(customers = current.customers.filterNot { it.id == id },
+            templates = current.templates.map { if (it.customerId == id) it.copy(customerId = null) else it })
     }
 
     fun removeProject(id: String, confirmed: Boolean): Vault = updateOrganization { current ->
         require(confirmed)
         require(current.projects.any { it.id == id })
         require(current.entries.none { it.projectId == id }) { "Project is still in use" }
-        current.copy(projects = current.projects.filterNot { it.id == id })
+        current.copy(projects = current.projects.filterNot { it.id == id },
+            templates = current.templates.map { if (it.projectId == id) it.copy(projectId = null) else it })
     }
 
+    /**
+     * Saves the layout of entry [entryId] as a new template named [name] (see [EntryTemplate.of]): type, field names,
+     * visibility, tags, customer and project, but no value.
+     */
+    fun saveTemplate(entryId: String, name: String): Vault = updateOrganization { current ->
+        require(name.isNotBlank() && name.length <= 4096)
+        require(current.templates.size < Vault.MAX_TEMPLATES)
+        val entry = requireNotNull(current.entries.firstOrNull { it.id == entryId && it.deletedAt == null }) { "Unknown entry" }
+        current.copy(templates = current.templates + EntryTemplate.of(java.util.UUID.randomUUID().toString(), name, entry))
+    }
+
+    fun deleteTemplate(id: String): Vault = updateOrganization { current ->
+        require(current.templates.any { it.id == id })
+        current.copy(templates = current.templates.filterNot { it.id == id })
+    }
+
+    /**
+     * Saves [change]'s candidate as one revision. Notes the change created (customer or project notes that are not
+     * part of the snapshot) belong to this call and are erased afterwards; the session keeps its own copy.
+     */
     private fun updateOrganization(change: (Vault) -> Vault): Vault {
         ensureOperationCurrent()
         session.snapshot().use { current ->
             val candidate = change(current)
-            candidate.validate()
-            session.save(candidate)
+            val existing = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Secret, Boolean>())
+            (current.customers.map { it.notes } + current.projects.map { it.notes }).forEach { existing.add(it) }
+            try {
+                candidate.validate()
+                session.save(candidate)
+            } finally {
+                (candidate.customers.map { it.notes } + candidate.projects.map { it.notes })
+                    .filterNot { it in existing }.forEach(Secret::close)
+            }
         }
         return session.snapshot()
     }
 
+    /** The older schema version of the opened file that the next save upgrades, or null (see [VaultSession.pendingMigration]). */
+    fun pendingMigration(): Int? = session.pendingMigration()
+
     fun lock() { vaultPath = null; session.lock() }
     override fun close() { vaultPath = null; session.close() }
+}
+
+/** Typed customer metadata; blank values are stored as unset (see [OrganizationMetadata]). */
+data class CustomerMetadata(val contactName: String = "", val contactEmail: String = "", val phone: String = "",
+                            val website: String = "") {
+    /** Whether each value is empty or passes the lenient format check, in the order of the constructor. */
+    val valid: List<Boolean> get() = listOf(
+        OrganizationMetadata.isValidContactName(OrganizationMetadata.normalize(contactName)),
+        OrganizationMetadata.isValidEmail(OrganizationMetadata.normalize(contactEmail)),
+        OrganizationMetadata.isValidPhone(OrganizationMetadata.normalize(phone)),
+        OrganizationMetadata.isValidWebsite(OrganizationMetadata.normalize(website)))
+
+    companion object {
+        fun of(customer: Customer) = CustomerMetadata(customer.contactName.orEmpty(), customer.contactEmail.orEmpty(),
+            customer.phone.orEmpty(), customer.website.orEmpty())
+    }
 }

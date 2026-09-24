@@ -196,11 +196,13 @@ private fun CsvMappingDialog(request: CsvMappingRequest, onAnswer: (CsvMapping?)
     var username by remember { mutableStateOf(position(request.suggested.username)) }
     var password by remember { mutableStateOf(position(request.suggested.password)) }
     var notes by remember { mutableStateOf(position(request.suggested.notes)) }
+    var tags by remember { mutableStateOf(position(request.suggested.tags)) }
+    var pinned by remember { mutableStateOf(position(request.suggested.pinned)) }
     AppDialog(UiText.text("csv.title"), onCancel = { onAnswer(null) },
         confirmButton = {
             FocusedButton(UiText.text("common.ok")) {
                 onAnswer(CsvMapping(columns[title], url?.let(columns::get), username?.let(columns::get),
-                    password?.let(columns::get), notes?.let(columns::get)))
+                    password?.let(columns::get), notes?.let(columns::get), tags?.let(columns::get), pinned?.let(columns::get)))
             }
         },
         dismissButton = { TextButton(onClick = { onAnswer(null) }) { Text(UiText.text("common.cancel")) } }) {
@@ -212,6 +214,9 @@ private fun CsvMappingDialog(request: CsvMappingRequest, onAnswer: (CsvMapping?)
             ColumnSelector(UiText.text("field.username"), columns, username, optional = true) { username = it }
             ColumnSelector(UiText.text("field.password"), columns, password, optional = true) { password = it }
             ColumnSelector(UiText.text("editor.notes"), columns, notes, optional = true) { notes = it }
+            ColumnSelector(UiText.text("editor.tags"), columns, tags, optional = true) { tags = it }
+            ColumnSelector(UiText.text("csv.pinned"), columns, pinned, optional = true) { pinned = it }
+            Text(UiText.text("csv.pinnedHint"), style = MaterialTheme.typography.caption)
         }
     }
 }

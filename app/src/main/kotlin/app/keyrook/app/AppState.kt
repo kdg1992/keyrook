@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import app.keyrook.core.model.Entry
+import app.keyrook.core.model.EntryTemplate
 import app.keyrook.core.model.Vault
 import java.util.concurrent.Executors
 import javax.swing.SwingUtilities
@@ -29,6 +30,8 @@ internal class AppState {
     var about by mutableStateOf(false)
     var editing by mutableStateOf<Entry?>(null)
     var creating by mutableStateOf(false)
+    // The template a new entry starts from while [creating]; null for a blank entry.
+    var template by mutableStateOf<EntryTemplate?>(null)
     var locking by mutableStateOf(false)
     var showSettings by mutableStateOf(false)
     // List view, selection and shown detail values live here so they survive the editor; lock resets them.
@@ -50,7 +53,7 @@ internal class AppState {
         // After invalidating: a worker's dialog request is either canceled here or refused by its guard.
         dialogs.cancelAll()
         java.awt.Window.getWindows().filterIsInstance<java.awt.Dialog>().filter { it.isVisible }.forEach { it.dispose() }
-        editing = null; creating = false; about = false; showSettings = false
+        editing = null; creating = false; template = null; about = false; showSettings = false
         if (confirmClose) { confirmClose = false; onCloseAnswered(false) }
         reveal = RevealState(); listView = ListView(); selection = EntrySelection(); organizer = false; warningsOpen = false
         recent = RecentEntries()

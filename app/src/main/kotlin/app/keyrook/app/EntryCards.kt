@@ -100,14 +100,16 @@ internal fun ExpiryBadge(date: LocalDate, state: ExpiryState) {
  * A list row. Selection is shown by border, tint and elevation and exposed to accessibility services. [markers] are
  * password warnings by reason only. [compact] cards, used next to the detail view, put their entry actions below the
  * text instead of beside it. With [onMark], a checkbox shows and toggles whether the entry is [marked] for a bulk action.
- * With [onFavorite], a star shows and toggles the favorite mark; reserved tags are never listed as tags.
+ * With [onFavorite], a star shows and toggles the favorite mark; reserved tags are never listed as tags. With
+ * [onSaveTemplate], an action saves the entry's layout as a template.
  */
 @Composable
 internal fun EntryCardView(entry: Entry, info: EntryCardInfo, isSelected: Boolean, listFocused: Boolean, trash: Boolean,
                            busy: Boolean, onClick: () -> Unit, onFocusInside: () -> Unit, onQuick: (QuickField) -> Unit,
                            onEdit: () -> Unit, onDuplicate: () -> Unit, onRestore: () -> Unit, onPurge: () -> Unit,
                            onTrash: () -> Unit, markers: List<HealthIssue> = emptyList(), compact: Boolean = false,
-                           marked: Boolean = false, onMark: (() -> Unit)? = null, onFavorite: (() -> Unit)? = null) {
+                           marked: Boolean = false, onMark: (() -> Unit)? = null, onFavorite: (() -> Unit)? = null,
+                           onSaveTemplate: (() -> Unit)? = null) {
     val colors = MaterialTheme.colors
     val latestClick by rememberUpdatedState(onClick)
     Card(
@@ -157,10 +159,10 @@ internal fun EntryCardView(entry: Entry, info: EntryCardInfo, isSelected: Boolea
                     }
                 }
                 if (compact) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    EntryCardActions(trash, busy, onEdit, onDuplicate, onRestore, onPurge, onTrash)
+                    EntryCardActions(trash, busy, onEdit, onDuplicate, onRestore, onPurge, onTrash, onSaveTemplate)
                 }
             }
-            if (!compact) EntryCardActions(trash, busy, onEdit, onDuplicate, onRestore, onPurge, onTrash)
+            if (!compact) EntryCardActions(trash, busy, onEdit, onDuplicate, onRestore, onPurge, onTrash, onSaveTemplate)
         }
     }
 }
@@ -180,9 +182,10 @@ internal fun FavoriteToggle(title: String, favorite: Boolean, busy: Boolean, onT
 
 @Composable
 private fun EntryCardActions(trash: Boolean, busy: Boolean, onEdit: () -> Unit, onDuplicate: () -> Unit,
-                             onRestore: () -> Unit, onPurge: () -> Unit, onTrash: () -> Unit) {
+                             onRestore: () -> Unit, onPurge: () -> Unit, onTrash: () -> Unit, onSaveTemplate: (() -> Unit)?) {
     if (!trash) TextButton(enabled = !busy, onClick = onEdit) { Text(UiText.text("shell.edit")) }
     if (!trash) TextButton(enabled = !busy, onClick = onDuplicate) { Text(UiText.text("shell.duplicate")) }
+    if (!trash && onSaveTemplate != null) TextButton(enabled = !busy, onClick = onSaveTemplate) { Text(UiText.text("template.save")) }
     if (trash) {
         TextButton(enabled = !busy, onClick = onRestore) { Text(UiText.text("shell.restore")) }
         TextButton(enabled = !busy, onClick = onPurge) { Text(UiText.text("list.purge"), color = MaterialTheme.colors.error) }

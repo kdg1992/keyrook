@@ -125,4 +125,70 @@ class OrganizationManagementTest {
             }
         }
     }
+
+    @Test fun `customer metadata and notes are saved, validated and kept as secrets`() {
+        withVault { controller ->
+            val notes = "Kunden-Notiz-SENTINEL".toCharArray()
+            controller.updateCustomer(first.id, " Erster Kunde ", CustomerMetadata(" Erika ", "erika@kunde.invalid",
+                "+49 30 555", "https://kunde.invalid"), notes).use {
+                val customer = it.customers.first()
+                assertEquals(listOf("Erster Kunde", "Erika", "erika@kunde.invalid", "+49 30 555", "https://kunde.invalid"),
+                    listOf(customer.name, customer.contactName, customer.contactEmail, customer.phone, customer.website))
+                assertEquals("Kunden-Notiz-SENTINEL", customer.notes.useChars { chars -> String(chars) })
+            }
+            // The caller's array is copied, never adopted.
+            notes.fill('x')
+            controller.session.snapshot().use {
+                assertEquals("Kunden-Notiz-SENTINEL", it.customers.first().notes.useChars { chars -> String(chars) })
+            }
+            controller.updateCustomer(first.id, "Erster Kunde", CustomerMetadata(contactEmail = "   "), CharArray(0)).use {
+                assertNull(it.customers.first().contactEmail)
+                assertNull(it.customers.first().contactName)
+                assertEquals(0, it.customers.first().notes.useChars { chars -> chars.size })
+            }
+            val revision = controller.session.snapshot().use { it.revision }
+            listOf(CustomerMetadata(contactEmail = "kein-mail"), CustomerMetadata(phone = "ruf an"),
+                CustomerMetadata(website = "ftp://kunde.invalid"), CustomerMetadata(contactName = "a\nb")).forEach { metadata ->
+                assertFalse(metadata.valid.all { it })
+                assertThrows(IllegalArgumentException::class.java) { controller.updateCustomer(first.id, "Name", metadata, CharArray(0)) }
+            }
+            assertTrue(CustomerMetadata().valid.all { it })
+            controller.session.snapshot().use { assertEquals(revision, it.revision) }
+        }
+    }
+
+    @Test fun `project description and notes are saved and moving a project carries its templates`() {
+        withVault(listOf(entry())) { controller ->
+            controller.saveTemplate(controller.session.snapshot().use { it.entries.single().id }, "Vorlage").close()
+            controller.updateProject(project.id, "Projekt", second.id, " Relaunch 2026 ", "Projekt-Notiz".toCharArray()).use {
+                it.validate()
+                assertEquals("Relaunch 2026", it.projects.single().description)
+                assertEquals("Projekt-Notiz", it.projects.single().notes.useChars { chars -> String(chars) })
+                assertEquals(second.id, it.templates.single().customerId)
+                assertEquals(project.id, it.templates.single().projectId)
+            }
+            // Null description and notes keep the stored values.
+            controller.updateProject(project.id, "Projekt", second.id).use {
+                assertEquals("Relaunch 2026", it.projects.single().description)
+                assertEquals("Projekt-Notiz", it.projects.single().notes.useChars { chars -> String(chars) })
+            }
+            assertThrows(IllegalArgumentException::class.java) {
+                controller.updateProject(project.id, "Projekt", second.id, "x".repeat(4097), null)
+            }
+        }
+    }
+
+    @Test fun `removing a customer or project clears template presets instead of blocking`() {
+        withVault { controller ->
+            controller.session.snapshot().use { current ->
+                val template = EntryTemplate(UUID.randomUUID().toString(), "Vorlage", TemplateType.CUSTOM,
+                    customerId = second.id)
+                val projectTemplate = EntryTemplate(UUID.randomUUID().toString(), "Projektvorlage", TemplateType.CUSTOM,
+                    projectId = project.id)
+                controller.session.save(current.copy(templates = listOf(template, projectTemplate)))
+            }
+            controller.removeCustomer(second.id, true).use { assertNull(it.templates.first().customerId) }
+            controller.removeProject(project.id, true).use { assertNull(it.templates.last().projectId) }
+        }
+    }
 }

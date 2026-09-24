@@ -44,7 +44,7 @@ private fun formatInstant(value: String): String = runCatching {
 @Composable
 internal fun EntryDetailPane(vault: Vault, entry: Entry?, issues: Set<HealthIssue>, reveal: RevealState, busy: Boolean,
                              onReveal: (RevealState) -> Unit, onEdit: (Entry) -> Unit, onFavorite: (Entry) -> Unit,
-                             onUsed: (Entry) -> Unit, modifier: Modifier = Modifier) {
+                             onUsed: (Entry) -> Unit, onSaveTemplate: (Entry) -> Unit = {}, modifier: Modifier = Modifier) {
     val latestReveal by rememberUpdatedState(onReveal)
     DisposableEffect(Unit) { onDispose { latestReveal(RevealState()) } }
     val key = entry?.let { RevealKey(vault.id, it.id, it.modifiedAt) }
@@ -88,6 +88,7 @@ internal fun EntryDetailPane(vault: Vault, entry: Entry?, issues: Set<HealthIssu
             style = MaterialTheme.typography.caption)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(enabled = !busy && actions, onClick = { onEdit(entry) }) { Text(UiText.text("shell.edit")) }
+            if (actions) TextButton(enabled = !busy, onClick = { onSaveTemplate(entry) }) { Text(UiText.text("template.save")) }
         }
         if (notice.isNotEmpty()) Text(notice)
         Divider()
