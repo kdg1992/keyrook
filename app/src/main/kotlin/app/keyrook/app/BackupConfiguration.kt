@@ -35,8 +35,8 @@ internal fun applyBackupConfiguration(controller: VaultController, selection: Ba
     val folder = selection.folder.toAbsolutePath().normalize()
     // Resolved like the vault file and the core backup service: linked parent directories are accepted,
     // a folder that is itself a symbolic link is refused.
-    require(!Files.isSymbolicLink(folder)) { "Backup folder must not be a symbolic link" }
-    require(Files.isDirectory(folder, LinkOption.NOFOLLOW_LINKS)) { "Backup folder must exist" }
+    requireUserFacing(!Files.isSymbolicLink(folder), "error.backupFolder")
+    requireUserFacing(Files.isDirectory(folder, LinkOption.NOFOLLOW_LINKS), "error.backupFolder")
     ensureOperationCurrent()
     controller.session.configureBackups(BackupService(folder, selection.policy))
     val vault = controller.vaultPath

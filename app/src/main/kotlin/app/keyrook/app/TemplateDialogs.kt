@@ -24,8 +24,8 @@ internal fun TemplateType.entryType(): EntryType = EntryType.valueOf(name)
 internal fun sortedTemplates(vault: Vault): List<EntryTemplate> =
     vault.templates.sortedWith(compareBy<EntryTemplate> { it.name.lowercase(Locale.ROOT) }.thenBy { it.name }.thenBy { it.id })
 
-/** A template name as typed: trimmed, non-blank and at most 4,096 characters, or null. */
-internal fun templateName(text: String): String? = text.trim().takeIf { it.isNotEmpty() && it.length <= 4096 }
+/** A template name as typed: trimmed, non-blank and at most [MAX_NAME_CHARS] characters, or null. */
+internal fun templateName(text: String): String? = text.trim().takeIf { it.isNotEmpty() && it.length <= MAX_NAME_CHARS }
 
 /** Lists the vault's templates; choosing one starts a new entry with its layout. */
 @Composable
@@ -55,14 +55,14 @@ internal fun TemplateChooserDialog(vault: Vault, busy: Boolean, onDismiss: () ->
  */
 @Composable
 internal fun SaveTemplateDialog(entry: Entry, busy: Boolean, onDismiss: () -> Unit, onSave: (String) -> Unit) {
-    var name by remember(entry.id) { mutableStateOf(entry.title.take(4096)) }
+    var name by remember(entry.id) { mutableStateOf(entry.title.take(MAX_NAME_CHARS)) }
     val valid = templateName(name) != null
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(UiText.text("template.saveTitle")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(name, { if (it.length <= 4096 + 16) name = it }, enabled = !busy,
+                OutlinedTextField(name, { if (it.length <= MAX_NAME_CHARS + 16) name = it }, enabled = !busy,
                     label = { Text(UiText.text("common.name")) }, singleLine = true, isError = !valid)
                 Text(UiText.text("template.saveHint"))
             }

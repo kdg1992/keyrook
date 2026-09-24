@@ -119,7 +119,7 @@ internal fun OrganizationTools(vault: Vault, controller: VaultController, busy: 
                         Text(UiText.text("organization.removeBody", editName))
                     } else {
                         OutlinedTextField(editName, { editName = it }, enabled = !busy,
-                            label = { Text(UiText.text("common.name")) }, singleLine = true, isError = editName.length > 4096)
+                            label = { Text(UiText.text("common.name")) }, singleLine = true, isError = editName.length > MAX_NAME_CHARS)
                         if (selectedCustomer != null) {
                             val fields = listOf("organization.contactName", "organization.contactEmail", "organization.phone", "organization.website")
                             val values = listOf(editMetadata.contactName, editMetadata.contactEmail, editMetadata.phone, editMetadata.website)
@@ -152,7 +152,7 @@ internal fun OrganizationTools(vault: Vault, controller: VaultController, busy: 
                 }
             },
             confirmButton = {
-                Button(enabled = !busy && if (confirmRemoval) !inUse else editName.isNotBlank() && editName.length <= 4096 && detailsValid,
+                Button(enabled = !busy && if (confirmRemoval) !inUse else editName.isNotBlank() && editName.length <= MAX_NAME_CHARS && detailsValid,
                     onClick = {
                         val name = editName; val customer = editCustomer; val remove = confirmRemoval
                         val metadata = editMetadata; val description = editDescription; val notes = editNotes

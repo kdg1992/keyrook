@@ -96,8 +96,8 @@ internal class AppState {
                         creating = false
                         inactivity.activity()
                     } else {
-                        // Exceptions can contain paths or decrypted input. Never display their messages.
-                        message = UiText.text("shell.failed")
+                        // Only the reasons of refused checks are shown, never the messages of other exceptions.
+                        message = failureMessage(result.exceptionOrNull())
                     }
                     busy = false
                 }
