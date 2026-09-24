@@ -12,17 +12,12 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.nio.ByteBuffer
-import java.util.HexFormat
 
 class CodecTest {
     private val codec = VaultCodec()
 
     @Test fun `frozen v1 fixture from independent JCA encryption remains readable`() {
-        // Fixed format regression vector: sequential salt/nonce, one Argon2 iteration, JDK AES-GCM.
-        val bytes = HexFormat.of().parseHex(
-            "4b4559524f4f4b000001004c0000010100000013000100000000000100000004" +
-            "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b" +
-            "e833639db333bb90708d90bf2938a8b1f8fe233c792159ea8410173a7edec06c34a5eb216675ec684d9f80e1f5fad0979741aa81cb8981d9ca8c9d657fb8a016c2cf5083616eb74f1000ff9eac3ab4ac10e5eb222b3d4738158133c76d50fe0fef503e825d1578599772e55a0c66e01bfb9dd642eb1f05b932f81728aeca814aefe2867f84a3")
+        val bytes = frozenV1Fixture()
         credentials("fixture-password").use { c -> codec.decrypt(bytes, c).use {
             it.id shouldBe "11111111-2222-4333-8444-555555555555"
             it.revision shouldBe 7L

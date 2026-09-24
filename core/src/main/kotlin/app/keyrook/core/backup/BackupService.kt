@@ -36,12 +36,14 @@ class BackupPreview internal constructor(
 data class BackupResult(val path: Path, val removed: Int)
 
 /** Copies authenticated ciphertext. Backup names disclose only a random vault ID, revision and time. */
-class BackupService(
+class BackupService internal constructor(
     private val directory: Path,
-    private val policy: BackupPolicy = BackupPolicy(),
-    private val clock: Clock = Clock.systemUTC(),
+    private val policy: BackupPolicy,
+    private val clock: Clock,
+    private val codec: VaultCodec,
 ) {
-    private val codec = VaultCodec()
+    constructor(directory: Path, policy: BackupPolicy = BackupPolicy(), clock: Clock = Clock.systemUTC()) :
+        this(directory, policy, clock, VaultCodec())
 
     fun create(source: Path, credentials: Credentials, expected: FileStamp? = null,
                allowExpensive: Boolean = false): BackupResult {

@@ -6,6 +6,7 @@ import app.keyrook.core.crypto.Credentials
 import app.keyrook.core.crypto.KdfParameters
 import app.keyrook.core.crypto.Secret
 import app.keyrook.core.model.*
+import java.util.HexFormat
 import java.util.UUID
 
 internal val testKdf = KdfParameters(iterations = 1)
@@ -42,3 +43,9 @@ internal fun sampleVault(): Vault {
     }
     return Vault(customers = listOf(customer), projects = listOf(project), entries = entries)
 }
+
+/** Fixed format regression vector: sequential salt/nonce, one Argon2 iteration, JDK AES-GCM. Password `fixture-password`. */
+internal fun frozenV1Fixture(): ByteArray = HexFormat.of().parseHex(
+    "4b4559524f4f4b000001004c0000010100000013000100000000000100000004" +
+    "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b" +
+    "e833639db333bb90708d90bf2938a8b1f8fe233c792159ea8410173a7edec06c34a5eb216675ec684d9f80e1f5fad0979741aa81cb8981d9ca8c9d657fb8a016c2cf5083616eb74f1000ff9eac3ab4ac10e5eb222b3d4738158133c76d50fe0fef503e825d1578599772e55a0c66e01bfb9dd642eb1f05b932f81728aeca814aefe2867f84a3")

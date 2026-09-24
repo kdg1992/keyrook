@@ -84,7 +84,7 @@ data class Entry(
 
 @Serializable
 data class Vault(
-    @Required val schemaVersion: Int = 1,
+    @Required val schemaVersion: Int = SCHEMA_VERSION,
     @Required val id: String = UUID.randomUUID().toString(),
     @Required val revision: Long = 0,
     @Required val customers: List<Customer> = emptyList(),
@@ -92,7 +92,7 @@ data class Vault(
     @Required val entries: List<Entry> = emptyList(),
 ) : AutoCloseable {
     fun validate() {
-        require(schemaVersion == 1 && revision >= 0) { "Invalid vault version or revision" }
+        require(schemaVersion == SCHEMA_VERSION && revision >= 0) { "Invalid vault version or revision" }
         uuid(id)
         require(customers.size <= 10_000 && projects.size <= 10_000 && entries.size <= 10_000)
         val customerIds = uniqueIds(customers.map { it.id })
@@ -131,6 +131,8 @@ data class Vault(
     }
 
     companion object {
+        /** Current decrypted document schema; older schemas are only accepted through registered migrations. */
+        const val SCHEMA_VERSION = 1
         const val MAX_FIELD_CHARS = 262_144
         private fun uuid(value: String) { require(UUID.fromString(value).toString() == value) }
         private fun uniqueIds(ids: List<String>): Set<String> {
