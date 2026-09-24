@@ -1,3 +1,16 @@
+# Normalise text files to LF in the repository; checkouts use the platform default.
+* text=auto
+# Scripts keep the line endings their interpreters require on every platform.
+gradlew text eol=lf
+*.sh text eol=lf
+# Batch files are committed with CRLF and stored unconverted, so every checkout
+# keeps CRLF without rewriting the existing files.
+*.bat -text
+# Binary files are never converted or diffed as text.
+*.jar binary
+*.png binary
+*.ico binary
+*.icns binary
 # Reviewed native inventories are hashed byte for byte by the packaging gate.
 /licenses/native/** text eol=lf
 # Release notices are collected on every platform and must be byte-identical.
