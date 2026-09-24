@@ -4,6 +4,7 @@ package app.keyrook.app
 
 import java.awt.AWTEvent
 import java.awt.Desktop
+import java.awt.Frame
 import java.awt.Toolkit
 import java.awt.Window
 import java.awt.desktop.*
@@ -13,12 +14,16 @@ import java.awt.event.WindowEvent
 import javax.swing.SwingUtilities
 import javax.swing.Timer
 
-/** Desktop session events are platform-dependent; leaving this application's windows also locks it. */
+/**
+ * Desktop session events are platform-dependent. Session, sleep and inactivity locking always apply; [windowLock] is read
+ * at each window event and decides whether minimizing or leaving this application's windows also locks.
+ */
 internal class DesktopLockMonitor(
     private val active: () -> Boolean,
     private val timeoutMinutes: () -> Int,
     private val lock: () -> Unit,
     private val deadline: InactivityDeadline,
+    private val windowLock: () -> WindowLockPolicy,
 ) : AutoCloseable {
     @Volatile private var closed = false
     private val toolkit = Toolkit.getDefaultToolkit()
@@ -30,21 +35,25 @@ internal class DesktopLockMonitor(
     private val events = AWTEventListener { event ->
         if (!closed) when (event) {
             is InputEvent -> handleDesktopActivity(active(), timeoutMinutes(), deadline, ::requestLock)
-            is WindowEvent -> if (event.id == WindowEvent.WINDOW_ICONIFIED || (event.id == WindowEvent.WINDOW_DEACTIVATED &&
+            is WindowEvent -> if (windowEventLocks(windowLock(), event.id, event.oldState, event.newState) {
                 // Swing's null-owner file choosers have a shared JVM owner, not the Compose frame.
-                event.oppositeWindow !in Window.getWindows().toSet())) requestLock()
+                event.oppositeWindow !in Window.getWindows().toSet()
+            }) requestLock()
         }
     }
+
+    /** Operating-system session and sleep notifications lock under every [WindowLockPolicy]. */
+    internal fun systemLockEvent() = requestLock()
     private val sessionListener = object : UserSessionListener {
-        override fun userSessionDeactivated(event: UserSessionEvent) = requestLock()
+        override fun userSessionDeactivated(event: UserSessionEvent) = systemLockEvent()
         override fun userSessionActivated(event: UserSessionEvent) = Unit
     }
     private val screenListener = object : ScreenSleepListener {
-        override fun screenAboutToSleep(event: ScreenSleepEvent) = requestLock()
+        override fun screenAboutToSleep(event: ScreenSleepEvent) = systemLockEvent()
         override fun screenAwoke(event: ScreenSleepEvent) = Unit
     }
     private val sleepListener = object : SystemSleepListener {
-        override fun systemAboutToSleep(event: SystemSleepEvent) = requestLock()
+        override fun systemAboutToSleep(event: SystemSleepEvent) = systemLockEvent()
         override fun systemAwoke(event: SystemSleepEvent) = Unit
     }
     private val registered = mutableListOf<SystemEventListener>()
@@ -85,6 +94,21 @@ internal class DesktopLockMonitor(
         }
         registered.clear()
         failure?.let { throw it }
+    }
+}
+
+/**
+ * Decides whether a window event locks under [policy]. Minimizing is recognized from WINDOW_ICONIFIED and, for window
+ * managers that only report the state change, from a WINDOW_STATE_CHANGED transition into the iconified state.
+ * [leavesApplication] is only consulted for focus loss under [WindowLockPolicy.FOCUS_LOSS].
+ */
+internal fun windowEventLocks(policy: WindowLockPolicy, id: Int, oldState: Int, newState: Int, leavesApplication: () -> Boolean): Boolean {
+    val minimized = id == WindowEvent.WINDOW_ICONIFIED || (id == WindowEvent.WINDOW_STATE_CHANGED &&
+        (newState and Frame.ICONIFIED) != 0 && (oldState and Frame.ICONIFIED) == 0)
+    return when (policy) {
+        WindowLockPolicy.FOCUS_LOSS -> minimized || (id == WindowEvent.WINDOW_DEACTIVATED && leavesApplication())
+        WindowLockPolicy.MINIMIZE -> minimized
+        WindowLockPolicy.NEVER -> false
     }
 }
 

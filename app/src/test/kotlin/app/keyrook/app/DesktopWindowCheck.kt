@@ -30,27 +30,51 @@ object DesktopWindowCheck {
                 val before = toolkit.awtEventListeners.size
                 var active = true
                 var locks = 0
+                var policy = WindowLockPolicy.FOCUS_LOSS
                 monitor = DesktopLockMonitor({ active }, { 5 }, {
                     check(SwingUtilities.isEventDispatchThread())
                     locks++; active = false
-                }, InactivityDeadline())
+                }, InactivityDeadline(), { policy })
                 // Native peers stay hidden, so no window is globally active. Redispatch routes
                 // controlled events through Toolkit listeners without fabricating OS activation.
                 fun dispatch(event: WindowEvent) = KeyboardFocusManager.getCurrentKeyboardFocusManager()
                     .redispatchEvent(event.window, event)
-                dispatch(WindowEvent(frame, WindowEvent.WINDOW_DEACTIVATED, dialog))
-                check(locks == 0) { "An application dialog must not lock its owning vault" }
-                dispatch(WindowEvent(dialog, WindowEvent.WINDOW_DEACTIVATED, frame))
-                check(locks == 0)
-                dispatch(WindowEvent(frame, WindowEvent.WINDOW_DEACTIVATED))
-                check(locks == 1) { "Leaving application windows must lock" }
-                active = true
-                dispatch(WindowEvent(frame, WindowEvent.WINDOW_ICONIFIED))
-                check(locks == 2) { "Minimizing must lock" }
+                fun locksOn(event: WindowEvent): Boolean {
+                    active = true
+                    val previous = locks
+                    dispatch(event)
+                    return locks > previous
+                }
+                // The policy is read per event, so changing the setting applies without a new monitor.
+                WindowLockPolicy.entries.forEach { current ->
+                    policy = current
+                    val focusLocks = current == WindowLockPolicy.FOCUS_LOSS
+                    val minimizeLocks = current != WindowLockPolicy.NEVER
+                    check(!locksOn(WindowEvent(frame, WindowEvent.WINDOW_DEACTIVATED, dialog))) {
+                        "An application dialog must not lock its owning vault ($current)"
+                    }
+                    check(!locksOn(WindowEvent(dialog, WindowEvent.WINDOW_DEACTIVATED, frame))) { "Returning to the frame ($current)" }
+                    check(locksOn(WindowEvent(frame, WindowEvent.WINDOW_DEACTIVATED)) == focusLocks) {
+                        "Leaving application windows under $current"
+                    }
+                    check(locksOn(WindowEvent(frame, WindowEvent.WINDOW_ICONIFIED)) == minimizeLocks) { "Minimizing under $current" }
+                    check(locksOn(WindowEvent(frame, WindowEvent.WINDOW_STATE_CHANGED, Frame.NORMAL, Frame.ICONIFIED)) == minimizeLocks) {
+                        "Iconified state change under $current"
+                    }
+                    check(!locksOn(WindowEvent(frame, WindowEvent.WINDOW_STATE_CHANGED, Frame.ICONIFIED, Frame.NORMAL))) {
+                        "Restoring must not lock ($current)"
+                    }
+                    active = true
+                    val previous = locks
+                    checkNotNull(monitor).systemLockEvent()
+                    check(locks == previous + 1) { "Session and sleep events must lock under $current" }
+                }
+                val closedLocks = locks
                 monitor.close()
-                active = true
-                dispatch(WindowEvent(frame, WindowEvent.WINDOW_ICONIFIED))
-                check(locks == 2) { "A closed monitor must not receive events" }
+                policy = WindowLockPolicy.FOCUS_LOSS
+                check(!locksOn(WindowEvent(frame, WindowEvent.WINDOW_ICONIFIED))) { "A closed monitor must not receive events" }
+                check(!locksOn(WindowEvent(frame, WindowEvent.WINDOW_DEACTIVATED)))
+                check(locks == closedLocks)
                 check(toolkit.awtEventListeners.size == before)
             } finally {
                 try { monitor?.close() } finally { dialog.dispose(); frame.dispose() }

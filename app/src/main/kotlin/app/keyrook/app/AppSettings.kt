@@ -13,6 +13,12 @@ import java.util.UUID
 
 internal enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
+/**
+ * Which window events lock the vault: [FOCUS_LOSS] locks on focus loss and minimizing, [MINIMIZE] on minimizing only,
+ * [NEVER] on neither. Operating-system session/sleep notifications and the inactivity deadline lock under every policy.
+ */
+internal enum class WindowLockPolicy { FOCUS_LOSS, MINIMIZE, NEVER }
+
 internal val LOCK_MINUTE_CHOICES = listOf(1, 2, 5, 10, 15, 30)
 internal val CLIPBOARD_SECOND_CHOICES = listOf(5L, 10L, 20L, 30L, 60L, 120L)
 
@@ -26,6 +32,7 @@ internal data class AppSettings(
     val lastVaultPath: Path? = null,
     val backups: Map<String, StoredBackup> = emptyMap(),
     val language: AppLanguage = AppLanguage.SYSTEM,
+    val windowLock: WindowLockPolicy = WindowLockPolicy.MINIMIZE,
 ) {
     fun backupFor(vault: Path): StoredBackup? = backups[vaultKey(vault)]
 
@@ -37,7 +44,7 @@ internal data class AppSettings(
 
     fun toDocument() = SettingsDocument(
         theme = theme.name, language = language.name, inactivityMinutes = inactivityMinutes, clipboardSeconds = clipboardSeconds,
-        lastVaultPath = lastVaultPath?.toString(),
+        windowLock = windowLock.name, lastVaultPath = lastVaultPath?.toString(),
         backups = backups.mapValues { (_, value) ->
             BackupSettingsDocument(value.folder.toString(), value.policy.latest, value.policy.daily, value.enabled)
         },
@@ -63,6 +70,7 @@ internal data class AppSettings(
                 lastVaultPath = storedPath(document.lastVaultPath),
                 backups = backups,
                 language = AppLanguage.entries.find { it.name == document.language } ?: defaults.language,
+                windowLock = WindowLockPolicy.entries.find { it.name == document.windowLock } ?: defaults.windowLock,
             )
         }
 

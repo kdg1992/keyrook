@@ -66,7 +66,8 @@ path, stamp and backup configuration. In the UI, `lockNow` in `Main.kt`
 invalidates the `SessionEpoch`, disposes dialogs, closes the presented
 snapshot, clears the owned clipboard and queues `controller.lock()` on the
 vault worker. Triggers are the lock shortcut, `DesktopLockMonitor.kt`
-(inactivity, window deactivation, AWT session and sleep events) and closing the
+(inactivity, AWT session and sleep events, and minimizing or window
+deactivation according to the saved window lock choice) and closing the
 window.
 
 **Backup.** Automatic backups run inside the session commit before replacement;

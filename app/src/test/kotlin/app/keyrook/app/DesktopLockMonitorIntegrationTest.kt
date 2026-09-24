@@ -30,7 +30,7 @@ class DesktopLockMonitorIntegrationTest {
             DesktopLockMonitor({ active }, { 1 }, {
                 assertTrue(SwingUtilities.isEventDispatchThread())
                 locks++; active = false
-            }, deadline).use {
+            }, deadline, { WindowLockPolicy.NEVER }).use {
                 fun input() = panel.dispatchEvent(MouseEvent(panel, MouseEvent.MOUSE_PRESSED,
                     System.currentTimeMillis(), 0, 0, 0, 1, false, MouseEvent.BUTTON1))
                 now = 59_000_000_000L
@@ -58,7 +58,7 @@ class DesktopLockMonitorIntegrationTest {
             var locks = 0
             var now = 0L
             val deadline = InactivityDeadline { now }
-            val monitor = DesktopLockMonitor({ checks++; true }, { 1 }, { locks++ }, deadline)
+            val monitor = DesktopLockMonitor({ checks++; true }, { 1 }, { locks++ }, deadline, { WindowLockPolicy.FOCUS_LOSS })
             assertEquals(before + 1, toolkit.awtEventListeners.size)
             monitor.close()
             monitor.close()
@@ -72,6 +72,30 @@ class DesktopLockMonitorIntegrationTest {
         }
     }
 
+    @Test fun `operating system session and sleep events lock under every window policy`() {
+        SwingUtilities.invokeAndWait {
+            WindowLockPolicy.entries.forEach { policy ->
+                var active = true
+                var locks = 0
+                var policyReads = 0
+                DesktopLockMonitor({ active }, { 30 }, {
+                    assertTrue(SwingUtilities.isEventDispatchThread())
+                    locks++; active = false
+                }, InactivityDeadline(), { policyReads++; policy }).use { monitor ->
+                    monitor.systemLockEvent()
+                    assertEquals(1, locks, policy.name)
+                    monitor.systemLockEvent()
+                    assertEquals(1, locks, "An inactive session is not locked again")
+                    active = true
+                    monitor.close()
+                    monitor.systemLockEvent()
+                    assertEquals(1, locks, "A closed monitor must not lock")
+                }
+                assertEquals(0, policyReads, "Session events must not depend on the window policy")
+            }
+        }
+    }
+
     @Test fun `real Swing timer forwards idle timeout to EDT without input`() {
         val locked = CountDownLatch(1)
         val onEdt = AtomicBoolean(false)
@@ -81,11 +105,12 @@ class DesktopLockMonitorIntegrationTest {
                 var now = 0L
                 var active = true
                 val deadline = InactivityDeadline { now }
+                // The inactivity deadline stays active even when no window event may lock.
                 monitor = DesktopLockMonitor({ active }, { 1 }, {
                     active = false
                     onEdt.set(SwingUtilities.isEventDispatchThread())
                     locked.countDown()
-                }, deadline)
+                }, deadline, { WindowLockPolicy.NEVER })
                 now = 60_000_000_000L
             }
             assertTrue(locked.await(5, TimeUnit.SECONDS), "Swing timer did not deliver the idle timeout")

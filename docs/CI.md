@@ -13,10 +13,10 @@ The `CI` workflow runs on pull requests, pushes to `main` and manual dispatch. I
 Full platform jobs also run `:app:desktopWindowCheck` on the runner's desktop
 (an isolated Xvfb display on Linux). It creates native AWT window peers without
 showing them, checks internal-dialog transitions, external-focus and minimization
-event routing, then verifies listener/window disposal. Events are controlled
-test inputs; this is not proof of actual operating-system lock/sleep notification
-delivery. The task refuses local execution so it cannot interact with a user's
-working desktop. Ordinary tests additionally exercise real Toolkit dispatch and
+event routing under each window lock choice, then verifies listener/window
+disposal. Events are controlled test inputs; this is not proof of actual
+operating-system lock/sleep notification delivery. The task refuses local
+execution so it cannot interact with a user's working desktop. Ordinary tests additionally exercise real Toolkit dispatch and
 the Swing inactivity timer without native windows.
 
 CodeQL uses the stable 2.27.1 bundle explicitly because the action's default 2.27.0 extractor does not support Kotlin 2.4.20. Review this bundle pin alongside Kotlin and CodeQL action updates.

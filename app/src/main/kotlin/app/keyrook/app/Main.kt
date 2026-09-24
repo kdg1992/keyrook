@@ -147,7 +147,7 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
             lock = { latestLock() })
         val monitor = if (window == null) null else DesktopLockMonitor(
             active = { vault != null || (busy && !locking) }, timeoutMinutes = { preferences.inactivityMinutes },
-            lock = { latestLock() }, deadline = inactivity)
+            lock = { latestLock() }, deadline = inactivity, windowLock = { preferences.windowLock })
         val countdown = javax.swing.Timer(250) { unlockDelay = controller.unlockDelayMillis() }.apply { start() }
         onDispose { lockKeys?.close(); monitor?.close(); countdown.stop() }
     }
@@ -182,6 +182,9 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
                         }
                         Choice(UiText.text("shell.lockMinutes"), preferences.inactivityMinutes.toString(), LOCK_MINUTE_CHOICES.map { it.toString() to it.toString() }, nullable = false) {
                             it?.toInt()?.let { value -> updatePreferences { current -> current.copy(inactivityMinutes = value) } }
+                        }
+                        Choice(UiText.text("shell.windowLock"), preferences.windowLock.name, WindowLockPolicy.entries.map { it.name to UiText.text("shell.windowLock.${it.name.lowercase()}") }, nullable = false) {
+                            it?.let { value -> updatePreferences { current -> current.copy(windowLock = WindowLockPolicy.valueOf(value)) } }
                         }
                         Choice(UiText.text("shell.clipboardSeconds"), preferences.clipboardSeconds.toString(), CLIPBOARD_SECOND_CHOICES.map { it.toString() to it.toString() }, nullable = false) {
                             it?.toLong()?.let { value ->

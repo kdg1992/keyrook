@@ -159,7 +159,17 @@ heuristics; a password without a warning is not guaranteed strong.
 
 ## Locking and current boundaries
 
-Use **Sicherheit** (**Security** in English) to choose the appearance (follow system, light or dark), the language (follow system, German or English), the inactivity deadline (default five minutes) and clipboard expiry (default 20 seconds). These preferences are saved and survive restarts. Switching to another application or minimizing Keyrook also locks it. Supported operating-system session/sleep notifications trigger locking; notification coverage varies by platform. The application additionally uses its own inactivity timer. See [SECURITY.md](SECURITY.md) for the limits of OS-event detection.
+Use **Sicherheit** (**Security** in English) to choose the appearance (follow system, light or dark), the language (follow system, German or English), the inactivity deadline (default five minutes), when the window locks and clipboard expiry (default 20 seconds). These preferences are saved and survive restarts.
+
+**Sperren, wenn das Fenster…** (**Lock when the window…**) controls locking on window events and applies immediately:
+
+| Choice | Locks on |
+| --- | --- |
+| **den Fokus verliert oder minimiert wird** (*loses focus or is minimized*) | Switching to another application and minimizing. Moving between Keyrook's own dialogs does not lock. |
+| **minimiert wird** (*is minimized*, default) | Minimizing only. Copying a password, switching to the browser and coming back keeps the vault open. |
+| **nie** (*never*) | Neither focus loss nor minimizing. |
+
+Under every choice, supported operating-system session/sleep notifications (screen lock, user switch, sleep) trigger locking and the inactivity timer keeps running; notification coverage varies by platform. The trade-off: with **minimiert wird** or **nie**, an unlocked vault stays unlocked behind other windows until the inactivity deadline, an OS lock or sleep event, or **Sperren**. Choose **den Fokus verliert oder minimiert wird** on shared or unattended machines. The window choice does not change clipboard expiry: copied values are still cleared after the configured seconds and on lock. See [SECURITY.md](SECURITY.md) for the limits of OS-event detection.
 
 **Sperren** remains available during vault operations. Locking discards unsaved edits, clears the displayed snapshot and owned clipboard, and closes open application dialogs. Already-started atomic writes finish before the worker clears session credentials. Results from before the lock cannot reopen the display. Reopen the vault to check the saved state if locking happened during a save.
 
@@ -169,7 +179,7 @@ Do not treat the clipboard timer as protection against OS clipboard history. Nat
 
 ## Saved settings
 
-Keyrook stores non-secret preferences in `settings.json` in the platform configuration directory: `%APPDATA%\Keyrook` on Windows, `~/Library/Application Support/Keyrook` on macOS and `$XDG_CONFIG_HOME/keyrook` (or `~/.config/keyrook`) on Linux. The file contains the appearance, language, inactivity deadline, clipboard expiry, the last opened vault path and per-vault backup settings (folder, retention, enabled). The unlock form is pre-filled with the last vault path. Passwords, key-file paths, key-file contents and vault contents are never saved there, so an optional key file must be selected again. If the file cannot be written, a notice appears and the changed preference applies until the application exits. A damaged, unknown or out-of-range file or value falls back to defaults; delete the file to reset all preferences. See [SECURITY.md](SECURITY.md#saved-settings).
+Keyrook stores non-secret preferences in `settings.json` in the platform configuration directory: `%APPDATA%\Keyrook` on Windows, `~/Library/Application Support/Keyrook` on macOS and `$XDG_CONFIG_HOME/keyrook` (or `~/.config/keyrook`) on Linux. The file contains the appearance, language, inactivity deadline, window lock choice, clipboard expiry, the last opened vault path and per-vault backup settings (folder, retention, enabled). The unlock form is pre-filled with the last vault path. Passwords, key-file paths, key-file contents and vault contents are never saved there, so an optional key file must be selected again. If the file cannot be written, a notice appears and the changed preference applies until the application exits. A damaged, unknown or out-of-range file or value falls back to defaults; delete the file to reset all preferences. See [SECURITY.md](SECURITY.md#saved-settings).
 
 Desktop text uses German and English resource catalogs. The language choice
 applies immediately without restarting or locking; messages already shown stay
