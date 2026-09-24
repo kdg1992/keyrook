@@ -267,7 +267,10 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
                     }
                 } else if (creating || editing != null) {
                     Editor(vault!!, editing, busy, shortcuts, onCancel = { editing = null; creating = false }) { entry ->
-                        operation { Vault(entries = listOf(entry)).use { controller.save(entry) } }
+                        // The editor's busy flag lags one composition behind; a second Save in that window is refused here.
+                        submitEditedEntry(busy, entry) { candidate ->
+                            operation { Vault(entries = listOf(candidate)).use { controller.save(candidate) } }
+                        }
                     }
                 } else {
                     val current = vault!!

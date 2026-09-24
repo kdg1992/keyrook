@@ -182,7 +182,8 @@ field limit, an invalid expiry date, an empty or invalid port, a changed TOTP
 secret the code generator does not accept (an unchanged stored one only warns;
 see [TOTP codes](#totp-codes)), and a
 duplicate or too long custom field name. **Speichern** with open problems saves nothing
-and shows one summary line above the buttons.
+and shows one summary line above the buttons. A second **Speichern** while a save is
+still running is ignored, and the values of that second attempt are erased at once.
 
 The expiry date accepts `2026-12-31`, `31.12.2026`, `1.2.2026` and `31.12.26`.
 Two-digit years mean 2000–2099. Impossible dates such as `29.02.2027` are
