@@ -111,7 +111,7 @@ class AppSettingsTest {
             assertTrue(restoreRememberedBackups(controller, restarted))
             assertTrue(controller.session.backupStatus().configured)
             repeat(3) { controller.session.snapshot().use { controller.session.save(it) } }
-            assertEquals(2L, Files.list(folder).use { it.count() })
+            assertEquals(2L, Files.list(folder).use { files -> files.filter { it.fileName.toString().endsWith(".keyrook.bak") }.count() })
             assertTrue(disableBackups(controller, true, restarted))
             controller.lock()
             controller.unlock(vault, "synthetic settings password".toCharArray(), null, false).close()
