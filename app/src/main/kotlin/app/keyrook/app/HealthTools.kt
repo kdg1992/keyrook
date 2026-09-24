@@ -12,38 +12,41 @@ import androidx.compose.ui.unit.dp
 import app.keyrook.core.model.Vault
 import app.keyrook.core.security.EntryHealth
 import app.keyrook.core.security.HealthIssue
-import app.keyrook.core.security.VaultHealth
-import javax.swing.SwingUtilities
 
+internal fun healthIssueText(issue: HealthIssue): String = when (issue) {
+    HealthIssue.EXPIRED -> UiText.text("health.expired")
+    HealthIssue.EXPIRING_SOON -> UiText.text("health.expiring")
+    HealthIssue.SHORT_OR_REPETITIVE_PASSWORD -> UiText.text("health.weak")
+    HealthIssue.REUSED_PASSWORD -> UiText.text("health.reused")
+}
+
+internal fun warningSummaryText(counts: WarningCounts): String =
+    UiText.text("health.summary", counts.entries, counts.expired, counts.expiringSoon, counts.weak, counts.reused)
+
+/**
+ * The warning list. [findings] are the latest background results of core health checks (null while they run);
+ * the dialog shows titles and reasons only. With [onSelect], each title selects its entry in the list.
+ */
 @Composable
-internal fun HealthTools(vault: Vault, controller: VaultController, busy: Boolean, operation: (() -> Vault?) -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    var findings by remember { mutableStateOf<List<EntryHealth>>(emptyList()) }
-    TextButton(enabled = !busy, onClick = {
-        val token = controller.sessionEpoch.capture()
-        operation {
-            ensureOperationCurrent()
-            val result = controller.session.snapshot().use { VaultHealth().inspect(it) }
-            SwingUtilities.invokeLater {
-                if (controller.sessionEpoch.accepts(token)) { findings = result; open = true }
-            }
-            controller.session.snapshot()
-        }
-    }) { Text(UiText.text("health.list")) }
-    if (open) AlertDialog(onDismissRequest = { open = false }, title = { Text(UiText.text("health.title")) }, text = {
+internal fun HealthDialog(vault: Vault, findings: List<EntryHealth>?, onSelect: ((String) -> Unit)?, onClose: () -> Unit) {
+    AlertDialog(onDismissRequest = onClose, title = { Text(UiText.text("health.title")) }, text = {
         val titles = remember(vault) { vault.entries.associate { it.id to it.title } }
         LazyColumn(Modifier.heightIn(max = 450.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item { Text(UiText.text("health.hint")) }
-            if (findings.isEmpty()) item { Text(UiText.text("health.empty")) }
-            items(findings, key = { it.entryId }) { finding ->
-                Text(titles[finding.entryId].orEmpty(), style = MaterialTheme.typography.subtitle1)
-                Text(finding.issues.joinToString("; ") { issue -> when (issue) {
-                    HealthIssue.EXPIRED -> UiText.text("health.expired")
-                    HealthIssue.EXPIRING_SOON -> UiText.text("health.expiring")
-                    HealthIssue.SHORT_OR_REPETITIVE_PASSWORD -> UiText.text("health.weak")
-                    HealthIssue.REUSED_PASSWORD -> UiText.text("health.reused")
-                } })
+            if (findings == null) item { Text(UiText.text("health.checking")) }
+            else {
+                item { Text(warningSummaryText(warningCounts(findings)), style = MaterialTheme.typography.subtitle2) }
+                if (findings.isEmpty()) item { Text(UiText.text("health.empty")) }
+                else if (onSelect != null) item { Text(UiText.text("health.selectHint"), style = MaterialTheme.typography.caption) }
+                items(findings, key = { it.entryId }) { finding ->
+                    Column {
+                        TextButton(enabled = onSelect != null, onClick = { onSelect?.invoke(finding.entryId) }) {
+                            Text(titles[finding.entryId].orEmpty(), style = MaterialTheme.typography.subtitle1)
+                        }
+                        Text(finding.issues.joinToString("; ") { healthIssueText(it) }, Modifier.padding(start = 8.dp))
+                    }
+                }
             }
         }
-    }, confirmButton = { TextButton(onClick = { open = false }) { Text(UiText.text("health.close")) } })
+    }, confirmButton = { TextButton(onClick = onClose) { Text(UiText.text("health.close")) } })
 }

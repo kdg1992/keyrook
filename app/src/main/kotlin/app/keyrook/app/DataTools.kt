@@ -2,13 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package app.keyrook.app
 
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material.Text
-import androidx.compose.material.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import app.keyrook.core.backup.BackupService
 import app.keyrook.core.crypto.Credentials
 import app.keyrook.core.crypto.Secret
@@ -23,11 +16,16 @@ import java.nio.file.attribute.*
 import java.io.IOException
 import javax.swing.*
 
-@Composable
-internal fun DataTools(controller: VaultController, settings: SettingsStore, busy: Boolean, operation: (() -> Vault?) -> Unit,
-                       settingsFailed: () -> Unit) {
-    Row(Modifier.horizontalScroll(rememberScrollState())) {
-        TextButton(enabled = !busy, onClick = {
+/** A backup, transfer or account action of the data menu; [run] starts its vault operation. */
+internal class DataAction(private val labelKey: String, val run: () -> Unit) {
+    val label: String get() = UiText.text(labelKey)
+}
+
+/** The data menu's actions in groups (backups, transfer, account); each starts one guarded vault operation. */
+internal fun dataActions(controller: VaultController, settings: SettingsStore, operation: (() -> Vault?) -> Unit,
+                         settingsFailed: () -> Unit): List<List<DataAction>> = listOf(
+    listOf(
+        DataAction("transfer.folder") {
             operation {
                 onEdt { chooseFolder() }?.let { folder ->
                     val selection = askBackupConfiguration(folder)
@@ -38,12 +36,12 @@ internal fun DataTools(controller: VaultController, settings: SettingsStore, bus
                 }
                 controller.session.snapshot()
             }
-        }) { Text(UiText.text("transfer.folder")) }
-        TextButton(enabled = !busy, onClick = { operation {
+        },
+        DataAction("transfer.status") { operation {
             inform(backupStatusText(controller))
             controller.session.snapshot()
-        } }) { Text(UiText.text("transfer.status")) }
-        TextButton(enabled = !busy, onClick = { operation {
+        } },
+        DataAction("transfer.now") { operation {
             ensureOperationCurrent()
             if (!controller.session.backupStatus().configured) inform(backupStatusText(controller))
             else {
@@ -51,21 +49,23 @@ internal fun DataTools(controller: VaultController, settings: SettingsStore, bus
                 inform(UiText.text("transfer.backedUp", removed))
             }
             controller.session.snapshot()
-        } }) { Text(UiText.text("transfer.now")) }
-        TextButton(enabled = !busy, onClick = { operation {
+        } },
+        DataAction("transfer.disable") { operation {
             ensureOperationCurrent()
             if (!controller.session.backupStatus().configured) inform(backupStatusText(controller))
             else if (disableBackups(controller, confirm(UiText.text("transfer.disableConfirm")), settings, settingsFailed)) {
                 inform(UiText.text("transfer.disabled"))
             }
             controller.session.snapshot()
-        } }) { Text(UiText.text("transfer.disable")) }
-        TextButton(enabled = !busy, onClick = { operation {
+        } },
+        DataAction("integrity.action") { operation {
             showReport(UiText.text("integrity.title"), integrityReportText(controller))
             controller.session.snapshot()
-        } }) { Text(UiText.text("integrity.action")) }
-        TextButton(enabled = !busy, onClick = { operation { restoreBackup(); controller.session.snapshot() } }) { Text(UiText.text("transfer.restore")) }
-        TextButton(enabled = !busy, onClick = { operation {
+        } },
+        DataAction("transfer.restore") { operation { restoreBackup(); controller.session.snapshot() } },
+    ),
+    listOf(
+        DataAction("transfer.exportEncrypted") { operation {
             onEdt { chooseNewFile(DialogFile.VAULT, "keyrook-export.keyrook") }?.let { target ->
                 askCredentials(UiText.text("transfer.exportPassword"), confirm = true)?.use { credentials ->
                     controller.session.snapshot().use {
@@ -76,10 +76,12 @@ internal fun DataTools(controller: VaultController, settings: SettingsStore, bus
                 }
             }
             controller.session.snapshot()
-        } }) { Text(UiText.text("transfer.exportEncrypted")) }
-        TextButton(enabled = !busy, onClick = { operation { importData(controller); controller.session.snapshot() } }) { Text(UiText.text("transfer.import")) }
-        TextButton(enabled = !busy, onClick = { operation { exportPlaintext(controller); controller.session.snapshot() } }) { Text(UiText.text("transfer.exportPlain")) }
-        TextButton(enabled = !busy, onClick = { operation {
+        } },
+        DataAction("transfer.import") { operation { importData(controller); controller.session.snapshot() } },
+        DataAction("transfer.exportPlain") { operation { exportPlaintext(controller); controller.session.snapshot() } },
+    ),
+    listOf(
+        DataAction("credentials.replaceTitle") { operation {
             askCredentials(UiText.text("credentials.replaceTitle"), confirm = true, replacing = true)?.use {
                 if (confirm(UiText.text("credentials.replaceConfirm"))) {
                     ensureOperationCurrent()
@@ -87,17 +89,17 @@ internal fun DataTools(controller: VaultController, settings: SettingsStore, bus
                 }
             }
             controller.session.snapshot()
-        } }) { Text(UiText.text("credentials.replaceTitle")) }
-        TextButton(enabled = !busy, onClick = { operation {
+        } },
+        DataAction("credentials.kdfTitle") { operation {
             configureKdf(controller)
             controller.session.snapshot()
-        } }) { Text(UiText.text("credentials.kdfTitle")) }
-        TextButton(enabled = !busy, onClick = { operation {
+        } },
+        DataAction("credentials.generateKey") { operation {
             generateKeyFileDialog()
             controller.session.snapshot()
-        } }) { Text(UiText.text("credentials.generateKey")) }
-    }
-}
+        } },
+    ),
+)
 
 private fun askBackupConfiguration(folder: Path): BackupConfiguration? {
     var latest = "30"

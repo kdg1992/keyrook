@@ -23,6 +23,7 @@ import app.keyrook.core.model.EntryData
 import app.keyrook.core.model.Field
 import app.keyrook.core.model.FieldKind
 import app.keyrook.core.model.Vault
+import app.keyrook.core.security.HealthIssue
 import app.keyrook.core.security.VaultHealth
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -76,7 +77,7 @@ private fun EntryData.cardValue(field: Field?): CardValue? {
 }
 
 @Composable
-private fun ExpiryBadge(date: LocalDate, state: ExpiryState) {
+internal fun ExpiryBadge(date: LocalDate, state: ExpiryState) {
     val formatted = date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(UiText.locale))
     when (state) {
         ExpiryState.VALID -> Text(UiText.text("list.expires", formatted), style = MaterialTheme.typography.body2)
@@ -92,12 +93,16 @@ private fun ExpiryBadge(date: LocalDate, state: ExpiryState) {
     }
 }
 
-/** A list row. Selection is shown by border, tint and elevation and exposed to accessibility services. */
+/**
+ * A list row. Selection is shown by border, tint and elevation and exposed to accessibility services. [markers] are
+ * password warnings by reason only. [compact] cards, used next to the detail view, put their entry actions below the
+ * text instead of beside it.
+ */
 @Composable
 internal fun EntryCardView(entry: Entry, info: EntryCardInfo, isSelected: Boolean, listFocused: Boolean, trash: Boolean,
                            busy: Boolean, onClick: () -> Unit, onFocusInside: () -> Unit, onQuick: (QuickField) -> Unit,
                            onEdit: () -> Unit, onDuplicate: () -> Unit, onRestore: () -> Unit, onPurge: () -> Unit,
-                           onTrash: () -> Unit) {
+                           onTrash: () -> Unit, markers: List<HealthIssue> = emptyList(), compact: Boolean = false) {
     val colors = MaterialTheme.colors
     val latestClick by rememberUpdatedState(onClick)
     Card(
@@ -120,6 +125,9 @@ internal fun EntryCardView(entry: Entry, info: EntryCardInfo, isSelected: Boolea
                 if (details.isNotEmpty()) Text(details.joinToString(" · ") { "${it.label}: ${it.value}" },
                     style = MaterialTheme.typography.body2, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (info.expiresOn != null && info.expiry != null) ExpiryBadge(info.expiresOn, info.expiry)
+                if (markers.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    markers.forEach { WarningChip(healthIssueText(it), severe = false) }
+                }
                 if (entry.tags.isNotEmpty()) Text(entry.tags.joinToString(", "), style = MaterialTheme.typography.body2)
                 if (!trash) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     QuickField.entries.forEach { kind ->
@@ -133,13 +141,22 @@ internal fun EntryCardView(entry: Entry, info: EntryCardInfo, isSelected: Boolea
                         }
                     }
                 }
+                if (compact) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    EntryCardActions(trash, busy, onEdit, onDuplicate, onRestore, onPurge, onTrash)
+                }
             }
-            if (!trash) TextButton(enabled = !busy, onClick = onEdit) { Text(UiText.text("shell.edit")) }
-            if (!trash) TextButton(enabled = !busy, onClick = onDuplicate) { Text(UiText.text("shell.duplicate")) }
-            if (trash) {
-                TextButton(enabled = !busy, onClick = onRestore) { Text(UiText.text("shell.restore")) }
-                TextButton(enabled = !busy, onClick = onPurge) { Text(UiText.text("list.purge"), color = colors.error) }
-            } else TextButton(enabled = !busy, onClick = onTrash) { Text(UiText.text("list.moveToTrash")) }
+            if (!compact) EntryCardActions(trash, busy, onEdit, onDuplicate, onRestore, onPurge, onTrash)
         }
     }
+}
+
+@Composable
+private fun EntryCardActions(trash: Boolean, busy: Boolean, onEdit: () -> Unit, onDuplicate: () -> Unit,
+                             onRestore: () -> Unit, onPurge: () -> Unit, onTrash: () -> Unit) {
+    if (!trash) TextButton(enabled = !busy, onClick = onEdit) { Text(UiText.text("shell.edit")) }
+    if (!trash) TextButton(enabled = !busy, onClick = onDuplicate) { Text(UiText.text("shell.duplicate")) }
+    if (trash) {
+        TextButton(enabled = !busy, onClick = onRestore) { Text(UiText.text("shell.restore")) }
+        TextButton(enabled = !busy, onClick = onPurge) { Text(UiText.text("list.purge"), color = MaterialTheme.colors.error) }
+    } else TextButton(enabled = !busy, onClick = onTrash) { Text(UiText.text("list.moveToTrash")) }
 }

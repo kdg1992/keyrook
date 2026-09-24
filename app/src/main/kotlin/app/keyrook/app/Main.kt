@@ -22,6 +22,7 @@ import androidx.compose.ui.window.application
 import app.keyrook.core.model.*
 import app.keyrook.core.crypto.Secret
 import app.keyrook.core.crypto.KdfParameters
+import app.keyrook.core.security.HealthIssue
 import app.keyrook.core.ssh.SshKeyService
 import java.awt.Desktop
 import java.net.URI
@@ -59,6 +60,14 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
     var creating by remember { mutableStateOf(false) }
     var locking by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
+    // List view, selection and shown detail values live here so they survive the editor; lock resets them.
+    var listView by remember { mutableStateOf(ListView()) }
+    var selection by remember { mutableStateOf(EntrySelection()) }
+    var reveal by remember { mutableStateOf(RevealState()) }
+    var organizer by remember { mutableStateOf(false) }
+    var warningsOpen by remember { mutableStateOf(false) }
+    val warnings = vaultWarnings(vault, controller)
+    val warningsByEntry = remember(warnings) { warningIssues(warnings.orEmpty()) }
     val updates = rememberUpdateChecks(settings)
     remember { runCatching { SecretClipboard.configure(settings.current().clipboardSeconds) } }
     var unlockDelay by remember { mutableStateOf(0L) }
@@ -81,6 +90,7 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
         val token = controller.sessionEpoch.invalidate()
         java.awt.Window.getWindows().filterIsInstance<java.awt.Dialog>().filter { it.isVisible }.forEach { it.dispose() }
         editing = null; creating = false; about = false; showSettings = false
+        reveal = RevealState(); listView = ListView(); selection = EntrySelection(); organizer = false; warningsOpen = false
         vault?.close(); vault = null
         runCatching { SecretClipboard.clear() }
         busy = true
@@ -121,7 +131,7 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
     fun handleShortcut(event: KeyEvent, onlyLock: Boolean): Boolean {
         // Entry-list shortcuts are resolved by the list itself; here focus is outside it.
         val action = keyboardShortcut(event, mac,
-            ShortcutContext(vault != null, busy, creating || editing != null, locking, about)) ?: return false
+            ShortcutContext(vault != null, busy, creating || editing != null, locking, about || warningsOpen)) ?: return false
         if (onlyLock && action != ShortcutAction.LOCK) return false
         when (action) {
             ShortcutAction.LOCK -> lockNow()
@@ -142,7 +152,22 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
             active = { vault != null || (busy && !locking) }, timeoutMinutes = { preferences.inactivityMinutes },
             lock = { latestLock() }, deadline = inactivity, windowLock = { preferences.windowLock })
         val countdown = javax.swing.Timer(250) { unlockDelay = controller.unlockDelayMillis() }.apply { start() }
-        onDispose { lockKeys?.close(); monitor?.close(); countdown.stop() }
+        // Shown detail values are masked whenever the strictest window lock choice would lock, whatever is selected.
+        val masking = object : java.awt.event.WindowAdapter() {
+            override fun windowDeactivated(event: java.awt.event.WindowEvent) = mask(event)
+            override fun windowIconified(event: java.awt.event.WindowEvent) = mask(event)
+            override fun windowStateChanged(event: java.awt.event.WindowEvent) = mask(event)
+            private fun mask(event: java.awt.event.WindowEvent) {
+                if (windowEventMasksValues(event.id, event.oldState, event.newState)) reveal = reveal.cleared()
+            }
+        }
+        window?.addWindowListener(masking)
+        window?.addWindowStateListener(masking)
+        onDispose {
+            window?.removeWindowListener(masking)
+            window?.removeWindowStateListener(masking)
+            lockKeys?.close(); monitor?.close(); countdown.stop()
+        }
     }
     DisposableEffect(Unit) {
         onDispose {
@@ -160,6 +185,7 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Keyrook", style = MaterialTheme.typography.h4, modifier = Modifier.weight(1f))
+                    if (vault != null) WarningsBadge(warnings) { warningsOpen = true }
                     TextButton(onClick = { updatePreferences { it.copy(theme = if (dark) ThemeMode.LIGHT else ThemeMode.DARK) } }) { Text(if (dark) UiText.text("shell.light") else UiText.text("shell.dark")) }
                     TextButton(onClick = { about = true }) { Text(UiText.text("shell.about")) }
                     TextButton(onClick = { showSettings = !showSettings }) { Text(UiText.text("shell.security")) }
@@ -225,20 +251,45 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
                         operation { Vault(entries = listOf(entry)).use { controller.save(entry) } }
                     }
                 } else {
-                    HealthTools(vault!!, controller, busy, ::operation)
-                    DataTools(controller, settings, busy, ::operation, settingsFailed = {
+                    val current = vault!!
+                    AppToolbar(dataActions(controller, settings, ::operation, settingsFailed = {
                         SwingUtilities.invokeLater { if (live.get()) message = UiText.text("settings.saveFailed") }
-                    })
-                    OrganizationTools(vault!!, controller, busy, ::operation)
-                    VaultList(vault!!, controller, busy, shortcuts, mac, onCreate = { creating = true }, onEdit = { editing = it },
-                        onDuplicate = { entry -> operation { controller.duplicate(entry.id) } },
-                        onTrash = { id -> operation { controller.trash(id, false) } },
-                        onRestore = { id -> operation { controller.trash(id, true) } },
-                        onPurge = { id -> operation { controller.purge(setOf(id)) } },
-                        onEmptyTrash = { operation { controller.emptyTrash() } })
+                    }), busy, organizer, onOrganizer = { organizer = !organizer })
+                    if (organizer) OrganizationTools(current, controller, busy, ::operation, onClose = { organizer = false })
+                    BoxWithConstraints(Modifier.fillMaxSize()) {
+                        val entryList: @Composable (Boolean) -> Unit = { compact ->
+                            VaultList(current, controller, busy, shortcuts, mac, listView, { listView = it }, selection,
+                                { selection = it }, warningsByEntry, compact, onCreate = { creating = true },
+                                onEdit = { editing = it },
+                                onDuplicate = { entry -> operation { controller.duplicate(entry.id) } },
+                                onTrash = { id -> operation { controller.trash(id, false) } },
+                                onRestore = { id -> operation { controller.trash(id, true) } },
+                                onPurge = { id -> operation { controller.purge(setOf(id)) } },
+                                onEmptyTrash = { operation { controller.emptyTrash() } })
+                        }
+                        if (workspaceLayout(maxWidth.value) == WorkspaceLayout.LIST_DETAIL) {
+                            Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                Column(Modifier.weight(0.45f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    entryList(true)
+                                }
+                                Box(Modifier.fillMaxHeight().width(1.dp).background(MaterialTheme.colors.onSurface.copy(alpha = 0.12f)))
+                                val selected = current.entries.firstOrNull { it.id == selection.selectedId }
+                                EntryDetailPane(current, selected, selected?.let { warningsByEntry[it.id] }.orEmpty(), reveal, busy,
+                                    onReveal = { reveal = it }, onEdit = { editing = it },
+                                    modifier = Modifier.weight(0.55f).fillMaxHeight())
+                            }
+                        } else Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { entryList(false) }
+                    }
                 }
             }
         }
+        val jump: ((String) -> Unit)? = if (busy || creating || editing != null) null else ({ id ->
+            warningsOpen = false
+            listView = listView.showing(id, selection.visible)
+            selection = selection.jump(id)
+        })
+        val shownVault = vault
+        if (warningsOpen && shownVault != null) HealthDialog(shownVault, warnings, jump) { warningsOpen = false }
         if (about) AlertDialog(onDismissRequest = { about = false }, title = { Text("Keyrook") },
             text = {
                 Column(Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -308,17 +359,23 @@ private fun UnlockForm(busy: Boolean, remembered: AppSettings, generateKey: (Pat
     }
 }
 
+/**
+ * Search, filters and entry cards. [view] and [selectionState] are owned by the caller so they survive the editor.
+ * [compact] arranges the controls for the narrower list pane next to the entry details.
+ */
 @Composable
 private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, shortcuts: ShortcutActions, mac: Boolean,
+                      view: ListView, onView: (ListView) -> Unit, selectionState: EntrySelection,
+                      onSelection: (EntrySelection) -> Unit, issues: Map<String, Set<HealthIssue>>, compact: Boolean,
                       onCreate: () -> Unit, onEdit: (Entry) -> Unit,
                       onDuplicate: (Entry) -> Unit, onTrash: (String) -> Unit, onRestore: (String) -> Unit,
                       onPurge: (String) -> Unit, onEmptyTrash: () -> Unit) {
-    var search by remember { mutableStateOf("") }
-    var filters by remember { mutableStateOf(EntryListFilters()) }
-    val activeFilters = filters.normalized(vault)
+    val search = view.search
+    val includeHidden = view.includeHidden
+    val activeFilters = view.filters.normalized(vault)
     val trash = activeFilters.trash
-    LaunchedEffect(activeFilters) { filters = activeFilters }
-    var includeHidden by remember { mutableStateOf(false) }
+    SideEffect { if (view.filters != activeFilters) onView(view.copy(filters = activeFilters)) }
+    fun applyFilters(next: EntryListFilters) = onView(view.copy(filters = next))
     val matches = searchResults(vault, controller, search, includeHidden)
     val searchFocus = remember { FocusRequester() }
     val listFocus = remember { FocusRequester() }
@@ -340,9 +397,8 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         while (true) { kotlinx.coroutines.delay(60_000); value = java.time.LocalDate.now() }
     }
     val entries = activeFilters.select(vault, matches.orEmpty(), today)
-    var selectionState by remember { mutableStateOf(EntrySelection()) }
-    val selection = selectionState.update(ListQuery(search, activeFilters, includeHidden), matches?.let { entries.map { it.id } })
-    SideEffect { if (selectionState != selection) selectionState = selection }
+    val selection = selectionState.update(view.query(activeFilters), matches?.let { entries.map { it.id } })
+    SideEffect { if (selectionState != selection) onSelection(selection) }
     val selectedEntry = entries.firstOrNull { it.id == selection.selectedId }
     fun quickAction(entry: Entry, kind: QuickField) {
         val field = entry.data.quickField(kind)?.takeIf { EntryQuickActions.available(it) }
@@ -359,10 +415,10 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
     fun handleListKey(event: KeyEvent): Boolean {
         val action = keyboardShortcut(event, mac, shortcutContext(ShortcutFocus.LIST)) ?: return false
         when (action) {
-            ShortcutAction.SELECT_PREVIOUS -> selectionState = selection.previous()
-            ShortcutAction.SELECT_NEXT -> selectionState = selection.next()
-            ShortcutAction.SELECT_FIRST -> selectionState = selection.first()
-            ShortcutAction.SELECT_LAST -> selectionState = selection.last()
+            ShortcutAction.SELECT_PREVIOUS -> onSelection(selection.previous())
+            ShortcutAction.SELECT_NEXT -> onSelection(selection.next())
+            ShortcutAction.SELECT_FIRST -> onSelection(selection.first())
+            ShortcutAction.SELECT_LAST -> onSelection(selection.last())
             else -> {
                 val entry = selectedEntry ?: return false
                 when (action) {
@@ -377,45 +433,54 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         }
         return true
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedTextField(search, { if (it.length <= 256) search = it }, label = { Text(UiText.text("shell.search")) },
-            modifier = Modifier.weight(1f).focusRequester(searchFocus).onPreviewKeyEvent { event ->
+    val searchField: @Composable (Modifier) -> Unit = { modifier ->
+        OutlinedTextField(search, { if (it.length <= 256) onView(view.copy(search = it)) }, label = { Text(UiText.text("shell.search")) },
+            modifier = modifier.focusRequester(searchFocus).onPreviewKeyEvent { event ->
                 if (keyboardShortcut(event, mac, shortcutContext(ShortcutFocus.SEARCH)) != ShortcutAction.FOCUS_LIST) false
                 else { runCatching { listFocus.requestFocus() }.isSuccess }
             }, singleLine = true)
+    }
+    val listButtons: @Composable () -> Unit = {
         Button(onClick = onCreate, enabled = !busy && !trash) { Text(UiText.text("shell.newEntry")) }
-        TextButton(onClick = { filters = activeFilters.copy(trash = !trash) }, enabled = !busy) { Text(if (trash) UiText.text("shell.active") else UiText.text("shell.trash")) }
+        TextButton(onClick = { applyFilters(activeFilters.copy(trash = !trash)) }, enabled = !busy) { Text(if (trash) UiText.text("shell.active") else UiText.text("shell.trash")) }
         if (trash) TextButton(enabled = !busy && trashCount > 0, onClick = { confirmation = ListConfirmation.EmptyTrash(trashCount) }) {
             Text(UiText.text("list.emptyTrash"))
         }
         TextButton(onClick = { help = true }) { Text(UiText.text("shortcuts.title")) }
     }
+    if (compact) {
+        searchField(Modifier.fillMaxWidth())
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) { listButtons() }
+    } else Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        searchField(Modifier.weight(1f))
+        listButtons()
+    }
     Row {
-        Checkbox(includeHidden, onCheckedChange = { includeHidden = it })
+        Checkbox(includeHidden, onCheckedChange = { onView(view.copy(includeHidden = it)) })
         Text(UiText.text("shell.hiddenSearch"))
     }
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Choice(UiText.text("shell.type"), activeFilters.type?.name, EntryType.entries.map { it.name to it.label }) {
-            filters = activeFilters.copy(type = it?.let(EntryType::valueOf))
+            applyFilters(activeFilters.copy(type = it?.let(EntryType::valueOf)))
         }
         Choice(UiText.text("shell.customer"), activeFilters.customerId, vault.customers.map { it.id to it.name }) {
-            filters = activeFilters.copy(customerId = it).normalized(vault)
+            applyFilters(activeFilters.copy(customerId = it).normalized(vault))
         }
         Choice(UiText.text("shell.project"), activeFilters.projectId, activeFilters.projects(vault).map { it.id to it.name }) {
-            filters = activeFilters.copy(projectId = it)
+            applyFilters(activeFilters.copy(projectId = it))
         }
         Choice(UiText.text("shell.tag"), activeFilters.tag, vault.entries.flatMap { it.tags }.distinct().sorted().map { it to it }) {
-            filters = activeFilters.copy(tag = it)
+            applyFilters(activeFilters.copy(tag = it))
         }
     }
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Choice(UiText.text("shell.expiry"), activeFilters.expiry.name, ExpiryFilter.entries.map { it.name to it.label }, nullable = false) {
-            filters = activeFilters.copy(expiry = ExpiryFilter.valueOf(requireNotNull(it)))
+            applyFilters(activeFilters.copy(expiry = ExpiryFilter.valueOf(requireNotNull(it))))
         }
         Choice(UiText.text("shell.sort"), activeFilters.sort.name, EntrySort.entries.map { it.name to it.label }, nullable = false) {
-            filters = activeFilters.copy(sort = EntrySort.valueOf(requireNotNull(it)))
+            applyFilters(activeFilters.copy(sort = EntrySort.valueOf(requireNotNull(it))))
         }
-        TextButton(onClick = { filters = EntryListFilters(); search = ""; includeHidden = false }) { Text(UiText.text("shell.reset")) }
+        TextButton(onClick = { onView(ListView()) }) { Text(UiText.text("shell.reset")) }
     }
     if (notice.isNotEmpty()) Text(notice)
     if (matches == null) Text(UiText.text("shell.searching"))
@@ -438,12 +503,13 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
             }
             EntryCardView(entry, info, isSelected = entry.id == selection.selectedId, listFocused = listFocused,
                 trash = trash, busy = busy,
-                onClick = { selectionState = selectionState.select(entry.id); runCatching { listFocus.requestFocus() } },
-                onFocusInside = { selectionState = selectionState.select(entry.id) },
+                onClick = { onSelection(selection.select(entry.id)); runCatching { listFocus.requestFocus() } },
+                onFocusInside = { onSelection(selection.select(entry.id)) },
                 onQuick = { kind -> quickAction(entry, kind) },
                 onEdit = { onEdit(entry) }, onDuplicate = { onDuplicate(entry) }, onRestore = { onRestore(entry.id) },
                 onPurge = { confirmation = ListConfirmation.Purge(entry.id, entry.title) },
-                onTrash = { confirmation = ListConfirmation.Trash(entry.id, entry.title) })
+                onTrash = { confirmation = ListConfirmation.Trash(entry.id, entry.title) },
+                markers = passwordMarkers(issues[entry.id].orEmpty()), compact = compact)
         }
     }
     if (help) AlertDialog(onDismissRequest = { help = false }, title = { Text(UiText.text("shortcuts.title")) },

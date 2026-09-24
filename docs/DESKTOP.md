@@ -56,6 +56,56 @@ shown, and edit/copy/open/trash are not available in the trash view (only
 selection moves are). Global shortcuts (Ctrl/⌘ + L/N/F/S, Escape) behave as
 before, regardless of the list focus.
 
+The search text, the filters, the hidden-field search option and the selection
+are kept while an entry is edited: after saving or canceling, the list shows
+the same results with the same entry selected (or its neighbor, as described
+above). Locking discards them together with the displayed vault.
+
+## Layout and entry details
+
+After unlocking, the header shows the warning summary (see
+[Warning list](#warning-list)). Above the entry list, **Daten** (**Data**)
+opens a menu with every backup, transfer and account action, grouped as
+backups (**Backup-Ordner**, **Backupstatus**, **Sicherung jetzt**, **Backups
+deaktivieren**, **Integrität prüfen**, **Backup wiederherstellen**), transfer
+(**Verschlüsselt exportieren**, **Importieren**, **Klartext exportieren**) and
+account (**Passwort / Schlüsseldatei ändern**, **Argon2-Einstellungen**,
+**Schlüsseldatei erzeugen**). The actions behave as described in the sections
+below. The menu is keyboard accessible: move the focus to **Daten** with Tab,
+open it with Enter, move between actions with ↑/↓, run one with Enter or close
+the menu with Escape. **Kunden und Projekte** next to it shows the customers and
+projects section above the list until it is closed again.
+
+When the content area is at least 900 dp wide, the entry list and the details
+of the selected entry are shown side by side; narrower windows show the list
+alone, as before, and entries are read through **Bearbeiten**. In the side-by-side
+layout, the list's cards place their buttons below the text.
+
+The detail view is read-only. It shows title, type, customer and project, tags,
+creation and modification time, the expiry badge, password warnings, ports,
+protocols and encryption of connection records, SSH key type and assigned
+servers, the registrar login of domains, the number of saved history versions
+and every field with its label, followed by the notes:
+
+- Fields that are not masked are shown as text. Masked fields and the notes are
+  shown as dots. **Anzeigen** (**Show**) displays one value in plain text until
+  **Verbergen** (**Hide**) is pressed. Shown values are masked again as soon as
+  another entry is selected, the entry is saved in a new version, the editor
+  opens, the window switches to the side-by-side layout or back, the window
+  loses the focus or is minimized (under every choice of
+  [Sperren, wenn das Fenster…](#locking-and-current-boundaries)), and on lock.
+  Selecting the entry again shows it masked.
+- **Kopieren** (**Copy**) copies a value without showing it, with the same
+  clipboard handling and expiry as the quick actions. **Öffnen** opens URL
+  fields after the same link validation.
+- Server records offer the SSH command and SFTP transfer records the SFTP
+  command, built exactly as in the editor; the password is never part of it.
+- **Bearbeiten** (**Edit**) opens the editor for the entry, which then uses the
+  full window. Enter and Ctrl/⌘ + E in the list do the same.
+
+Trashed entries show their metadata and unmasked fields only; restore them to
+show or copy masked values.
+
 ## Vaults and entries
 
 Choose an existing `.keyrook` file to open, or a new file to create. Creation requires the master password twice. The optional key file must contain exactly 32 bytes and must be available again when unlocking. Existing files are never replaced during creation.
@@ -77,7 +127,9 @@ through the core API and cannot currently be opened in the desktop interface.
 
 Entries are saved immediately through authenticated, atomic vault storage. Fields can be masked independently. Web, transfer, email, hosting-panel, server, SSH, domain and custom records have their own editors. Customers/projects can be created and assigned. Entries can be duplicated, moved to the trash, restored and permanently deleted (see below). Editing retains up to 100 historical field snapshots. Search and filters narrow the visible list; history displays hidden fields masked. Canceling an edit discards that edit.
 
-Under **Kunden und Projekte**, existing customers and projects can be renamed.
+**Kunden und Projekte** above the entry list opens the section for adding
+customers and projects; **Kunden und Projekte ausblenden** or **Schließen**
+closes it. There, existing customers and projects can be renamed.
 Changing a project's customer moves all its entries, including trash, to that
 customer in one save. Clearing only the project's customer preserves the entries'
 individual customer assignments. Removal requires confirmation and is available
@@ -180,9 +232,15 @@ email, the domain name, and the first URL field of custom records). Only fields
 that are not masked are shown; a masked username or host stays hidden in the
 list. Long values are shortened. The expiry date is shown with a marker: expired
 dates, and dates from today through the next 30 days (the same window as the
-vault health check), are highlighted.
+vault health check), are highlighted. Entries with a short or repetitive or a
+reused password carry a marker naming that reason (see
+[Warning list](#warning-list)).
 
 ## Backups and encrypted export
+
+The actions in this and the next section, as well as **Passwort /
+Schlüsseldatei ändern**, **Argon2-Einstellungen** and **Schlüsseldatei
+erzeugen** after unlocking, are in the **Daten** menu above the entry list.
 
 Select an existing **Backup-Ordner** after unlocking, then confirm how many recent versions (1–1000) and additional daily representatives (0–3660) to retain. The dialog starts with 30 versions and 30 daily representatives; zero disables daily retention. Both retention rules apply together. Canceling leaves the current backup configuration unchanged. The confirmed settings enable automatic backups and are remembered for this vault file; future backups can remove older managed backups outside those limits. Each backup preserves the previous saved revision before it is replaced. Locking clears the active configuration; after the same vault file is unlocked again, including after a restart, the remembered folder and retention are reapplied with the same folder checks. A notice then shows the restored folder and retention. If that retention would keep fewer backups than this vault already has in the folder, Keyrook asks before applying it; declining keeps backups off for the session. If backups are stored as disabled although backups of this vault exist in the folder, a notice says so. If the folder is no longer usable, the vault still opens without backups and a notice asks you to configure them again. Disabling backups stops this restoration for that vault file. A failed backup prevents the update; fix the folder access before retrying.
 
@@ -233,10 +291,27 @@ check the mapping before confirming the import.
 
 ## Warning list
 
-**Warnliste** checks active entries for expiry within 30 days, expired dates,
-short or repetitive passwords and reuse across entries. It displays entry titles
-and reasons without exposing passwords. The checks run locally and are limited
-heuristics; a password without a warning is not guaranteed strong.
+The vault health check looks at active entries for expiry within 30 days, expired
+dates, short or repetitive passwords and reuse across entries. The checks run
+locally and are limited heuristics; a password without a warning is not
+guaranteed strong.
+
+The check runs by itself after unlocking, after every change of the vault and
+once a day, in the background on a copy of the vault that is erased afterwards;
+the window stays responsive. Its result appears in three places:
+
+- **Warnliste** (**Warnings**) in the header shows how many entries are
+  affected per reason, for example *2 abgelaufen*, *1 laufen ab*, *3 schwach*,
+  *2 mehrfach* (or *keine*; *wird geprüft* while the check runs). Expired entries
+  are marked in the error color.
+- List cards and the detail view mark entries with a short or repetitive or a
+  reused password. The expiry badge on the cards covers expired and expiring
+  entries. Markers name the reason only; no password or part of one is shown.
+- Clicking **Warnliste** opens the list with a summary, the affected entry
+  titles and their reasons. Clicking a title (or focusing it and pressing Enter)
+  closes the list and selects that entry. If the current search or filters hide
+  it, they are reset to all active entries (keeping the sort order) first.
+  While an editor is open or work is running, titles cannot be selected.
 
 ## Locking and current boundaries
 

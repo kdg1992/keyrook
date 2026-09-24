@@ -5,7 +5,10 @@ package app.keyrook.app
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
@@ -14,9 +17,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.keyrook.core.model.Vault
 
+/** The customers and projects section, opened from the toolbar and shown above the entry list until closed. */
 @Composable
-internal fun OrganizationTools(vault: Vault, controller: VaultController, busy: Boolean, operation: (() -> Vault?) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
+internal fun OrganizationTools(vault: Vault, controller: VaultController, busy: Boolean, operation: (() -> Vault?) -> Unit,
+                               onClose: () -> Unit) {
     var customer by remember { mutableStateOf("") }
     var project by remember { mutableStateOf("") }
     var customerId by remember { mutableStateOf<String?>(null) }
@@ -25,8 +29,11 @@ internal fun OrganizationTools(vault: Vault, controller: VaultController, busy: 
     var editName by remember { mutableStateOf("") }
     var editCustomer by remember { mutableStateOf<String?>(null) }
     var confirmRemoval by remember { mutableStateOf(false) }
-    TextButton(enabled = !busy, onClick = { expanded = !expanded }) { Text(UiText.text("organization.title")) }
-    if (expanded) {
+    Card(Modifier.fillMaxWidth(), elevation = 2.dp) { Column(Modifier.padding(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(UiText.text("organization.title"), style = MaterialTheme.typography.h6, modifier = Modifier.weight(1f))
+            TextButton(onClick = onClose) { Text(UiText.text("shell.close")) }
+        }
         Row {
             OutlinedTextField(customer, { customer = it }, enabled = !busy, label = { Text(UiText.text("organization.newCustomer")) })
             Button(enabled = !busy && customer.isNotBlank(), onClick = {
@@ -54,7 +61,7 @@ internal fun OrganizationTools(vault: Vault, controller: VaultController, busy: 
                 }) { Text(UiText.text("organization.editProject", item.name)) }
             }
         }
-    }
+    } }
     val selectedCustomer = editingCustomer
     val selectedProject = editingProject
     if (selectedCustomer != null || selectedProject != null) {
