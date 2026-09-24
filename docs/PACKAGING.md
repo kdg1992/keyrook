@@ -22,7 +22,8 @@ when the job has `contents: write`. The normal Actions token cannot receive
 the additional workflow permission described in the
 [GitHub release API documentation](https://docs.github.com/en/rest/releases/releases#create-a-release).
 
-For an unpublished `0.x.y` version, run **Recover release pull request** on
+For an unpublished `MAJOR.MINOR.PATCH` version, before or after 1.0.0, run
+**Recover release pull request** on
 `main`, supplying the old release PR number. It checks the version and manifest,
 refuses an existing tag, release or replacement PR, removes the old PR's pending
 label, and invokes release-please to generate a replacement at the same version.
