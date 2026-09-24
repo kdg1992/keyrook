@@ -53,10 +53,12 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
     val mac = remember { System.getProperty("os.name").startsWith("Mac", ignoreCase = true) }
     val shortcutPrefix = if (mac) "⌘" else UiText.text("shell.ctrlPrefix")
     fun updatePreferences(change: (AppSettings) -> AppSettings) {
-        val saved = settings.update(change)
+        // The file is written on the settings writer; a failed write is reported here, while this window lives.
+        settings.update(onWriteFailure = {
+            javax.swing.SwingUtilities.invokeLater { if (state.live.get()) message = UiText.text("settings.saveFailed") }
+        }, change)
         preferences = settings.current()
         UiText.select(preferences.language)
-        if (!saved) message = UiText.text("settings.saveFailed")
     }
     fun lockNow() = state.lockNow(onCloseAnswered)
     fun handleShortcut(event: KeyEvent, onlyLock: Boolean): Boolean {

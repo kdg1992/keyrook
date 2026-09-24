@@ -92,7 +92,8 @@ class BackupConfigurationTest {
             repeat(4) { controller.session.snapshot().use { controller.session.save(it) } }
             assertEquals(4L, backupCount(folder))
             // Simulates a tampered settings file that shrinks retention.
-            assertTrue(settings.update { it.withBackup(vault, StoredBackup(folder, BackupPolicy(1, 0), true)) })
+            settings.update { it.withBackup(vault, StoredBackup(folder, BackupPolicy(1, 0), true)) }
+            assertTrue(settings.flush())
             controller.lock()
             controller.unlock(vault, "synthetic retention password".toCharArray(), null, false).close()
             val asked = mutableListOf<String>()

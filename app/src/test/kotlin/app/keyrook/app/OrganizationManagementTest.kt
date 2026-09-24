@@ -191,4 +191,42 @@ class OrganizationManagementTest {
             controller.removeProject(project.id, true).use { assertNull(it.templates.last().projectId) }
         }
     }
+
+    private fun reason(action: () -> Unit): String =
+        assertThrows(UserFacingException::class.java) { action() }.messageKey
+
+    @Test fun `added customers and projects are trimmed and checked like a rename`() {
+        withVault { controller ->
+            controller.addCustomer("  Dritter Kunde \t").use { vault -> assertEquals("Dritter Kunde", vault.customers.last().name) }
+            controller.addProject(" Neues Projekt ", second.id).use { vault -> assertEquals("Neues Projekt", vault.projects.last().name) }
+            assertEquals("error.nameRequired", reason { controller.addCustomer(" \t ") })
+            assertEquals("error.nameRequired", reason { controller.addProject("", null) })
+            assertEquals("error.nameTooLong", reason { controller.addCustomer("x".repeat(MAX_NAME_CHARS + 1)) })
+            assertEquals("error.nameTooLong", reason { controller.addProject("x".repeat(MAX_NAME_CHARS + 1), null) })
+            controller.addCustomer(" " + "x".repeat(MAX_NAME_CHARS) + " ").close()
+            controller.session.snapshot().use { assertEquals(3L, it.revision) }
+        }
+        // The add buttons and Enter accept exactly the names the controller accepts.
+        assertTrue(validOrganizationName(" Kunde "))
+        assertTrue(validOrganizationName(" " + "x".repeat(MAX_NAME_CHARS) + " "))
+        assertFalse(validOrganizationName(" \t "))
+        assertFalse(validOrganizationName("x".repeat(MAX_NAME_CHARS + 1)))
+    }
+
+    @Test fun `refused organization changes name their reason and unknown failures stay generic`() {
+        withVault(listOf(entry(true))) { controller ->
+            assertEquals("error.customerInUse", reason { controller.removeCustomer(first.id, true) })
+            assertEquals("error.projectInUse", reason { controller.removeProject(project.id, true) })
+            assertEquals("error.nameRequired", reason { controller.renameCustomer(first.id, " ") })
+            assertEquals("error.nameTooLong", reason { controller.updateProject(project.id, "x".repeat(MAX_NAME_CHARS + 1), null) })
+            UiText.select(AppLanguage.ENGLISH)
+            try {
+                val failure = assertThrows(UserFacingException::class.java) { controller.removeProject(project.id, true) }
+                assertEquals(UiText.text("error.projectInUse"), failureMessage(failure))
+                assertEquals(UiText.text("error.nameTooLong", MAX_NAME_CHARS), failureMessage(UserFacingException("error.nameTooLong", MAX_NAME_CHARS)))
+                assertEquals(UiText.text("shell.failed"), failureMessage(IllegalArgumentException("/secret/path")))
+                assertEquals(UiText.text("shell.failed"), failureMessage(null))
+            } finally { UiText.select(AppLanguage.GERMAN) }
+        }
+    }
 }

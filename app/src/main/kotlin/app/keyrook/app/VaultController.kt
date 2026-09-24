@@ -38,11 +38,7 @@ class VaultController(internal val session: VaultSession = VaultSession(),
             ensureOperationCurrent()
             backoff.requireReady()
             try {
-                val key = keyFile?.let { file ->
-                    readTransfer(file, 32).also { bytes ->
-                        if (bytes.size != 32) { bytes.fill(0); error("Invalid key file") }
-                    }
-                }
+                val key = keyFile?.let(::readKeyFile)
                 try {
                     vaultPath = null
                     Secret(password).use { secret ->
@@ -99,7 +95,7 @@ class VaultController(internal val session: VaultSession = VaultSession(),
      * changes, nothing is saved. Reserved tags are refused; favorites change only through [setFavorite].
      */
     fun tagAll(ids: Set<String>, tag: String, add: Boolean): Vault = bulkChange { current ->
-        require(!ReservedTags.isReserved(tag.trim())) { "Reserved tag" }
+        requireUserFacing(!ReservedTags.isReserved(tag.trim()), "validation.tagReserved")
         current.tagEntries(ids, tag.trim(), add, java.time.Instant.now())
     }
 
@@ -149,28 +145,30 @@ class VaultController(internal val session: VaultSession = VaultSession(),
         return session.snapshot()
     }
 
+    /** Adds a customer named [name], trimmed and checked like a rename (see [organizationName]). */
     fun addCustomer(name: String): Vault {
         ensureOperationCurrent()
-        require(name.isNotBlank())
+        val stored = organizationName(name)
         session.snapshot().use { current ->
-            session.save(current.copy(customers = current.customers + app.keyrook.core.model.Customer(java.util.UUID.randomUUID().toString(), name)))
+            session.save(current.copy(customers = current.customers + app.keyrook.core.model.Customer(java.util.UUID.randomUUID().toString(), stored)))
         }
         return session.snapshot()
     }
 
+    /** Adds a project named [name], trimmed and checked like a rename (see [organizationName]). */
     fun addProject(name: String, customerId: String?): Vault {
         ensureOperationCurrent()
-        require(name.isNotBlank())
+        val stored = organizationName(name)
         session.snapshot().use { current ->
-            session.save(current.copy(projects = current.projects + app.keyrook.core.model.Project(java.util.UUID.randomUUID().toString(), name, customerId)))
+            session.save(current.copy(projects = current.projects + app.keyrook.core.model.Project(java.util.UUID.randomUUID().toString(), stored, customerId)))
         }
         return session.snapshot()
     }
 
     fun renameCustomer(id: String, name: String): Vault = updateOrganization { current ->
-        require(name.isNotBlank() && name.length <= 4096)
+        val stored = organizationName(name)
         require(current.customers.any { it.id == id })
-        current.copy(customers = current.customers.map { if (it.id == id) it.copy(name = name.trim()) else it })
+        current.copy(customers = current.customers.map { if (it.id == id) it.copy(name = stored) else it })
     }
 
     /**
@@ -178,10 +176,11 @@ class VaultController(internal val session: VaultSession = VaultSession(),
      * a new secret and the caller keeps erasing its array. Invalid values fail without saving.
      */
     fun updateCustomer(id: String, name: String, metadata: CustomerMetadata, notes: CharArray): Vault = updateOrganization { current ->
-        require(name.isNotBlank() && name.length <= 4096)
+        val stored = organizationName(name)
         val customer = current.customers.single { it.id == id }
-        require(notes.size <= Vault.MAX_FIELD_CHARS)
-        val updated = Customer(customer.id, name.trim(), OrganizationMetadata.normalize(metadata.contactName),
+        requireUserFacing(notes.size <= Vault.MAX_FIELD_CHARS, "error.notesTooLong", Vault.MAX_FIELD_CHARS)
+        requireUserFacing(metadata.valid.all { it }, "organization.metadataInvalid")
+        val updated = Customer(customer.id, stored, OrganizationMetadata.normalize(metadata.contactName),
             OrganizationMetadata.normalize(metadata.contactEmail), OrganizationMetadata.normalize(metadata.phone),
             OrganizationMetadata.normalize(metadata.website), Secret(notes))
         current.copy(customers = current.customers.map { if (it.id == id) updated else it })
@@ -195,12 +194,12 @@ class VaultController(internal val session: VaultSession = VaultSession(),
      * clears it); non-null [notes] replace the notes, copied into a new secret; null keeps either unchanged.
      */
     fun updateProject(id: String, name: String, customerId: String?, description: String?, notes: CharArray?): Vault = updateOrganization { current ->
-        require(name.isNotBlank() && name.length <= 4096)
+        val stored = organizationName(name)
         val project = current.projects.single { it.id == id }
         require(customerId == null || current.customers.any { it.id == customerId })
-        require(notes == null || notes.size <= Vault.MAX_FIELD_CHARS)
+        requireUserFacing(notes == null || notes.size <= Vault.MAX_FIELD_CHARS, "error.notesTooLong", Vault.MAX_FIELD_CHARS)
         val now = java.time.Instant.now().toString()
-        val updated = project.copy(name = name.trim(), customerId = customerId,
+        val updated = project.copy(name = stored, customerId = customerId,
             description = if (description == null) project.description else OrganizationMetadata.normalize(description),
             notes = notes?.let(::Secret) ?: project.notes)
         current.copy(
@@ -223,9 +222,8 @@ class VaultController(internal val session: VaultSession = VaultSession(),
     fun removeCustomer(id: String, confirmed: Boolean): Vault = updateOrganization { current ->
         require(confirmed)
         require(current.customers.any { it.id == id })
-        require(current.projects.none { it.customerId == id } && current.entries.none { it.customerId == id }) {
-            "Customer is still in use"
-        }
+        requireUserFacing(current.projects.none { it.customerId == id } && current.entries.none { it.customerId == id },
+            "error.customerInUse")
         // Templates only preset a customer; removing it clears the preset instead of blocking the removal.
         current.copy(customers = current.customers.filterNot { it.id == id },
             templates = current.templates.map { if (it.customerId == id) it.copy(customerId = null) else it })
@@ -234,7 +232,7 @@ class VaultController(internal val session: VaultSession = VaultSession(),
     fun removeProject(id: String, confirmed: Boolean): Vault = updateOrganization { current ->
         require(confirmed)
         require(current.projects.any { it.id == id })
-        require(current.entries.none { it.projectId == id }) { "Project is still in use" }
+        requireUserFacing(current.entries.none { it.projectId == id }, "error.projectInUse")
         current.copy(projects = current.projects.filterNot { it.id == id },
             templates = current.templates.map { if (it.projectId == id) it.copy(projectId = null) else it })
     }
@@ -244,10 +242,10 @@ class VaultController(internal val session: VaultSession = VaultSession(),
      * visibility, tags, customer and project, but no value.
      */
     fun saveTemplate(entryId: String, name: String): Vault = updateOrganization { current ->
-        require(name.isNotBlank() && name.length <= 4096)
-        require(current.templates.size < Vault.MAX_TEMPLATES)
+        val stored = organizationName(name)
+        requireUserFacing(current.templates.size < Vault.MAX_TEMPLATES, "error.templateLimit", Vault.MAX_TEMPLATES)
         val entry = requireNotNull(current.entries.firstOrNull { it.id == entryId && it.deletedAt == null }) { "Unknown entry" }
-        current.copy(templates = current.templates + EntryTemplate.of(java.util.UUID.randomUUID().toString(), name, entry))
+        current.copy(templates = current.templates + EntryTemplate.of(java.util.UUID.randomUUID().toString(), stored, entry))
     }
 
     fun deleteTemplate(id: String): Vault = updateOrganization { current ->

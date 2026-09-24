@@ -100,12 +100,14 @@ internal sealed interface ListConfirmation {
 }
 
 /**
- * Escape cancels. Enter activates a focused button; without such focus it confirms only reversible actions.
- * Irreversible confirmations start focused on cancel.
+ * The confirmation of a destructive action, named by [confirmLabel]; [dismissLabel] names the way back. Escape
+ * cancels. Enter activates a focused button; without such focus it confirms only reversible actions. Irreversible
+ * confirmations use the error color and start focused on cancel.
  */
 @Composable
 internal fun ConfirmationDialog(title: String, body: String, confirmLabel: String, busy: Boolean, irreversible: Boolean,
-                                onConfirm: () -> Unit, onDismiss: () -> Unit) {
+                                onConfirm: () -> Unit, onDismiss: () -> Unit,
+                                dismissLabel: String = UiText.text("common.cancel")) {
     val confirmFocus = remember { FocusRequester() }
     val cancelFocus = remember { FocusRequester() }
     var confirmFocused by remember { mutableStateOf(false) }
@@ -138,7 +140,7 @@ internal fun ConfirmationDialog(title: String, body: String, confirmLabel: Strin
         dismissButton = {
             TextButton(onClick = { latestDismiss() },
                 modifier = Modifier.focusRequester(cancelFocus).onFocusChanged { cancelFocused = it.isFocused }) {
-                Text(UiText.text("common.cancel"))
+                Text(dismissLabel)
             }
             if (irreversible) LaunchedEffect(Unit) { runCatching { cancelFocus.requestFocus() } }
         },

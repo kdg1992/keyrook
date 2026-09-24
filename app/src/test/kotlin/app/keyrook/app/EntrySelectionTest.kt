@@ -109,4 +109,15 @@ class EntrySelectionTest {
         assertEquals("z", jumped.selectedId)
         assertEquals(setOf("b", "c"), jumped.marked)
     }
+
+    @Test fun `the same result list again keeps the selection object unchanged`() {
+        val shown = listOf("a", "b", "c")
+        val selection = EntrySelection().update(query, shown).next().toggleMark("c")
+        assertSame(selection, selection.update(query, shown))
+        assertEquals(selection, selection.update(query, shown.toList()))
+        val empty = EntrySelection().update(query, emptyList())
+        assertSame(empty, empty.update(query, empty.visible))
+        val pending = EntrySelection(visible = shown, query = query)
+        assertEquals("a", pending.update(query, shown).selectedId)
+    }
 }

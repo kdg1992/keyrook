@@ -13,27 +13,28 @@ import app.keyrook.core.model.Vault
 import app.keyrook.core.security.EntryHealth
 import app.keyrook.core.security.HealthIssue
 import app.keyrook.core.security.VaultHealth
-import java.time.LocalDate
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.swing.SwingUtilities
 
 /**
- * Core health findings for the displayed vault revision, or null while locked or while the check runs. The check
+ * Core health findings for the displayed vault, or null while locked or while its first check runs. The check
  * runs once per vault revision and day on its own worker thread, never on the UI thread, on a session copy taken
- * without serializing secrets and erased afterwards. Results from an older revision or a previous session are discarded.
+ * without serializing secrets and erased afterwards. Late results from an older revision or a previous session are
+ * discarded; until the check of a newer revision finishes, the findings of the previous one stay shown.
  */
 @Composable
 internal fun vaultWarnings(vault: Vault?, controller: VaultController): List<EntryHealth>? {
     val worker = remember { Executors.newSingleThreadExecutor { Thread(it, "vault-health").apply { isDaemon = true } } }
     DisposableEffect(Unit) { onDispose { worker.shutdown() } }
-    val today by produceState(LocalDate.now()) {
-        while (true) { kotlinx.coroutines.delay(60_000); value = LocalDate.now() }
-    }
+    val today by rememberToday()
     val id = vault?.id
     val revision = vault?.revision
-    var result by remember(id, revision, today) { mutableStateOf<List<EntryHealth>?>(null) }
+    // The findings of the previous revision stay shown while the new one is checked (see [LatestResult]).
+    var result by remember { mutableStateOf<LatestResult<String, List<EntryHealth>>?>(null) }
     DisposableEffect(id, revision, today) {
+        // Locking forgets the findings, so a reopened vault never shows those of an earlier session.
+        if (id == null) result = null
         val active = AtomicBoolean(id != null)
         val token = controller.sessionEpoch.capture()
         val task = if (id == null) null else worker.submit {
@@ -43,12 +44,12 @@ internal fun vaultWarnings(vault: Vault?, controller: VaultController): List<Ent
                 }
             }.getOrNull()
             SwingUtilities.invokeLater {
-                if (findings != null && active.get() && controller.sessionEpoch.accepts(token)) result = findings
+                if (findings != null && active.get() && controller.sessionEpoch.accepts(token)) result = LatestResult(id, findings)
             }
         }
         onDispose { active.set(false); task?.cancel(false) }
     }
-    return if (id == null) null else result
+    return if (id == null) null else result.valueFor(id)
 }
 
 /** A small colored label; [severe] uses the error color like the expiry badge of expired entries. */

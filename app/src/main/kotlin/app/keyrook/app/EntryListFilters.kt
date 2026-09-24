@@ -50,13 +50,7 @@ internal data class EntryListFilters(
     fun select(vault: Vault, matches: Set<String>, today: LocalDate, recentIds: List<String> = emptyList()): List<Entry> {
         val recency = recentIds.withIndex().associate { it.value to it.index }
         val owners = vault.projects.associate { it.id to it.customerId }
-        val titleOrder = compareBy<Entry> { it.title.lowercase(Locale.ROOT) }.thenBy { it.title }.thenBy { it.id }
-        val order = when (sort) {
-            EntrySort.TITLE -> titleOrder
-            EntrySort.MODIFIED -> compareByDescending<Entry> { Instant.parse(it.modifiedAt) }.then(titleOrder)
-            EntrySort.EXPIRY -> compareBy<Entry, LocalDate?>(nullsLast()) { it.expiresOn?.let(LocalDate::parse) }.then(titleOrder)
-        }
-        return vault.entries.filter { entry ->
+        val selected = vault.entries.filter { entry ->
             (entry.deletedAt != null) == trash && entry.id in matches &&
                 (type == null || entry.data.type() == type) &&
                 (customerId == null || (entry.customerId ?: owners[entry.projectId]) == customerId) &&
@@ -68,6 +62,26 @@ internal data class EntryListFilters(
                     ExpiryFilter.EXPIRED -> entry.expiresOn?.let { LocalDate.parse(it) < today } == true
                     ExpiryFilter.UPCOMING -> entry.expiresOn?.let { LocalDate.parse(it) in today..today.plusDays(VaultHealth.EXPIRY_WARNING_DAYS) } == true
                 }
-        }.sortedWith(if (recent) compareBy<Entry> { recency.getValue(it.id) } else order)
+        }
+        return if (recent) selected.sortedBy { recency.getValue(it.id) } else sortEntries(selected, sort)
     }
+}
+
+/**
+ * Orders [entries] by [sort]: by title case-insensitively, then exactly, then by ID; the change time (newest first)
+ * and the expiry date (undated last) sort before the title. Each entry's keys are computed once, not per comparison.
+ */
+internal fun sortEntries(entries: List<Entry>, sort: EntrySort): List<Entry> {
+    class Keyed(val entry: Entry) {
+        val title = entry.title.lowercase(Locale.ROOT)
+        val modified: Instant? = if (sort == EntrySort.MODIFIED) Instant.parse(entry.modifiedAt) else null
+        val expires: LocalDate? = if (sort == EntrySort.EXPIRY) entry.expiresOn?.let(LocalDate::parse) else null
+    }
+    val titleOrder = compareBy<Keyed> { it.title }.thenBy { it.entry.title }.thenBy { it.entry.id }
+    val order = when (sort) {
+        EntrySort.TITLE -> titleOrder
+        EntrySort.MODIFIED -> compareByDescending<Keyed> { it.modified }.then(titleOrder)
+        EntrySort.EXPIRY -> compareBy<Keyed, LocalDate?>(nullsLast()) { it.expires }.then(titleOrder)
+    }
+    return entries.map(::Keyed).sortedWith(order).map { it.entry }
 }

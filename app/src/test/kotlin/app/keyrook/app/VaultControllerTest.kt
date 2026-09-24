@@ -274,6 +274,35 @@ class VaultControllerTest {
         }
     }
 
+    @Test fun `a full template list and invalid key files are refused with their reason`() {
+        VaultController().use { controller ->
+            controller.unlock(directory.resolve("limits.keyrook"), "synthetic-master-passphrase".toCharArray(), null, true,
+                app.keyrook.core.crypto.KdfParameters(iterations = 1)).close()
+            val data = blankData(EntryType.WEB)
+            val entry = editedEntry(null, data, "Vorlagenquelle", "", "", "", listOf("", "", "", ""), listOf(false, false, true, true))
+            data.fields().forEach { it.value.close() }
+            Vault(entries = listOf(entry)).use { controller.save(entry).close() }
+            controller.session.snapshot().use { current ->
+                controller.session.save(current.copy(templates = (1..Vault.MAX_TEMPLATES).map {
+                    EntryTemplate.of(java.util.UUID.randomUUID().toString(), "Vorlage $it", entry)
+                }))
+            }
+            val full = assertThrows(UserFacingException::class.java) { controller.saveTemplate(entry.id, "Eine zu viel") }
+            assertEquals("error.templateLimit", full.messageKey)
+            assertEquals(listOf<Any>(Vault.MAX_TEMPLATES), full.arguments)
+            controller.lock()
+            val short = java.nio.file.Files.write(directory.resolve("short.key"), ByteArray(KEY_FILE_BYTES - 1))
+            listOf(short, directory.resolve("absent.key")).forEach { key ->
+                val password = "synthetic-master-passphrase".toCharArray()
+                val refused = assertThrows(UserFacingException::class.java) {
+                    controller.unlock(directory.resolve("limits.keyrook"), password, key, false)
+                }
+                assertEquals("error.keyFileInvalid", refused.messageKey)
+                assertTrue(password.all { it == '\u0000' })
+            }
+        }
+    }
+
     @Test fun `every template type maps to the editor type of the same name`() {
         TemplateType.entries.forEach { type ->
             val data = EntryTemplate(java.util.UUID.randomUUID().toString(), "t", type,

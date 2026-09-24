@@ -42,9 +42,12 @@ class AppSettingsTest {
         val store = SettingsStore(config)
         assertEquals(AppSettings(), store.current())
         assertFalse(Files.exists(config))
-        assertTrue(store.update { it.copy(theme = ThemeMode.DARK, inactivityMinutes = 15, clipboardSeconds = 60) })
-        assertTrue(rememberUnlockedPath(store, vault))
-        assertTrue(store.update { it.withBackup(vault, StoredBackup(folder, BackupPolicy(3, 4), true)) })
+        store.update { it.copy(theme = ThemeMode.DARK, inactivityMinutes = 15, clipboardSeconds = 60) }
+        assertTrue(store.flush())
+        rememberUnlockedPath(store, vault)
+        assertTrue(store.flush())
+        store.update { it.withBackup(vault, StoredBackup(folder, BackupPolicy(3, 4), true)) }
+        assertTrue(store.flush())
         val reloaded = SettingsStore(config).current()
         assertEquals(store.current(), reloaded)
         assertEquals(ThemeMode.DARK, reloaded.theme)
@@ -58,7 +61,8 @@ class AppSettingsTest {
         }
         assertTrue(Files.readString(file).contains("\"version\": 1"))
         val memory = SettingsStore(null)
-        assertTrue(memory.update { it.copy(theme = ThemeMode.LIGHT) })
+        memory.update { it.copy(theme = ThemeMode.LIGHT) }
+        assertTrue(memory.flush())
         assertEquals(ThemeMode.LIGHT, memory.current().theme)
     }
 
@@ -66,11 +70,13 @@ class AppSettingsTest {
         val config = directory.toRealPath().resolve("config")
         val store = SettingsStore(config)
         assertEquals(AppLanguage.SYSTEM, store.current().language)
-        assertTrue(store.update { it.copy(language = AppLanguage.ENGLISH, theme = ThemeMode.DARK) })
+        store.update { it.copy(language = AppLanguage.ENGLISH, theme = ThemeMode.DARK) }
+        assertTrue(store.flush())
         assertTrue(Files.readString(config.resolve(SettingsStore.FILE_NAME)).contains("\"language\": \"ENGLISH\""))
         assertEquals(AppLanguage.ENGLISH, SettingsStore(config).current().language)
         assertEquals(ThemeMode.DARK, SettingsStore(config).current().theme)
-        assertTrue(store.update { it.copy(language = AppLanguage.GERMAN) })
+        store.update { it.copy(language = AppLanguage.GERMAN) }
+        assertTrue(store.flush())
         assertEquals(AppLanguage.GERMAN, SettingsStore(config).current().language)
         Files.writeString(config.resolve(SettingsStore.FILE_NAME), """{"version":1,"theme":"DARK","language":"KLINGON"}""")
         assertEquals(AppSettings(theme = ThemeMode.DARK), SettingsStore(config).current())
@@ -109,7 +115,8 @@ class AppSettingsTest {
         val store = SettingsStore(config)
         assertEquals(WindowLockPolicy.MINIMIZE, store.current().windowLock)
         WindowLockPolicy.entries.forEach { policy ->
-            assertTrue(store.update { it.copy(windowLock = policy, theme = ThemeMode.DARK) })
+            store.update { it.copy(windowLock = policy, theme = ThemeMode.DARK) }
+            assertTrue(store.flush())
             assertTrue(Files.readString(file).contains("\"windowLock\": \"${policy.name}\""))
             assertEquals(policy, SettingsStore(config).current().windowLock)
         }
@@ -131,7 +138,8 @@ class AppSettingsTest {
         assertEquals(DEFAULT_UI_SCALE, store.current().uiScale)
         assertEquals(ContrastMode.STANDARD, store.current().contrast)
         UI_SCALE_CHOICES.forEach { scale ->
-            assertTrue(store.update { it.copy(uiScale = scale, contrast = ContrastMode.HIGH) })
+            store.update { it.copy(uiScale = scale, contrast = ContrastMode.HIGH) }
+            assertTrue(store.flush())
             assertTrue(Files.readString(file).contains("\"uiScale\": $scale"))
             assertTrue(Files.readString(file).contains("\"contrast\": \"HIGH\""))
             assertEquals(scale, SettingsStore(config).current().uiScale)
@@ -150,7 +158,8 @@ class AppSettingsTest {
         assertEquals(PasswordPreset.MAX_16, generatorOnly.current().generator.preset)
         assertEquals(DEFAULT_UI_SCALE, generatorOnly.current().uiScale)
         assertEquals(ContrastMode.STANDARD, generatorOnly.current().contrast)
-        assertTrue(generatorOnly.update { it.copy(uiScale = 130, contrast = ContrastMode.HIGH) })
+        generatorOnly.update { it.copy(uiScale = 130, contrast = ContrastMode.HIGH) }
+        assertTrue(generatorOnly.flush())
         val reloaded = SettingsStore(config).current()
         assertEquals(PasswordPreset.MAX_16, reloaded.generator.preset)
         assertEquals(130, reloaded.uiScale)
@@ -163,7 +172,8 @@ class AppSettingsTest {
         val store = SettingsStore(config)
         assertNull(store.current().window)
         val geometry = WindowGeometry(-40, 25, 1200, 800, true)
-        assertTrue(store.update { it.copy(window = geometry, theme = ThemeMode.DARK) })
+        store.update { it.copy(window = geometry, theme = ThemeMode.DARK) }
+        assertTrue(store.flush())
         assertTrue(Files.readString(file).contains("\"maximized\": true"))
         assertEquals(geometry, SettingsStore(config).current().window)
         assertEquals(ThemeMode.DARK, SettingsStore(config).current().theme)
@@ -219,6 +229,7 @@ class AppSettingsTest {
             assertTrue(applyBackupConfiguration(controller, BackupConfiguration(folder, BackupPolicy(2, 0)), settings))
             controller.lock()
         }
+        assertTrue(settings.flush())
         val restarted = SettingsStore(config)
         VaultController().use { controller ->
             controller.unlock(other, "synthetic other password".toCharArray(), null, false).close()
@@ -232,6 +243,7 @@ class AppSettingsTest {
             repeat(3) { controller.session.snapshot().use { controller.session.save(it) } }
             assertEquals(2L, Files.list(folder).use { files -> files.filter { it.fileName.toString().endsWith(".keyrook.bak") }.count() })
             assertTrue(disableBackups(controller, true, restarted))
+            assertTrue(restarted.flush())
             controller.lock()
             controller.unlock(vault, "synthetic settings password".toCharArray(), null, false).close()
             assertEquals(BackupNotice(UiText.text("settings.backupDisabledNotice", folder.toString(), 2), false),
@@ -287,6 +299,7 @@ class AppSettingsTest {
             assertTrue(disableBackups(controller, true, settings))
             controller.lock()
         }
+        assertTrue(settings.flush())
         val written = Files.readString(config.resolve(SettingsStore.FILE_NAME))
         sentinels.forEach { assertFalse(written.contains(it, ignoreCase = true), it) }
         assertTrue(written.contains(vault.toString().replace("\\", "\\\\")))
@@ -302,11 +315,48 @@ class AppSettingsTest {
         VaultController().use { controller ->
             controller.unlock(vault, "synthetic write failure password".toCharArray(), null, true, kdf).close()
             assertTrue(applyBackupConfiguration(controller, BackupConfiguration(folder, BackupPolicy(2, 0)), settings) { failures++ })
+            assertFalse(settings.flush())
             assertEquals(1, failures)
             assertTrue(controller.session.backupStatus().configured)
             assertTrue(disableBackups(controller, true, settings) { failures++ })
+            assertFalse(settings.flush())
             assertEquals(2, failures)
             assertFalse(controller.session.backupStatus().configured)
         }
+    }
+
+    @Test fun `changes apply in memory at once and the newest settings are written last`() {
+        val config = directory.toRealPath().resolve("config")
+        val store = SettingsStore(config)
+        LOCK_MINUTE_CHOICES.forEach { minutes ->
+            CLIPBOARD_SECOND_CHOICES.forEach { seconds ->
+                store.update { it.copy(inactivityMinutes = minutes, clipboardSeconds = seconds) }
+                assertEquals(minutes, store.current().inactivityMinutes)
+                assertEquals(seconds, store.current().clipboardSeconds)
+            }
+        }
+        store.update { it.copy(theme = ThemeMode.DARK) }
+        assertTrue(store.flush())
+        assertEquals(store.current(), SettingsStore(config).current())
+        assertEquals(AppSettings(theme = ThemeMode.DARK, inactivityMinutes = LOCK_MINUTE_CHOICES.last(),
+            clipboardSeconds = CLIPBOARD_SECOND_CHOICES.last()), SettingsStore(config).current())
+        // An unchanged value schedules nothing and the last write stays reported as successful.
+        store.update { it }
+        assertTrue(store.flush())
+    }
+
+    @Test fun `a failed write reports each change once and keeps the settings in memory`() {
+        val root = directory.toRealPath()
+        val store = SettingsStore(Files.writeString(root.resolve("not-a-directory"), "").resolve("keyrook"))
+        val failures = java.util.concurrent.atomic.AtomicInteger()
+        store.update({ failures.incrementAndGet() }) { it.copy(theme = ThemeMode.DARK) }
+        store.update({ failures.incrementAndGet() }) { it.copy(theme = ThemeMode.LIGHT) }
+        assertFalse(store.flush())
+        assertEquals(2, failures.get())
+        assertEquals(ThemeMode.LIGHT, store.current().theme)
+        val memory = SettingsStore(null)
+        memory.update({ failures.incrementAndGet() }) { it.copy(theme = ThemeMode.DARK) }
+        assertTrue(memory.flush())
+        assertEquals(2, failures.get())
     }
 }

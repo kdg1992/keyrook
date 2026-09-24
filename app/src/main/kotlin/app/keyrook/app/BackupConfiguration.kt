@@ -26,7 +26,7 @@ internal fun parseBackupPolicy(latest: String, daily: String): BackupPolicy? {
 /**
  * A null selection represents cancellation and must not replace a previous configuration.
  * An accepted selection is remembered for the open vault file when settings are provided;
- * [settingsFailed] reports that it could not be written although backups are active.
+ * [settingsFailed] reports, on the settings writer thread, that it could not be written although backups are active.
  */
 internal fun applyBackupConfiguration(controller: VaultController, selection: BackupConfiguration?,
                                       settings: SettingsStore? = null, settingsFailed: () -> Unit = {}): Boolean {
@@ -35,13 +35,12 @@ internal fun applyBackupConfiguration(controller: VaultController, selection: Ba
     val folder = selection.folder.toAbsolutePath().normalize()
     // Resolved like the vault file and the core backup service: linked parent directories are accepted,
     // a folder that is itself a symbolic link is refused.
-    require(!Files.isSymbolicLink(folder)) { "Backup folder must not be a symbolic link" }
-    require(Files.isDirectory(folder, LinkOption.NOFOLLOW_LINKS)) { "Backup folder must exist" }
+    requireUserFacing(!Files.isSymbolicLink(folder), "error.backupFolder")
+    requireUserFacing(Files.isDirectory(folder, LinkOption.NOFOLLOW_LINKS), "error.backupFolder")
     ensureOperationCurrent()
     controller.session.configureBackups(BackupService(folder, selection.policy))
     val vault = controller.vaultPath
-    if (settings != null && vault != null &&
-        !settings.update { it.withBackup(vault, StoredBackup(folder, selection.policy, true)) }) settingsFailed()
+    if (vault != null) settings?.update(settingsFailed) { it.withBackup(vault, StoredBackup(folder, selection.policy, true)) }
     return true
 }
 
@@ -53,8 +52,7 @@ internal fun disableBackups(controller: VaultController, confirmed: Boolean, set
     controller.session.configureBackups(null)
     val vault = controller.vaultPath
     val stored = vault?.let { settings?.current()?.backupFor(it) }
-    if (settings != null && vault != null && stored != null &&
-        !settings.update { it.withBackup(vault, stored.copy(enabled = false)) }) settingsFailed()
+    if (vault != null && stored != null) settings?.update(settingsFailed) { it.withBackup(vault, stored.copy(enabled = false)) }
     return true
 }
 

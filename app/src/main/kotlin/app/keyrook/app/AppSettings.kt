@@ -11,6 +11,9 @@ import java.nio.file.*
 import java.nio.file.attribute.PosixFileAttributeView
 import java.nio.file.attribute.PosixFilePermissions
 import java.util.UUID
+import java.util.concurrent.Executors
+import java.util.concurrent.FutureTask
+import java.util.concurrent.TimeUnit
 
 internal enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
@@ -114,24 +117,64 @@ internal data class AppSettings(
 internal fun vaultKey(path: Path): String = path.toAbsolutePath().normalize().toString()
 
 /** Records only where the vault lives. The key file stays unrecorded so the settings do not reveal the second factor. */
-internal fun rememberUnlockedPath(settings: SettingsStore, vault: Path): Boolean =
+internal fun rememberUnlockedPath(settings: SettingsStore, vault: Path) {
     settings.update { it.copy(lastVaultPath = vault.toAbsolutePath().normalize()) }
+}
 
 /**
  * Plaintext settings file with owner-only permissions, replaced atomically. A null directory keeps
  * preferences in memory only. Unreadable files are ignored without inspecting or reporting their content.
+ *
+ * Changes apply in memory at once; the file is written on a single writer thread so no caller, in particular the
+ * UI thread, waits for the disk. Writes run in order and the newest settings win: a change made while an older one
+ * waits replaces it, and only the newest settings are written. [flush] waits for pending writes, as on exit.
  */
 internal class SettingsStore(private val directory: Path?) {
     private var current = load()
+    // Guarded by this: the newest settings not yet written and who to tell if writing them fails.
+    private var pending: AppSettings? = null
+    private val failureHandlers = mutableListOf<() -> Unit>()
+    @Volatile private var lastWriteSucceeded = true
 
     @Synchronized fun current(): AppSettings = current
 
-    /** Applies the change in memory; returns false when it could not be written to disk. */
-    @Synchronized fun update(change: (AppSettings) -> AppSettings): Boolean {
-        val next = AppSettings.fromDocument(change(current).toDocument())
-        if (next == current) return true
-        current = next
-        return try { write(next); true } catch (_: Exception) { false }
+    /**
+     * Applies the change in memory and schedules writing it. [onWriteFailure] runs on the writer thread when the
+     * write that includes this change fails; the change then still applies until the application ends.
+     */
+    fun update(onWriteFailure: () -> Unit = {}, change: (AppSettings) -> AppSettings) {
+        synchronized(this) {
+            val next = AppSettings.fromDocument(change(current).toDocument())
+            if (next == current) return
+            current = next
+            if (directory == null) return
+            failureHandlers += onWriteFailure
+            val scheduled = pending != null
+            pending = next
+            if (scheduled) return
+        }
+        writer.execute(::writePending)
+    }
+
+    /**
+     * Waits up to [timeoutMillis] for the writes scheduled so far; returns whether they finished and the last one
+     * succeeded. Settings kept in memory only always count as written.
+     */
+    fun flush(timeoutMillis: Long = 5_000): Boolean {
+        if (directory == null) return true
+        val done = FutureTask {}
+        writer.execute(done)
+        return try { done.get(timeoutMillis, TimeUnit.MILLISECONDS); lastWriteSucceeded } catch (_: Exception) { false }
+    }
+
+    private fun writePending() {
+        val (settings, handlers) = synchronized(this) {
+            val next = pending ?: return
+            pending = null
+            (next to failureHandlers.toList()).also { failureHandlers.clear() }
+        }
+        lastWriteSucceeded = try { write(settings); true } catch (_: Exception) { false }
+        if (!lastWriteSucceeded) handlers.forEach { runCatching { it() } }
     }
 
     private fun load(): AppSettings {
@@ -161,6 +204,11 @@ internal class SettingsStore(private val directory: Path?) {
 
     companion object {
         const val FILE_NAME = "settings.json"
+
+        /** One writer for all stores; a daemon, so a pending write never keeps the application alive after [flush]. */
+        private val writer by lazy {
+            Executors.newSingleThreadExecutor { Thread(it, "settings-writer").apply { isDaemon = true } }
+        }
 
         fun platform(): SettingsStore = SettingsStore(
             platformSettingsDirectory(System.getProperty("os.name").orEmpty(), System::getenv, System.getProperty("user.home")))

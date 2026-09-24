@@ -148,10 +148,12 @@ class UpdateCheckTest {
         val config = directory.toRealPath().resolve("config")
         val store = SettingsStore(config)
         assertFalse(store.current().checkUpdatesOnStart)
-        assertTrue(store.update { it.copy(checkUpdatesOnStart = true) })
+        store.update { it.copy(checkUpdatesOnStart = true) }
+        assertTrue(store.flush())
         assertTrue(Files.readString(config.resolve(SettingsStore.FILE_NAME)).contains("\"updateCheck\": \"ON_START\""))
         assertTrue(SettingsStore(config).current().checkUpdatesOnStart)
-        assertTrue(store.update { it.copy(checkUpdatesOnStart = false) })
+        store.update { it.copy(checkUpdatesOnStart = false) }
+        assertTrue(store.flush())
         assertFalse(SettingsStore(config).current().checkUpdatesOnStart)
     }
 

@@ -211,6 +211,11 @@ internal fun validateEditor(title: String, tags: String, notes: String, expires:
     )
 }
 
-internal const val MAX_TITLE_CHARS = 4096
+/**
+ * Longest entry title and customer, project or template name the vault accepts; the core checks the same limit
+ * when it validates a vault.
+ */
+internal const val MAX_NAME_CHARS = 4096
+internal const val MAX_TITLE_CHARS = MAX_NAME_CHARS
 internal const val MAX_TAGS = 100
 internal const val MAX_TAG_CHARS = 256

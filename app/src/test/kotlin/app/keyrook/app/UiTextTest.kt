@@ -71,6 +71,21 @@ class UiTextTest {
         }
     }
 
+    @Test fun `messages without placeholders read the same with and without formatting`() {
+        listOf("messages", "messages_en").forEach { name ->
+            val bundle = Properties().apply {
+                UiTextTest::class.java.getResourceAsStream("/app/keyrook/app/$name.properties")!!.reader(Charsets.UTF_8).use(::load)
+            }
+            bundle.stringPropertyNames().forEach { key ->
+                val value = bundle.getProperty(key)
+                // Only messages with a conversion are formatted; every other one must not rely on format escapes.
+                if (!Regex("%[^%]").containsMatchIn(value.replace("%%", ""))) assertFalse('%' in value, "$name $key")
+            }
+        }
+        assertEquals(UiText.localized(Locale.ENGLISH, "common.save"), UiText.localized(Locale.ENGLISH, "common.save"))
+        assertEquals("100 %", UiText.localized(Locale.GERMAN, "shell.uiScaleValue", 100))
+    }
+
     @Test fun `every window lock policy has a label in both languages`() {
         listOf(Locale.GERMAN, Locale.ENGLISH).forEach { locale ->
             assertTrue(UiText.localized(locale, "shell.windowLock").isNotBlank())

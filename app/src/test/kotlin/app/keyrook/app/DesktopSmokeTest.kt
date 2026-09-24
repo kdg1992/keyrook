@@ -33,7 +33,7 @@ class DesktopSmokeTest {
     @Test fun `unlock screen renders scaled in the dark high-contrast colours`() {
         SwingUtilities.invokeAndWait {
             val settings = SettingsStore(null)
-            assertTrue(settings.update { it.copy(theme = ThemeMode.DARK, contrast = ContrastMode.HIGH, uiScale = 150) })
+            settings.update { it.copy(theme = ThemeMode.DARK, contrast = ContrastMode.HIGH, uiScale = 150) }
             val scene = ImageComposeScene(width = 1000, height = 800, content = { KeyrookApp(settings = remember { settings }) })
             try {
                 scene.render(0).close()

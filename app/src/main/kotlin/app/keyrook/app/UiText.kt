@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import java.util.Locale
 import java.util.ResourceBundle
+import java.util.concurrent.ConcurrentHashMap
 
 /** SYSTEM uses German for a German operating-system locale and English for every other one. */
 internal enum class AppLanguage {
@@ -34,10 +35,19 @@ internal object UiText {
 
     fun text(key: String, vararg arguments: Any): String = localized(selected, key, *arguments)
 
+    /**
+     * The message [key] in [locale]. Each bundle is loaded once; a message without [arguments] is returned as written,
+     * so messages used without arguments must not contain format escapes such as `%%`.
+     */
     fun localized(locale: Locale, key: String, vararg arguments: Any): String {
         val supported = if (locale.language == "en") Locale.ENGLISH else Locale.ROOT
-        val bundle = ResourceBundle.getBundle("app.keyrook.app.messages", supported,
-            ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES))
-        return String.format(locale, bundle.getString(key), *arguments)
+        val bundle = bundles.computeIfAbsent(supported) {
+            ResourceBundle.getBundle("app.keyrook.app.messages", it,
+                ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES))
+        }
+        val pattern = bundle.getString(key)
+        return if (arguments.isEmpty()) pattern else String.format(locale, pattern, *arguments)
     }
+
+    private val bundles = ConcurrentHashMap<Locale, ResourceBundle>()
 }
