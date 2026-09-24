@@ -71,8 +71,12 @@ what the CI workflows check in addition.
   // SPDX-License-Identifier: GPL-3.0-or-later
   ```
 
-  Workflow and other YAML files carry the same lines as `#` comments. Tabs and
-  trailing whitespace are rejected.
+  Workflows and other YAML files, shell and Python scripts, TOML and
+  `.properties` files carry the same lines as `#` comments (after a shebang
+  line, if any), JavaScript modules (`.mjs`) as `//` comments; the lint task
+  checks these too. Generated files (the Gradle wrapper, lockfiles and the
+  collected license evidence under `licenses/`) are exempt. Tabs and trailing
+  whitespace are rejected. Kotlin compiler warnings fail the build.
 - Do not implement cryptographic primitives or protocols yourself. Use the
   established providers already in use (Bouncy Castle, Apache MINA SSHD) and
   the `Secret`/`Credentials` ownership rules described in

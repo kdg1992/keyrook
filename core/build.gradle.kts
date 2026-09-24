@@ -5,7 +5,8 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     id("keyrook.runtime-dependency-check")
 }
-kotlin { jvmToolchain(25) }
+// Compiler warnings fail the build so that new ones are fixed instead of accumulating.
+kotlin { jvmToolchain(25); compilerOptions { allWarningsAsErrors = true } }
 dependencies {
     implementation(libs.serialization.json)
     implementation(libs.bouncycastle)

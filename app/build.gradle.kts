@@ -16,7 +16,8 @@ plugins {
     alias(libs.plugins.compose.compiler)
     id("keyrook.runtime-dependency-check")
 }
-kotlin { jvmToolchain(25) }
+// Compiler warnings fail the build so that new ones are fixed instead of accumulating.
+kotlin { jvmToolchain(25); compilerOptions { allWarningsAsErrors = true } }
 val hostOs = System.getProperty("os.name").lowercase().let {
     when { it.startsWith("windows") -> "windows"; it.startsWith("mac") -> "macos"; else -> "linux" }
 }
