@@ -78,12 +78,12 @@ fun EntryData.mapFields(transform: (Field) -> Field): EntryData = when (this) {
 /** The editor's immutable text values are discarded on cancel/lock; JVM copies cannot be erased. */
 fun editedEntry(source: Entry?, data: EntryData, title: String, tags: String, notes: String, expires: String,
                 values: List<String>, hidden: List<Boolean>): Entry {
-    require(title.isNotBlank() && title.length <= 4096)
+    require(title.isNotBlank() && title.length <= MAX_TITLE_CHARS)
     require(values.size == data.fields().size && hidden.size == values.size)
     require(values.all { it.length <= Vault.MAX_FIELD_CHARS } && notes.length <= Vault.MAX_FIELD_CHARS)
     val parsedTags = tags.split(',').map(String::trim).filter(String::isNotEmpty)
-    require(parsedTags.size <= 100 && parsedTags.all { it.length <= 256 })
-    val expiry = expires.ifBlank { null }?.also { java.time.LocalDate.parse(it) }
+    require(parsedTags.size <= MAX_TAGS && parsedTags.all { it.length <= MAX_TAG_CHARS })
+    val expiry = ExpiryDates.normalize(expires)
     val owned = mutableListOf<Secret>()
     var index = 0
     fun secret(text: String): Secret {

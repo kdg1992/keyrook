@@ -90,14 +90,7 @@ internal fun chooseKeyFile(save: Boolean): Path? {
         JOptionPane.showConfirmDialog(null, UiText.text("credentials.keyCreateConfirm"), UiText.text("credentials.generateKey"),
             JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION
     }) return null
-    return credentialOnEdt {
-        val picker = JFileChooser().apply {
-            fileFilter = javax.swing.filechooser.FileNameExtensionFilter(UiText.text("credentials.keyFilter"), "key")
-            isAcceptAllFileFilterUsed = true
-        }
-        val result = if (save) picker.showSaveDialog(null) else picker.showOpenDialog(null)
-        if (result == JFileChooser.APPROVE_OPTION) picker.selectedFile.toPath() else null
-    }
+    return credentialOnEdt { if (save) chooseNewFile(DialogFile.KEY, "keyrook.key") else chooseOpenFile(DialogFile.KEY) }
 }
 
 internal fun <T> credentialOnEdt(action: () -> T): T {
