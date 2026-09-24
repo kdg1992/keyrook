@@ -36,7 +36,15 @@ fun main(args: Array<String>) {
     // Select the language before the first composition so no text is rendered in the wrong language.
     UiText.select(settings.current().language)
     application {
-        Window(onCloseRequest = ::exitApplication, title = "Keyrook") { KeyrookApp(window, settings) }
+        val windowState = rememberMainWindowState(settings)
+        Window(
+            onCloseRequest = { saveWindowGeometry(settings, windowState); exitApplication() },
+            state = windowState, title = "Keyrook",
+        ) {
+            LaunchedEffect(window) { window.minimumSize = minimumWindowSize() }
+            PersistWindowGeometry(windowState, settings)
+            KeyrookApp(window, settings)
+        }
     }
 }
 
