@@ -85,17 +85,7 @@ class VaultHealth(private val clock: Clock = Clock.systemDefaultZone()) {
     private fun samePasswords(a: List<Secret>, b: List<Secret>): Boolean =
         a.size == b.size && a.indices.all { i -> a[i].useChars { x -> b[i].useChars { y -> x.contentEquals(y) } } }
 
-    /** Non-empty passwords of [data]; an unset password is not a finding. */
-    private fun passwords(data: EntryData): List<Secret> = when (data) {
-        is EntryData.Web -> listOf(data.password.value)
-        is EntryData.Transfer -> listOf(data.password.value)
-        is EntryData.Email -> listOf(data.password.value)
-        is EntryData.Panel -> listOf(data.password.value)
-        is EntryData.Server -> listOf(data.password.value)
-        is EntryData.Ssh -> listOf(data.passphrase.value)
-        is EntryData.Custom -> data.values.filterKeys { it.lowercase() in PASSWORD_KEYS }.values.map { it.value }
-        is EntryData.Domain -> emptyList()
-    }.filter { secret -> secret.useChars { it.isNotEmpty() } }
+    private fun passwords(data: EntryData): List<Secret> = passwordSecrets(data)
 
     /** Keyed digest of the type, normalized host or URL and user name; null if either is empty or the type has none. */
     private fun identity(mac: Mac, data: EntryData): Digest? {
@@ -140,7 +130,6 @@ class VaultHealth(private val clock: Clock = Clock.systemDefaultZone()) {
         const val PASSWORD_MAX_AGE_DAYS = 365L
         /** History items the editor retains per entry; a full history may have lost its oldest items. */
         private const val MAX_HISTORY = 100
-        private val PASSWORD_KEYS = setOf("password", "passwort", "passphrase")
         private val HOST_KEYS = setOf("url", "url1", "uri", "host")
         private val USER_KEYS = setOf("username", "user", "benutzername")
     }
@@ -151,3 +140,20 @@ class VaultHealth(private val clock: Clock = Clock.systemDefaultZone()) {
         fun clear() = bytes.fill(0)
     }
 }
+
+private val PASSWORD_KEYS = setOf("password", "passwort", "passphrase")
+
+/**
+ * Non-empty passwords of [data]: the password or SSH key passphrase field and custom fields named like a password. An
+ * unset password is not a finding. The returned secrets belong to [data] and must not be closed by the caller.
+ */
+internal fun passwordSecrets(data: EntryData): List<Secret> = when (data) {
+    is EntryData.Web -> listOf(data.password.value)
+    is EntryData.Transfer -> listOf(data.password.value)
+    is EntryData.Email -> listOf(data.password.value)
+    is EntryData.Panel -> listOf(data.password.value)
+    is EntryData.Server -> listOf(data.password.value)
+    is EntryData.Ssh -> listOf(data.passphrase.value)
+    is EntryData.Custom -> data.values.filterKeys { it.lowercase() in PASSWORD_KEYS }.values.map { it.value }
+    is EntryData.Domain -> emptyList()
+}.filter { secret -> secret.useChars { it.isNotEmpty() } }
