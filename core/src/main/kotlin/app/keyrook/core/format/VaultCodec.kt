@@ -51,7 +51,11 @@ class VaultCodec internal constructor(private val migrations: SchemaMigrations) 
         } finally { plaintext.fill(0) }
     }
 
-    fun decrypt(bytes: ByteArray, credentials: Credentials, allowExpensive: Boolean = false): Vault {
+    fun decrypt(bytes: ByteArray, credentials: Credentials, allowExpensive: Boolean = false): Vault =
+        decryptDocument(bytes, credentials, allowExpensive).vault
+
+    /** Like [decrypt], and also reports the schema version stored in the file before any migration. */
+    internal fun decryptDocument(bytes: ByteArray, credentials: Credentials, allowExpensive: Boolean = false): DecryptedDocument {
         if (bytes.size > MAX_FILE_BYTES) throw InvalidVaultException()
         val header = VaultHeader.parse(bytes, allowExpensive)
         if (header.keyFile != credentials.hasKeyFile()) throw AuthenticationException()
@@ -63,7 +67,7 @@ class VaultCodec internal constructor(private val migrations: SchemaMigrations) 
         return try {
             checkJsonLimits(plaintext)
             val version = probe.decodeFromStream<SchemaProbe>(ByteArrayInputStream(plaintext)).schemaVersion
-            if (version == migrations.current) decodeCurrent(plaintext) else migrate(plaintext, version)
+            DecryptedDocument(if (version == migrations.current) decodeCurrent(plaintext) else migrate(plaintext, version), version)
         } catch (_: Exception) {
             // Parser messages may include decrypted field contents; never attach the original exception.
             throw InvalidVaultException()
@@ -181,6 +185,9 @@ class VaultCodec internal constructor(private val migrations: SchemaMigrations) 
         }
     }
 }
+
+/** A decrypted, current-schema document and the schema version its file stored; [vault] is caller-owned. */
+internal class DecryptedDocument(val vault: Vault, val storedSchemaVersion: Int)
 
 /** Reads only the schema version so the matching decoder or migration chain can be chosen. */
 @Serializable

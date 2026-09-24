@@ -5,7 +5,6 @@ package app.keyrook.app
 import app.keyrook.core.model.Entry
 import app.keyrook.core.model.Project
 import app.keyrook.core.model.Vault
-import app.keyrook.core.model.favorite
 import app.keyrook.core.security.VaultHealth
 import java.time.Instant
 import java.time.LocalDate
@@ -27,7 +26,7 @@ internal data class EntryListFilters(
     val customerId: String? = null,
     val projectId: String? = null,
     val tag: String? = null,
-    /** Only entries marked as favorites (see [app.keyrook.core.model.ReservedTags.FAVORITE]). */
+    /** Only entries marked as favorites, i.e. pinned (see [Entry.pinned]). */
     val favorites: Boolean = false,
     /** Only recently used entries, most recent first instead of in [sort] order (see [RecentEntries]). */
     val recent: Boolean = false,
@@ -62,7 +61,7 @@ internal data class EntryListFilters(
                 (type == null || entry.data.type() == type) &&
                 (customerId == null || (entry.customerId ?: owners[entry.projectId]) == customerId) &&
                 (projectId == null || entry.projectId == projectId) &&
-                (tag == null || tag in entry.tags) && (!favorites || entry.favorite) &&
+                (tag == null || tag in entry.tags) && (!favorites || entry.pinned) &&
                 (!recent || entry.id in recency) && when (expiry) {
                     ExpiryFilter.ALL -> true
                     ExpiryFilter.NONE -> entry.expiresOn == null

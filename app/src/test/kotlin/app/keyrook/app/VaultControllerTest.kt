@@ -238,12 +238,14 @@ class VaultControllerTest {
             val start = controller.session.snapshot().use { it.revision }
             controller.setFavorite(ids.toSet(), true).use { snapshot ->
                 assertEquals(start + 1, snapshot.revision)
-                assertTrue(snapshot.entries.all { it.favorite && ReservedTags.visible(it.tags) == listOf("ops") })
+                assertTrue(snapshot.entries.all { it.pinned && ReservedTags.visible(it.tags) == listOf("ops") })
             }
-            assertThrows(IllegalArgumentException::class.java) { controller.tagAll(ids.toSet(), ReservedTags.FAVORITE, add = false) }
+            assertThrows(IllegalArgumentException::class.java) { controller.tagAll(ids.toSet(), ReservedTags.LEGACY_FAVORITE, add = true) }
+            // Pinning pinned entries again changes nothing and saves nothing.
+            controller.setFavorite(ids.toSet(), true).use { assertEquals(start + 1, it.revision) }
             controller.setFavorite(setOf(ids[0]), false).use { snapshot ->
                 assertEquals(start + 2, snapshot.revision)
-                assertEquals(listOf(false, true), snapshot.entries.map { it.favorite })
+                assertEquals(listOf(false, true), snapshot.entries.map { it.pinned })
             }
         }
     }

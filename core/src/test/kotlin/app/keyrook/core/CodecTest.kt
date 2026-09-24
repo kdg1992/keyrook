@@ -40,8 +40,13 @@ class CodecTest {
         credentials().use { credentials -> sampleVault().use { source ->
             codec.decrypt(codec.encrypt(source, credentials, testKdf), credentials).use { actual ->
                 actual.id shouldBe source.id
-                actual.customers shouldBe source.customers
-                actual.projects shouldBe source.projects
+                // Notes are secrets with identity equality; their characters are compared separately.
+                val noNotes = Secret(charArrayOf())
+                actual.customers.map { it.copy(notes = noNotes) } shouldBe source.customers.map { it.copy(notes = noNotes) }
+                actual.projects.map { it.copy(notes = noNotes) } shouldBe source.projects.map { it.copy(notes = noNotes) }
+                (actual.customers + actual.projects).map { it.notesText() } shouldBe (source.customers + source.projects).map { it.notesText() }
+                actual.templates shouldBe source.templates
+                actual.entries.map { it.pinned } shouldBe source.entries.map { it.pinned }
                 actual.entries.size shouldBe 8
                 actual.entries.zip(source.entries).forEach { (a, b) ->
                     a.title shouldBe b.title
@@ -149,7 +154,7 @@ class CodecTest {
 
     @Test fun `invalid authenticated schema is rejected without leaking parser details`() {
         credentials().use { c ->
-            listOf("{\"schemaVersion\":2}", "{\"private-value-SENTINEL\":42}", "{\"id\":\"private-value-SENTINEL\"}",
+            listOf("{\"schemaVersion\":2}", "{\"schemaVersion\":3}", "{\"private-value-SENTINEL\":42}", "{\"id\":\"private-value-SENTINEL\"}",
                 "[".repeat(33) + "]".repeat(33), "{} {}", "{}", "{\"schemaVersion\":1,\"schemaVersion\":1}").forEach { payload ->
                 val header = VaultHeader(testKdf, false, ByteArray(32), ByteArray(12))
                 val key = c.derive(header.salt, testKdf)
@@ -166,10 +171,25 @@ class CodecTest {
         sampleVault().use { valid ->
             val web = valid.entries.first()
             listOf(valid.copy(entries = valid.entries + web), valid.copy(entries = listOf(web.copy(projectId = id()))),
-                valid.copy(schemaVersion = 2), valid.copy(revision = -1),
+                valid.copy(schemaVersion = 3), valid.copy(schemaVersion = 1), valid.copy(revision = -1),
+                valid.copy(entries = listOf(web.copy(tags = listOf(ReservedTags.LEGACY_FAVORITE)))),
+                valid.copy(customers = listOf(valid.customers[0].copy(contactEmail = "no-address"))),
+                valid.copy(customers = listOf(valid.customers[0].copy(website = "javascript://x"))),
+                valid.copy(projects = listOf(valid.projects[0].copy(description = " "))),
+                valid.copy(templates = listOf(EntryTemplate(id(), "t", TemplateType.WEB, customerId = id()))),
+                valid.copy(templates = listOf(EntryTemplate(id(), "t", TemplateType.SERVER))),
+                valid.copy(templates = listOf(EntryTemplate(id(), "t", TemplateType.DOMAIN,
+                    listOf("name", "registrar", "dnsNotes", "url").map { TemplateField(it) }))),
+                valid.copy(templates = valid.templates + valid.templates),
                 valid.copy(entries = listOf(valid.entries[4].copy(data = (valid.entries[4].data as EntryData.Server).copy(port = 0))))).forEach {
                 assertThrows(IllegalArgumentException::class.java) { it.validate() }
             }
         }
     }
+}
+
+private fun Any.notesText(): String = when (this) {
+    is Customer -> notes.useChars { String(it) }
+    is Project -> notes.useChars { String(it) }
+    else -> error("No notes")
 }

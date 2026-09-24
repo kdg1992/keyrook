@@ -9,6 +9,7 @@ import app.keyrook.core.crypto.KdfParameters
 import app.keyrook.core.model.Entry
 import app.keyrook.core.model.ReservedTags
 import app.keyrook.core.model.Vault
+import app.keyrook.core.model.pinEntries
 import app.keyrook.core.model.tagEntries
 import app.keyrook.core.model.trashEntries
 import app.keyrook.core.service.VaultSession
@@ -99,9 +100,9 @@ class VaultController(internal val session: VaultSession = VaultSession(),
         current.tagEntries(ids, tag.trim(), add, java.time.Instant.now())
     }
 
-    /** Marks the entries [ids] as favorites, or unmarks them, through the reserved tag as one save. */
+    /** Pins the entries [ids] as favorites, or unpins them, as one save; unchanged entries save nothing. */
     fun setFavorite(ids: Set<String>, favorite: Boolean): Vault = bulkChange { current ->
-        current.tagEntries(ids, ReservedTags.FAVORITE, favorite, java.time.Instant.now())
+        current.pinEntries(ids, favorite, java.time.Instant.now())
     }
 
     /** [change] returns its argument unchanged to skip the save, otherwise a candidate saved as one revision. */

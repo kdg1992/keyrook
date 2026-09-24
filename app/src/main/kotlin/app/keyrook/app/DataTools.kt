@@ -181,7 +181,8 @@ private fun importData(controller: VaultController, dialogs: Dialogs) {
         if (!dialogs.confirm(UiText.text("transfer.importConfirm", it.entries.size))) return
         controller.session.snapshot().use { current ->
             val candidate = current.copy(customers = current.customers + it.customers,
-                projects = current.projects + it.projects, entries = current.entries + it.entries)
+                projects = current.projects + it.projects, entries = current.entries + it.entries,
+                templates = current.templates + it.templates)
             candidate.validate()
             ensureOperationCurrent()
             controller.session.save(candidate)

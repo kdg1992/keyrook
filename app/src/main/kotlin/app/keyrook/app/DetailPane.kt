@@ -70,7 +70,7 @@ internal fun EntryDetailPane(vault: Vault, entry: Entry?, issues: Set<HealthIssu
     Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (actions) FavoriteToggle(entry.title, entry.favorite, busy) { onFavorite(entry) }
+            if (actions) FavoriteToggle(entry.title, entry.pinned, busy) { onFavorite(entry) }
             Text(entry.title, Modifier.semantics { heading() }, style = MaterialTheme.typography.h5)
         }
         Text(listOfNotNull(entry.data.type().label,

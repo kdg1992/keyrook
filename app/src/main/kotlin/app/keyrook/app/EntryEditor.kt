@@ -88,12 +88,12 @@ internal fun submitEditedEntry(busy: Boolean, candidate: Entry, save: (Entry) ->
     return true
 }
 
-/** The editor's tag text: the user's tags without reserved ones such as the favorite mark. */
+/** The editor's tag text: the user's tags, never a reserved one. */
 internal fun editorTags(source: Entry?): String = source?.tags?.let(ReservedTags::visible)?.joinToString(", ").orEmpty()
 
 /**
  * The editor's immutable text values are discarded on cancel/lock; JVM copies cannot be erased. Typed reserved tags
- * are dropped, and the reserved tags of [source], such as its favorite mark, are kept after the typed ones.
+ * are dropped. The favorite mark ([Entry.pinned]) of [source] is kept; a new entry starts unpinned.
  */
 fun editedEntry(source: Entry?, data: EntryData, title: String, tags: String, notes: String, expires: String,
                 values: List<String>, hidden: List<Boolean>): Entry {
@@ -102,7 +102,6 @@ fun editedEntry(source: Entry?, data: EntryData, title: String, tags: String, no
     require(values.all { it.length <= Vault.MAX_FIELD_CHARS } && notes.length <= Vault.MAX_FIELD_CHARS)
     val parsedTags = tags.split(',').map(String::trim).filter(String::isNotEmpty).filterNot(ReservedTags::isReserved)
     require(parsedTags.size <= MAX_TAGS && parsedTags.all { it.length <= MAX_TAG_CHARS })
-    val storedTags = parsedTags + source?.tags.orEmpty().filter(ReservedTags::isReserved)
     val expiry = ExpiryDates.normalize(expires)
     val owned = mutableListOf<Secret>()
     var index = 0
@@ -121,7 +120,8 @@ fun editedEntry(source: Entry?, data: EntryData, title: String, tags: String, no
             it.copy(data = copyData(it.data))
         } + listOfNotNull(source?.let { HistoryItem(now, copyData(it.data)) })
         return Entry(source?.id ?: UUID.randomUUID().toString(), title, changed, source?.createdAt ?: now, now,
-            source?.customerId, source?.projectId, storedTags, secret(notes), expiry, source?.deletedAt, history)
+            source?.customerId, source?.projectId, parsedTags, secret(notes), expiry, source?.deletedAt, history,
+            pinned = source?.pinned ?: false)
     } catch (failure: Throwable) {
         owned.forEach(Secret::close)
         throw failure

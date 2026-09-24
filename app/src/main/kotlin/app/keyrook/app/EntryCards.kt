@@ -26,7 +26,6 @@ import app.keyrook.core.model.Field
 import app.keyrook.core.model.FieldKind
 import app.keyrook.core.model.ReservedTags
 import app.keyrook.core.model.Vault
-import app.keyrook.core.model.favorite
 import app.keyrook.core.security.HealthIssue
 import app.keyrook.core.security.VaultHealth
 import java.time.LocalDate
@@ -125,7 +124,7 @@ internal fun EntryCardView(entry: Entry, info: EntryCardInfo, isSelected: Boolea
                 modifier = Modifier.describedAs(UiText.text("a11y.markEntry", entry.title)))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    if (onFavorite != null) FavoriteToggle(entry.title, entry.favorite, busy, onFavorite)
+                    if (onFavorite != null) FavoriteToggle(entry.title, entry.pinned, busy, onFavorite)
                     Text(entry.title, style = MaterialTheme.typography.h6)
                 }
                 Text(listOfNotNull(entry.data.type().label,

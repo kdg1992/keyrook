@@ -97,22 +97,22 @@ class EditorBehaviorTest {
         }
     }
 
-    @Test fun `the editor hides the favorite tag keeps it on save and never creates it from typed tags`() {
+    @Test fun `the editor keeps the pin on save and never creates the legacy favorite tag from typed tags`() {
         val date = "2026-01-01T00:00:00Z"
         val entry = Entry(java.util.UUID.randomUUID().toString(), "Favorite", EntryData.Custom(emptyMap()), date, date,
-            tags = listOf("ops", ReservedTags.FAVORITE, "db"))
+            tags = listOf("ops", "db"), pinned = true)
         assertEquals("ops, db", editorTags(entry))
         assertEquals("", editorTags(null))
         Vault(entries = listOf(entry)).use {
             val kept = editedEntry(entry, entry.data, "Favorite", "db", "", "", emptyList(), emptyList())
-            assertEquals(listOf("db", ReservedTags.FAVORITE), kept.tags)
-            assertTrue(kept.favorite)
+            assertEquals(listOf("db"), kept.tags)
+            assertTrue(kept.pinned)
             Vault(entries = listOf(kept)).close()
         }
-        val typed = editedEntry(null, EntryData.Custom(emptyMap()), "Plain", "ops, ${ReservedTags.FAVORITE}", "", "",
+        val typed = editedEntry(null, EntryData.Custom(emptyMap()), "Plain", "ops, ${ReservedTags.LEGACY_FAVORITE}", "", "",
             emptyList(), emptyList())
         assertEquals(listOf("ops"), typed.tags)
-        assertFalse(typed.favorite)
+        assertFalse(typed.pinned)
         Vault(entries = listOf(typed)).close()
     }
 }

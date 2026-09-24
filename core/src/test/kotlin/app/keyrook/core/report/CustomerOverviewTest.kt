@@ -50,6 +50,7 @@ class CustomerOverviewTest {
             val text = customerOverviewText(customerOverviews(vault), reportKeys)
             assertNoSentinel(text)
             assertTrue(text.contains("Customer-SENTINEL-4531"))
+            assertTrue(text.contains("Contact-SENTINEL-2291") && text.contains("Description-SENTINEL-1182"), text)
         }
     }
 
@@ -62,6 +63,12 @@ class CustomerOverviewTest {
             val text = customerOverviewText(overviews, reportKeys)
             assertNoSentinel(text)
             assertTrue(text.contains("srv.invalid:2222") && text.contains("ftp.invalid:2121") && text.contains("example.invalid"), text)
+            assertEquals(ContactLine("Erika <Kontakt>", "kontakt@kunde.invalid", "+49 30 555", "https://kunde.invalid"),
+                overviews.single().contact)
+            assertEquals(listOf(ProjectLine("Projekt <P>", "Beschreibung <D>")), overviews.single().projects)
+            listOf("report.contactName: Erika <Kontakt>", "report.contactEmail: kontakt@kunde.invalid",
+                "report.phone: +49 30 555", "report.website: https://kunde.invalid", "Projekt <P> – Beschreibung <D>")
+                .forEach { assertTrue(text.contains(it), it) }
         }
     }
 

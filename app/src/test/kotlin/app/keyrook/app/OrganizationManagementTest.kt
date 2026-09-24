@@ -18,6 +18,13 @@ class OrganizationManagementTest {
     private val second = Customer(UUID.randomUUID().toString(), "Zweiter Kunde")
     private val project = Project(UUID.randomUUID().toString(), "Projekt", first.id)
     private val time = "2026-01-01T00:00:00Z"
+    // Notes are secrets with identity equality; comparisons of snapshots replace them with this one instance.
+    private val noNotes = Secret(charArrayOf())
+    private fun customers(vault: Vault) = vault.customers.map { it.copy(notes = noNotes) }
+    private fun projects(vault: Vault) = vault.projects.map { it.copy(notes = noNotes) }
+    private val firstPlain get() = first.copy(notes = noNotes)
+    private val secondPlain get() = second.copy(notes = noNotes)
+    private val projectPlain get() = project.copy(notes = noNotes)
 
     private fun entry(deleted: Boolean = false, customerId: String? = first.id, projectId: String? = project.id) = Entry(
         UUID.randomUUID().toString(), "Synthetischer Eintrag",
@@ -84,8 +91,8 @@ class OrganizationManagementTest {
                 assertThrows(IllegalArgumentException::class.java) { controller.removeProject(project.id, true) }
                 controller.session.snapshot().use { after ->
                     assertEquals(before.revision, after.revision)
-                    assertEquals(before.customers, after.customers)
-                    assertEquals(before.projects, after.projects)
+                    assertEquals(customers(before), customers(after))
+                    assertEquals(projects(before), projects(after))
                     assertEquals(before.entries.single().id, after.entries.single().id)
                 }
             }
@@ -96,7 +103,7 @@ class OrganizationManagementTest {
         withVault { controller ->
             assertThrows(IllegalArgumentException::class.java) { controller.removeCustomer(second.id, false) }
             assertThrows(IllegalArgumentException::class.java) { controller.removeProject(project.id, false) }
-            controller.removeCustomer(second.id, true).use { assertEquals(listOf(first), it.customers) }
+            controller.removeCustomer(second.id, true).use { assertEquals(listOf(firstPlain), customers(it)) }
             controller.removeProject(project.id, true).use { assertTrue(it.projects.isEmpty()) }
             controller.removeCustomer(first.id, true).use { assertTrue(it.customers.isEmpty()) }
             assertThrows(IllegalArgumentException::class.java) { controller.removeCustomer(first.id, true) }
@@ -113,8 +120,8 @@ class OrganizationManagementTest {
             assertThrows(IllegalArgumentException::class.java) { controller.updateProject(project.id, " ", first.id) }
             controller.session.snapshot().use {
                 assertEquals(0L, it.revision)
-                assertEquals(listOf(project), it.projects)
-                assertEquals(listOf(first, second), it.customers)
+                assertEquals(listOf(projectPlain), projects(it))
+                assertEquals(listOf(firstPlain, secondPlain), customers(it))
             }
         }
     }

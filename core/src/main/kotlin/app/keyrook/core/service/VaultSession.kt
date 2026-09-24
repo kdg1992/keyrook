@@ -7,6 +7,7 @@ import app.keyrook.core.backup.BackupService
 import app.keyrook.core.backup.BackupResult
 import app.keyrook.core.backup.IntegrityCheck
 import app.keyrook.core.backup.IntegrityReport
+import app.keyrook.core.backup.preserveBeforeMigration
 import app.keyrook.core.crypto.KdfParameters
 import app.keyrook.core.format.VaultCodec
 import app.keyrook.core.model.Vault
@@ -29,6 +30,8 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
     private var backups: BackupService? = null
     private var lastBackupRevision: Long? = null
     private var incompleteRotation: BackupResult? = null
+    private var storedSchemaVersion: Int? = null
+    private var migrationCopy: Path? = null
     val state: SessionState @Synchronized get() = currentState
 
     /** A configured backup must succeed before an existing vault is replaced. */
@@ -40,6 +43,15 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
     }
 
     @Synchronized fun backupStatus(): BackupStatus = BackupStatus(backups != null, lastBackupRevision)
+
+    /**
+     * The older schema version the opened file still stores, or null when it already uses [Vault.SCHEMA_VERSION].
+     * The document was migrated in memory; the first save keeps a copy of the file (see [migrationBackup]).
+     */
+    @Synchronized fun pendingMigration(): Int? { requireDocument(); return storedSchemaVersion }
+
+    /** Name of the copy of the older file kept by the first save after a migration, or null. Never a full path. */
+    @Synchronized fun migrationBackup(): String? { requireDocument(); return migrationCopy?.fileName?.toString() }
 
     /** Authenticates and copies the persisted revision without rewriting it or exporting credentials. */
     @Synchronized fun backupNow(allowExpensive: Boolean = false): BackupResult {
@@ -82,7 +94,7 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
         try {
             currentState = SessionState.SAVING
             val result = store.save(path, owned, ownedCredentials, parameters = parameters, allowExpensive = allowExpensive)
-            install(path, owned, ownedCredentials, result.stamp, parameters)
+            install(path, owned, ownedCredentials, result.stamp, parameters, null)
             return result
         } catch (e: Exception) {
             owned.close(); ownedCredentials.close(); currentState = SessionState.LOCKED
@@ -95,7 +107,8 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
         val ownedCredentials = credentials.copy()
         try {
             val loaded = store.load(path, ownedCredentials, allowExpensive)
-            install(path, loaded.vault, ownedCredentials, loaded.stamp, loaded.parameters)
+            install(path, loaded.vault, ownedCredentials, loaded.stamp, loaded.parameters,
+                loaded.storedSchemaVersion.takeIf { it != Vault.SCHEMA_VERSION })
         } catch (e: Exception) { ownedCredentials.close(); throw e }
     }
 
@@ -141,6 +154,10 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
                        parameters: KdfParameters, allowExpensive: Boolean): SaveResult {
         currentState = SessionState.SAVING
         try {
+            // A file still in an older schema is copied unchanged before the first rewrite, with or without backups.
+            storedSchemaVersion?.let { version ->
+                if (migrationCopy == null) migrationCopy = preserveBeforeMigration(path!!, stamp!!, version)
+            }
             backups?.let { createBackup(it, allowExpensive) }
             val result = store.save(path!!, next, nextCredentials, stamp, parameters, allowExpensive)
             document!!.close()
@@ -148,6 +165,7 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
             if (replaceCredentials) { credentials!!.close(); credentials = nextCredentials }
             stamp = result.stamp
             this.parameters = parameters
+            storedSchemaVersion = null
             currentState = SessionState.UNLOCKED
             return result
         } catch (e: Exception) {
@@ -158,7 +176,10 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
         }
     }
 
-    private fun install(path: Path, vault: Vault, credentials: Credentials, stamp: FileStamp, parameters: KdfParameters) {
+    private fun install(path: Path, vault: Vault, credentials: Credentials, stamp: FileStamp, parameters: KdfParameters,
+                        storedSchemaVersion: Int?) {
+        this.storedSchemaVersion = storedSchemaVersion
+        migrationCopy = null
         this.path = path.toAbsolutePath().normalize()
         document = vault
         this.credentials = credentials
@@ -177,6 +198,8 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
         document = null; credentials = null; path = null; stamp = null; backups = null
         lastBackupRevision = null
         incompleteRotation = null
+        storedSchemaVersion = null
+        migrationCopy = null
         currentState = SessionState.LOCKED
     }
     override fun close() = lock()

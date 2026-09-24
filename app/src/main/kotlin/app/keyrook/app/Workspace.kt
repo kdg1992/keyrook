@@ -67,7 +67,7 @@ internal fun Workspace(state: AppState, current: Vault, settings: SettingsStore,
                 EntryDetailPane(current, selected, selected?.let { warningsByEntry[it.id] }.orEmpty(), reveal, busy,
                     onReveal = { reveal = it }, onEdit = { state.used(it.id); editing = it },
                     onUsed = { state.used(it.id) },
-                    onFavorite = { entry -> operation { controller.setFavorite(setOf(entry.id), !entry.favorite) } },
+                    onFavorite = { entry -> operation { controller.setFavorite(setOf(entry.id), !entry.pinned) } },
                     modifier = Modifier.weight(0.55f).fillMaxHeight())
             }
         } else Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { entryList(false) }
@@ -249,7 +249,7 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
                 onTrash = { confirmation = ListConfirmation.Trash(entry.id, entry.title) },
                 markers = passwordMarkers(issues[entry.id].orEmpty()), compact = compact,
                 marked = entry.id in selection.marked, onMark = { onSelection(selection.toggleMark(entry.id)) },
-                onFavorite = if (trash) null else ({ onFavorite(setOf(entry.id), !entry.favorite) }))
+                onFavorite = if (trash) null else ({ onFavorite(setOf(entry.id), !entry.pinned) }))
         }
     }
     if (help) AlertDialog(onDismissRequest = { help = false }, title = { Text(UiText.text("shortcuts.title")) },

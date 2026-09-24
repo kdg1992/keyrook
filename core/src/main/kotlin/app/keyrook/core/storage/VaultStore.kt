@@ -20,7 +20,12 @@ class AtomicSaveUnavailableException : IOException("Atomic replacement is unavai
 
 /** Opaque optimistic concurrency token; contains no plaintext values. */
 class FileStamp internal constructor(internal val digest: ByteArray, internal val vaultId: String, internal val revision: Long)
-class LoadedVault(val vault: Vault, val stamp: FileStamp, val parameters: KdfParameters) : AutoCloseable {
+/**
+ * [storedSchemaVersion] is the schema version of the file as read; when it is older than [Vault.SCHEMA_VERSION],
+ * [vault] was migrated in memory and the file is still unchanged.
+ */
+class LoadedVault(val vault: Vault, val stamp: FileStamp, val parameters: KdfParameters,
+                  val storedSchemaVersion: Int = Vault.SCHEMA_VERSION) : AutoCloseable {
     override fun close() = vault.close()
 }
 enum class DirectoryDurability { FORCED, NOT_SUPPORTED }
@@ -41,8 +46,10 @@ class VaultStore internal constructor(private val codec: VaultCodec, private val
 
     override fun load(path: Path, credentials: Credentials, allowExpensive: Boolean): LoadedVault {
         val bytes = readBounded(resolve(path))
-        val vault = codec.decrypt(bytes, credentials, allowExpensive)
-        return LoadedVault(vault, stamp(bytes, vault), VaultHeader.parse(bytes, allowExpensive).kdf)
+        val document = codec.decryptDocument(bytes, credentials, allowExpensive)
+        val vault = document.vault
+        return LoadedVault(vault, stamp(bytes, vault), VaultHeader.parse(bytes, allowExpensive).kdf,
+            document.storedSchemaVersion)
     }
 
     /** expected=null creates a new vault; updates must advance revision by exactly one. */

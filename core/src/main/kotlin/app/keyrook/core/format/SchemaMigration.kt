@@ -3,7 +3,10 @@
 package app.keyrook.core.format
 
 import app.keyrook.core.crypto.InvalidVaultException
+import app.keyrook.core.model.ReservedTags
 import app.keyrook.core.model.Vault
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.longOrNull
@@ -56,8 +59,46 @@ internal class SchemaMigrations(val current: Int, steps: List<SchemaMigration>) 
     }
 
     companion object {
-        /** Schema 1 is the first format; no production steps exist yet. */
-        val PRODUCTION = SchemaMigrations(Vault.SCHEMA_VERSION, emptyList())
+        /**
+         * Schema 1 to 2: entries tagged [ReservedTags.LEGACY_FAVORITE] lose the tag and become `pinned`, and an empty
+         * `templates` list is added. Customer and project metadata start unset. A schema 1 document that already
+         * uses a field only schema 2 defines is not a valid schema 1 document and is rejected.
+         */
+        internal val V1_TO_V2 = SchemaMigration(1, 2) { source ->
+            fun objects(key: String): List<JsonObject> = when (val value = source[key]) {
+                null -> emptyList()
+                is JsonArray -> value.map { it as? JsonObject ?: throw InvalidVaultException() }
+                else -> throw InvalidVaultException()
+            }
+            fun onlyKeys(value: JsonObject, allowed: Set<String>) {
+                if (!allowed.containsAll(value.keys)) throw InvalidVaultException()
+            }
+            if ("templates" in source) throw InvalidVaultException()
+            objects("customers").forEach { onlyKeys(it, setOf("id", "name")) }
+            objects("projects").forEach { onlyKeys(it, setOf("id", "name", "customerId")) }
+            val entries = objects("entries").map { entry ->
+                if ("pinned" in entry) throw InvalidVaultException()
+                val tags = when (val value = entry["tags"]) {
+                    null -> null
+                    is JsonArray -> value
+                    else -> throw InvalidVaultException()
+                }
+                val favorite = JsonPrimitive(ReservedTags.LEGACY_FAVORITE)
+                if (tags == null || favorite !in tags) entry
+                else JsonObject(entry + mapOf<String, JsonElement>("tags" to JsonArray(tags.filterNot { it == favorite }),
+                    "pinned" to JsonPrimitive(true)))
+            }
+            JsonObject(source.mapValues { (key, value) ->
+                when (key) {
+                    "schemaVersion" -> JsonPrimitive(2)
+                    "entries" -> JsonArray(entries)
+                    else -> value
+                }
+            } + ("templates" to JsonArray(emptyList())))
+        }
+
+        /** Every registered step up to [Vault.SCHEMA_VERSION]; schema 1 was the first format. */
+        val PRODUCTION = SchemaMigrations(Vault.SCHEMA_VERSION, listOf(V1_TO_V2))
 
         internal fun schemaVersion(document: JsonObject): Int? {
             val value = document["schemaVersion"] as? JsonPrimitive ?: return null
