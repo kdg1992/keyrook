@@ -9,11 +9,13 @@ kotlin { jvmToolchain(25) }
 dependencies {
     implementation(libs.serialization.json)
     implementation(libs.bouncycastle)
-    implementation(libs.bouncycastle.pkix)
+    // No bcpkix API in main sources: Apache SSHD's Bouncy Castle support loads it at run time; tests use it directly.
+    runtimeOnly(libs.bouncycastle.pkix)
     implementation(libs.sshd.common)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.kotest.assertions)
+    testImplementation(libs.bouncycastle.pkix)
     testRuntimeOnly(libs.junit.launcher)
 }
 dependencyLocking { lockAllConfigurations() }
