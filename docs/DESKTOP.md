@@ -272,8 +272,8 @@ email, the domain name, and the first URL field of custom records). Only fields
 that are not masked are shown; a masked username or host stays hidden in the
 list. Long values are shortened. The expiry date is shown with a marker: expired
 dates, and dates from today through the next 30 days (the same window as the
-vault health check), are highlighted. Entries with a short or repetitive or a
-reused password carry a marker naming that reason (see
+vault health check), are highlighted. Entries with a short or repetitive, a
+reused or an old password carry a marker naming that reason (see
 [Warning list](#warning-list)).
 
 ## Backups and encrypted export
@@ -332,9 +332,25 @@ check the mapping before confirming the import.
 ## Warning list
 
 The vault health check looks at active entries for expiry within 30 days, expired
-dates, short or repetitive passwords and reuse across entries. The checks run
-locally and are limited heuristics; a password without a warning is not
-guaranteed strong.
+dates, short or repetitive passwords, reuse across entries, passwords unchanged
+for more than 365 days and possible duplicate entries. Empty passwords are not
+rated. The checks run locally and are limited heuristics; a password without a
+warning is not guaranteed strong.
+
+- **Old password**: the age counts from the last time the password itself
+  changed, taken from the entry history, so editing the title or notes does not
+  reset it. If the history holds no password change, the age counts from the
+  creation of the entry (or from the oldest kept history item when all 100 are
+  used). Entries without any history, such as some imports, count from their
+  last change of any kind. Imported KeePass history records when a version was
+  created rather than replaced, so ages of such entries can come out too high.
+- **Possible duplicate**: another active entry of the same type has the same
+  host or URL and the same user name, ignoring upper/lower case, surrounding
+  blanks and trailing slashes (`https://Example.org/` matches
+  `https://example.org`). The port and passwords are not compared. Entries
+  without a host/URL or user name, SSH keys and domains are not compared. Custom
+  records use their first URL field (`url`, `url1`, `uri`, `host`) and their user
+  name field (`username`, `user`, `benutzername`).
 
 The check runs by itself after unlocking, after every change of the vault and
 once a day, in the background on a copy of the vault that is erased afterwards;
@@ -342,10 +358,10 @@ the window stays responsive. Its result appears in three places:
 
 - **Warnliste** (**Warnings**) in the header shows how many entries are
   affected per reason, for example *2 abgelaufen*, *1 laufen ab*, *3 schwach*,
-  *2 mehrfach* (or *keine*; *wird geprüft* while the check runs). Expired entries
+  *2 mehrfach*, *4 alt*, *2 doppelt* (or *keine*; *wird geprüft* while the check runs). Expired entries
   are marked in the error color.
-- List cards and the detail view mark entries with a short or repetitive or a
-  reused password. The expiry badge on the cards covers expired and expiring
+- List cards and the detail view mark entries with a short or repetitive, a
+  reused or an old password. Possible duplicates appear in the warning list only. The expiry badge on the cards covers expired and expiring
   entries. Markers name the reason only; no password or part of one is shown.
 - Clicking **Warnliste** opens the list with a summary, the affected entry
   titles and their reasons. Clicking a title (or focusing it and pressing Enter)

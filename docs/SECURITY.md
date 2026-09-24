@@ -84,10 +84,17 @@ retry period; permanently unavailable clipboard access cannot guarantee OS erasu
 
 The warning list examines active entries only: expiry before today, expiry within
 30 days, passwords shorter than 14 characters or containing fewer than four
-distinct characters, and passwords reused across different entries. These are
-limited heuristics, not an entropy estimate or a breached-password database.
+distinct characters, passwords reused across different entries, passwords
+unchanged for more than 365 days, and possible duplicate entries (same type, host
+or URL and user name). Empty passwords are skipped. These are limited heuristics,
+not an entropy estimate or a breached-password database; no breach lookup is made.
 Custom fields are recognized by the names password, passwort and passphrase.
-Reuse comparisons use HMAC-SHA-256 with a fresh random key for each inspection.
+Reuse and duplicate comparisons use HMAC-SHA-256 with a fresh random key for each
+inspection; host, URL and user name are normalized (lower case, without surrounding
+blanks and trailing slashes) in temporary character arrays that are erased. Password
+age compares the current and historical passwords through erased character copies
+and uses only the stored timestamps (see [Warning list](DESKTOP.md#warning-list)
+for how the date is chosen).
 The key and comparison buffers are cleared afterward; only entry IDs and warning
 categories are returned. Nothing is persisted or sent over a network.
 Provider-internal key copies remain subject to the JVM memory limits above.

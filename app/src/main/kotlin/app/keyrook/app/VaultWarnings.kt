@@ -7,12 +7,14 @@ import app.keyrook.core.security.HealthIssue
 
 /** Numbers of entries per [HealthIssue] and of entries with any issue; each entry counts once per issue. */
 internal data class WarningCounts(val expired: Int = 0, val expiringSoon: Int = 0, val weak: Int = 0, val reused: Int = 0,
-                                  val entries: Int = 0) {
+                                  val entries: Int = 0, val old: Int = 0, val duplicates: Int = 0) {
     fun count(issue: HealthIssue): Int = when (issue) {
         HealthIssue.EXPIRED -> expired
         HealthIssue.EXPIRING_SOON -> expiringSoon
         HealthIssue.SHORT_OR_REPETITIVE_PASSWORD -> weak
         HealthIssue.REUSED_PASSWORD -> reused
+        HealthIssue.OLD_PASSWORD -> old
+        HealthIssue.DUPLICATE_ENTRY -> duplicates
     }
 }
 
@@ -24,7 +26,8 @@ internal fun warningCounts(findings: List<EntryHealth>): WarningCounts {
     val byEntry = warningIssues(findings)
     fun count(issue: HealthIssue) = byEntry.values.count { issue in it }
     return WarningCounts(count(HealthIssue.EXPIRED), count(HealthIssue.EXPIRING_SOON),
-        count(HealthIssue.SHORT_OR_REPETITIVE_PASSWORD), count(HealthIssue.REUSED_PASSWORD), byEntry.size)
+        count(HealthIssue.SHORT_OR_REPETITIVE_PASSWORD), count(HealthIssue.REUSED_PASSWORD), byEntry.size,
+        count(HealthIssue.OLD_PASSWORD), count(HealthIssue.DUPLICATE_ENTRY))
 }
 
 /** Issues per entry ID in finding order; entries without issues are absent. */
@@ -38,4 +41,4 @@ internal fun warningIssues(findings: List<EntryHealth>): Map<String, Set<HealthI
 
 /** Password markers of a list card, in display order. Expiry already has its own badge with the date. */
 internal fun passwordMarkers(issues: Set<HealthIssue>): List<HealthIssue> =
-    listOf(HealthIssue.SHORT_OR_REPETITIVE_PASSWORD, HealthIssue.REUSED_PASSWORD).filter { it in issues }
+    listOf(HealthIssue.SHORT_OR_REPETITIVE_PASSWORD, HealthIssue.REUSED_PASSWORD, HealthIssue.OLD_PASSWORD).filter { it in issues }
