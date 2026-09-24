@@ -6,10 +6,15 @@ import app.keyrook.core.crypto.Secret
 import app.keyrook.core.model.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Files
+import java.nio.file.Path
 import java.time.Instant
 import java.util.UUID
 
 class SessionSecurityTest {
+    @TempDir lateinit var directory: Path
+
     @Test fun `failure delays grow cap at sixty seconds and success resets them`() {
         var now = 0L
         val backoff = UnlockBackoff { now }
@@ -145,6 +150,28 @@ class SessionSecurityTest {
             assertEquals(1000L, controller.unlockDelayMillis())
             now += 1_000_000_000
             assertEquals(0L, controller.unlockDelayMillis())
+        }
+    }
+
+    @Test fun `only rejected credentials delay the next unlock attempt`() {
+        val backoff = UnlockBackoff { 0L }
+        VaultController(backoff = backoff).use { controller ->
+            val file = directory.resolve("backoff.keyrook")
+            controller.unlock(file, "synthetic-master-passphrase".toCharArray(), null, true,
+                app.keyrook.core.crypto.KdfParameters(iterations = 1)).close()
+            controller.lock()
+            assertThrows(Exception::class.java) {
+                controller.unlock(directory.resolve("absent.keyrook"), "synthetic-password".toCharArray(), null, false)
+            }
+            val corrupt = Files.write(directory.resolve("corrupt.keyrook"), ByteArray(64))
+            assertThrows(Exception::class.java) { controller.unlock(corrupt, "synthetic-password".toCharArray(), null, false) }
+            val shortKey = Files.write(directory.resolve("short.key"), ByteArray(8))
+            assertThrows(Exception::class.java) { controller.unlock(file, "synthetic-master-passphrase".toCharArray(), shortKey, false) }
+            assertEquals(0L, controller.unlockDelayMillis())
+            assertThrows(app.keyrook.core.crypto.AuthenticationException::class.java) {
+                controller.unlock(file, "wrong-synthetic-passphrase".toCharArray(), null, false)
+            }
+            assertEquals(1000L, controller.unlockDelayMillis())
         }
     }
 }

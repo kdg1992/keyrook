@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package app.keyrook.app
 
+import app.keyrook.core.crypto.AuthenticationException
 import app.keyrook.core.crypto.Credentials
 import app.keyrook.core.crypto.Secret
 import app.keyrook.core.crypto.KdfParameters
@@ -48,7 +49,8 @@ class VaultController(internal val session: VaultSession = VaultSession(),
                     backoff.succeeded()
                     vaultPath = path.toAbsolutePath().normalize()
                 }
-            } catch (failure: Exception) {
+            } catch (failure: AuthenticationException) {
+                // Only rejected credentials count; missing, unreadable, corrupt or busy files never delay a retry.
                 backoff.failed()
                 throw failure
             }
