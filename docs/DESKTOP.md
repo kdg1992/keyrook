@@ -117,6 +117,17 @@ Import parses and validates first, then asks for confirmation showing the entry 
 
 - Keyrook JSON: all entry types, references, metadata and history.
 - CSV: select the actual header names from dropdowns for title, URL, username, password and notes. The title column is required; optional fields can remain unassigned. Common German and English column names are suggested. Quoted commas, escaped quotes and multiline values are supported. Headers must be unique and nonblank, with at most 100 columns and 512 characters per name. A UTF-8 BOM is accepted. Keyrook's own CSV format is recognized automatically without a mapping dialog.
+- KeePass CSV: a fixed mapping without a dialog, using the same CSV parser and limits. The header is checked before any row is read and must contain exactly one of these column sets, in any order; otherwise nothing is imported and a message names the expected columns:
+
+  | KeePass CSV 1.x (KeePass 2.x *Export → KeePass CSV (1.x)*) | KeePass 2.x field names | Keyrook field |
+  | --- | --- | --- |
+  | Account | Title | Title |
+  | Login Name | UserName | Username (hidden) |
+  | Password | Password | Password (hidden) |
+  | Web Site | URL | URL |
+  | Comments | Notes | Notes |
+
+  The KeePass CSV 1.x format quotes every field and escapes quotes as `\"` and backslashes as `\\`; these escapes are decoded, and any other backslash sequence is refused. The field-name variant uses ordinary CSV quoting (doubled quotes). Additional columns such as groups, TOTP or timestamps are refused rather than silently dropped; use **CSV mit Feldzuordnung** for such files. Each row becomes a web login entry.
 - Bitwarden unencrypted JSON: login and secure-note items, custom fields, folders, multiple URLs, dates and password history. Cards, identities, organization records, attachments, passkeys and password-reprompt restrictions are not imported.
 - KeePass XML: exported plaintext strings, group paths, tags, ISO timestamps, expiry and history. Entries in the identified recycle bin, including nested groups, remain deleted; their last-modified time supplies the deletion timestamp because the export has no separate deletion date. KDBX, binary/attached data, protected values, custom plugin data and binary timestamps are not supported. DTDs, external entities and ambiguous recycle-bin/expiry metadata are refused.
 
