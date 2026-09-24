@@ -41,6 +41,27 @@ class VaultControllerTest {
         }
     }
 
+    @Test fun `the first save of a migrated vault names the kept copy once`() {
+        // Schema 1 file of the core's frozen format fixture; password `fixture-password`, revision 7.
+        val file = directory.resolve("legacy.keyrook")
+        java.nio.file.Files.write(file, java.util.HexFormat.of().parseHex(
+            "4b4559524f4f4b000001004c0000010100000013000100000000000100000004" +
+            "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b" +
+            "e833639db333bb90708d90bf2938a8b1f8fe233c792159ea8410173a7edec06c34a5eb216675ec684d9f80e1f5fad0979741aa81cb8981d9ca8c9d657fb8a016c2cf5083616eb74f1000ff9eac3ab4ac10e5eb222b3d4738158133c76d50fe0fef503e825d1578599772e55a0c66e01bfb9dd642eb1f05b932f81728aeca814aefe2867f84a3"))
+        VaultController().use { controller ->
+            controller.unlock(file, "fixture-password".toCharArray(), null, false).close()
+            assertEquals(1, controller.pendingMigration())
+            assertNull(migrationCopyNotice(controller))
+            controller.addCustomer("Customer").close()
+            val notice = migrationCopyNotice(controller)
+            assertEquals(UiText.text("migration.copyKept", Vault.SCHEMA_VERSION, "legacy.keyrook.schema-v1-r7.keyrook.bak"), notice)
+            controller.addCustomer("Another").close()
+            assertNull(migrationCopyNotice(controller))
+            controller.lock()
+            assertNull(controller.takeMigrationCopy())
+        }
+    }
+
     @Test fun `trash and restore never move the change time backwards`() {
         VaultController().use { controller ->
             controller.unlock(directory.resolve("skew.keyrook"), "synthetic-master-passphrase".toCharArray(), null, true,

@@ -15,6 +15,7 @@ import app.keyrook.core.model.Vault
 import app.keyrook.core.model.pinEntries
 import app.keyrook.core.model.tagEntries
 import app.keyrook.core.model.trashEntries
+import app.keyrook.core.service.SessionState
 import app.keyrook.core.service.VaultSession
 import java.nio.file.Path
 
@@ -41,6 +42,7 @@ class VaultController(internal val session: VaultSession = VaultSession(),
                 val key = keyFile?.let(::readKeyFile)
                 try {
                     vaultPath = null
+                    migrationCopyReported = false
                     Secret(password).use { secret ->
                         Credentials(secret, key).use { credentials ->
                             if (create) Vault().use { session.create(path, it, credentials, parameters) }
@@ -277,8 +279,21 @@ class VaultController(internal val session: VaultSession = VaultSession(),
     /** The older schema version of the opened file that the next save upgrades, or null (see [VaultSession.pendingMigration]). */
     fun pendingMigration(): Int? = session.pendingMigration()
 
-    fun lock() { vaultPath = null; session.lock() }
-    override fun close() { vaultPath = null; session.close() }
+    private var migrationCopyReported = false
+
+    /**
+     * The file name of the copy of the old file that the first save after a migration kept ([VaultSession.migrationBackup]),
+     * returned only once per unlock; null before that save, afterwards and without a migration.
+     */
+    fun takeMigrationCopy(): String? {
+        if (migrationCopyReported || session.state == SessionState.LOCKED) return null
+        val name = session.migrationBackup() ?: return null
+        migrationCopyReported = true
+        return name
+    }
+
+    fun lock() { vaultPath = null; migrationCopyReported = false; session.lock() }
+    override fun close() { vaultPath = null; migrationCopyReported = false; session.close() }
 }
 
 /** Typed customer metadata; blank values are stored as unset (see [OrganizationMetadata]). */
