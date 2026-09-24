@@ -8,14 +8,15 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import app.keyrook.core.security.BreachCheck
 import app.keyrook.core.security.EntryHealth
 import java.awt.Desktop
 import java.net.URI
 
 /** The window's dialogs: vault warnings, about, worker questions and the question before quitting during work. */
 @Composable
-internal fun AppDialogs(state: AppState, warnings: List<EntryHealth>?, updates: UpdateChecks, mac: Boolean,
-                        onCloseAnswered: (quit: Boolean) -> Unit) {
+internal fun AppDialogs(state: AppState, warnings: List<EntryHealth>?, breached: Map<String, Long>, updates: UpdateChecks,
+                        mac: Boolean, onCloseAnswered: (quit: Boolean) -> Unit) {
     val dialogs = state.dialogs
     val vault by state::vault
     val busy by state::busy
@@ -32,7 +33,14 @@ internal fun AppDialogs(state: AppState, warnings: List<EntryHealth>?, updates: 
         selection = selection.jump(id)
     })
     val shownVault = vault
-    if (warningsOpen && shownVault != null) HealthDialog(shownVault, warnings, jump) { warningsOpen = false }
+    // The consent question replaces the warning list while it is open; the list returns with the progress afterwards.
+    val breaches = state.breaches
+    if (warningsOpen && shownVault != null && breaches.status !is BreachStatus.Consent) {
+        HealthDialog(shownVault, warnings, breached, breaches, onBreachCheck = {
+            breaches.prepare { state.controller.read(BreachCheck::plan) }
+        }, onSelect = jump) { warningsOpen = false }
+    }
+    BreachConsentDialog(breaches)
     if (about) AlertDialog(onDismissRequest = { about = false }, title = { Text("Keyrook") },
         text = {
             Column(Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {

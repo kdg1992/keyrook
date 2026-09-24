@@ -13,7 +13,12 @@ import java.time.LocalDate
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
-enum class HealthIssue { EXPIRED, EXPIRING_SOON, SHORT_OR_REPETITIVE_PASSWORD, REUSED_PASSWORD, OLD_PASSWORD, DUPLICATE_ENTRY }
+/**
+ * Reasons for a warning. [BREACHED_PASSWORD] is never reported by [VaultHealth]; it comes only from a [BreachCheck] the
+ * user started explicitly and lives in memory until the vault is locked.
+ */
+enum class HealthIssue { EXPIRED, EXPIRING_SOON, SHORT_OR_REPETITIVE_PASSWORD, REUSED_PASSWORD, OLD_PASSWORD, DUPLICATE_ENTRY,
+    BREACHED_PASSWORD }
 data class EntryHealth(val entryId: String, val issues: Set<HealthIssue>)
 
 /**

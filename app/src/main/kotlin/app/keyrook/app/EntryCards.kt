@@ -137,7 +137,7 @@ internal fun EntryCardView(entry: Entry, info: EntryCardInfo, isSelected: Boolea
                     style = MaterialTheme.typography.body2, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (info.expiresOn != null && info.expiry != null) ExpiryBadge(info.expiresOn, info.expiry)
                 if (markers.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    markers.forEach { WarningChip(healthIssueText(it), severe = false) }
+                    markers.forEach { WarningChip(healthIssueText(it), severe = severeIssue(it)) }
                 }
                 val tags = ReservedTags.visible(entry.tags)
                 if (tags.isNotEmpty()) Text(tags.joinToString(", "), style = MaterialTheme.typography.body2)

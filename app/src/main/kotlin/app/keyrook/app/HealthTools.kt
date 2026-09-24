@@ -20,22 +20,26 @@ internal fun healthIssueText(issue: HealthIssue): String = when (issue) {
     HealthIssue.REUSED_PASSWORD -> UiText.text("health.reused")
     HealthIssue.OLD_PASSWORD -> UiText.text("health.old")
     HealthIssue.DUPLICATE_ENTRY -> UiText.text("health.duplicate")
+    HealthIssue.BREACHED_PASSWORD -> UiText.text("health.breached")
 }
 
 internal fun warningSummaryText(counts: WarningCounts): String =
     UiText.text("health.summary", counts.entries, counts.expired, counts.expiringSoon, counts.weak, counts.reused,
-        counts.old, counts.duplicates)
+        counts.old, counts.duplicates, counts.breached)
 
 /**
- * The warning list. [findings] are the latest background results of core health checks (null while they run);
- * the dialog shows titles and reasons only. With [onSelect], each title selects its entry in the list.
+ * The warning list. [findings] are the latest background results of core health checks (null while they run) merged
+ * with the [breached] counts of a breach check; the dialog shows titles, reasons and counts only. With [onSelect], each
+ * title selects its entry in the list. [breaches] offers the optional breach check, which [onBreachCheck] prepares.
  */
 @Composable
-internal fun HealthDialog(vault: Vault, findings: List<EntryHealth>?, onSelect: ((String) -> Unit)?, onClose: () -> Unit) {
+internal fun HealthDialog(vault: Vault, findings: List<EntryHealth>?, breached: Map<String, Long>, breaches: BreachChecks,
+                          onBreachCheck: () -> Unit, onSelect: ((String) -> Unit)?, onClose: () -> Unit) {
     AlertDialog(onDismissRequest = onClose, title = { Text(UiText.text("health.title")) }, text = {
         val titles = remember(vault) { vault.entries.associate { it.id to it.title } }
         LazyColumn(Modifier.heightIn(max = 450.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item { Text(UiText.text("health.hint")) }
+            item { BreachCheckPanel(breaches, onBreachCheck) }
             if (findings == null) item { Text(UiText.text("health.checking")) }
             else {
                 item { Text(warningSummaryText(warningCounts(findings)), style = MaterialTheme.typography.subtitle2) }
@@ -46,7 +50,11 @@ internal fun HealthDialog(vault: Vault, findings: List<EntryHealth>?, onSelect: 
                         TextButton(enabled = onSelect != null, onClick = { onSelect?.invoke(finding.entryId) }) {
                             Text(titles[finding.entryId].orEmpty(), style = MaterialTheme.typography.subtitle1)
                         }
-                        Text(finding.issues.joinToString("; ") { healthIssueText(it) }, Modifier.padding(start = 8.dp))
+                        Text(finding.issues.joinToString("; ") { issue ->
+                            val count = breached[finding.entryId]
+                            if (issue == HealthIssue.BREACHED_PASSWORD && count != null) UiText.text("health.breachedCount", count)
+                            else healthIssueText(issue)
+                        }, Modifier.padding(start = 8.dp))
                     }
                 }
             }

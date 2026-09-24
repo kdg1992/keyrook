@@ -19,6 +19,8 @@ internal class AppState {
     val controller = VaultController()
     private val worker = Executors.newSingleThreadExecutor { task -> Thread(task, "vault-worker").apply { isDaemon = true } }
     val dialogs = DialogHost()
+    // Optional breach check results; memory only and discarded on lock (see BreachChecks).
+    val breaches = BreachChecks()
     var vault by mutableStateOf<Vault?>(null)
     var busy by mutableStateOf(false)
     var message by mutableStateOf("")
@@ -52,6 +54,7 @@ internal class AppState {
         if (confirmClose) { confirmClose = false; onCloseAnswered(false) }
         reveal = RevealState(); listView = ListView(); selection = EntrySelection(); organizer = false; warningsOpen = false
         recent = RecentEntries()
+        breaches.clear()
         vault?.close(); vault = null
         runCatching { SecretClipboard.clear() }
         busy = true
@@ -103,6 +106,7 @@ internal class AppState {
     fun dispose() {
         live.set(false)
         controller.sessionEpoch.invalidate()
+        breaches.clear()
         dialogs.close()
         runCatching { SecretClipboard.clear() }
         vault?.close()

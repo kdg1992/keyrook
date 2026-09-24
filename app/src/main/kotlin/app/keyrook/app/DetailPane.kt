@@ -80,7 +80,7 @@ internal fun EntryDetailPane(vault: Vault, entry: Entry?, issues: Set<HealthIssu
         if (info.expiresOn != null && info.expiry != null) ExpiryBadge(info.expiresOn, info.expiry)
         val markers = passwordMarkers(issues)
         if (markers.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            markers.forEach { WarningChip(healthIssueText(it), severe = false) }
+            markers.forEach { WarningChip(healthIssueText(it), severe = severeIssue(it)) }
         }
         val tags = ReservedTags.visible(entry.tags)
         if (tags.isNotEmpty()) Text(UiText.text("detail.tags", tags.joinToString(", ")))
