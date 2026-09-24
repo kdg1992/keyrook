@@ -6,11 +6,13 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -116,16 +118,8 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
         }
     }
     fun handleShortcut(event: KeyEvent, onlyLock: Boolean): Boolean {
-        val key = when (event.key) {
-            Key.L -> ShortcutKey.L
-            Key.N -> ShortcutKey.N
-            Key.F -> ShortcutKey.F
-            Key.S -> ShortcutKey.S
-            Key.Escape -> ShortcutKey.ESCAPE
-            else -> ShortcutKey.OTHER
-        }
-        val action = keyboardShortcut(key, event.type == KeyEventType.KeyDown, event.isCtrlPressed,
-            event.isMetaPressed, event.isAltPressed, event.isShiftPressed, mac,
+        // Entry-list shortcuts are resolved by the list itself; here focus is outside it.
+        val action = keyboardShortcut(event, mac,
             ShortcutContext(vault != null, busy, creating || editing != null, locking, about)) ?: return false
         if (onlyLock && action != ShortcutAction.LOCK) return false
         when (action) {
@@ -134,6 +128,7 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
             ShortcutAction.SEARCH -> shortcuts.search?.invoke() ?: return false
             ShortcutAction.SAVE -> shortcuts.save?.invoke() ?: return false
             ShortcutAction.CANCEL -> shortcuts.cancel?.invoke() ?: return false
+            else -> return false
         }
         return true
     }
@@ -232,7 +227,7 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
                         SwingUtilities.invokeLater { if (live.get()) message = UiText.text("settings.saveFailed") }
                     })
                     OrganizationTools(vault!!, controller, busy, ::operation)
-                    VaultList(vault!!, controller, busy, shortcuts, onCreate = { creating = true }, onEdit = { editing = it },
+                    VaultList(vault!!, controller, busy, shortcuts, mac, onCreate = { creating = true }, onEdit = { editing = it },
                         onDuplicate = { entry -> operation { controller.duplicate(entry.id) } },
                         onTrash = { id -> operation { controller.trash(id, false) } },
                         onRestore = { id -> operation { controller.trash(id, true) } },
@@ -242,7 +237,12 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
             }
         }
         if (about) AlertDialog(onDismissRequest = { about = false }, title = { Text("Keyrook") },
-            text = { Text(UiText.text("shell.aboutBody", System.getProperty("keyrook.version", "dev"))) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(UiText.text("shell.aboutBody", System.getProperty("keyrook.version", "dev")))
+                    ShortcutHelpTable(mac)
+                }
+            },
             confirmButton = { TextButton(onClick = { about = false }) { Text(UiText.text("shell.close")) } },
             dismissButton = { TextButton(onClick = {
                 runCatching { Desktop.getDesktop().browse(URI("https://github.com/kdg1992/keyrook")) }
@@ -305,7 +305,7 @@ private fun UnlockForm(busy: Boolean, remembered: AppSettings, generateKey: (Pat
 }
 
 @Composable
-private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, shortcuts: ShortcutActions,
+private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, shortcuts: ShortcutActions, mac: Boolean,
                       onCreate: () -> Unit, onEdit: (Entry) -> Unit,
                       onDuplicate: (Entry) -> Unit, onTrash: (String) -> Unit, onRestore: (String) -> Unit,
                       onPurge: (String) -> Unit, onEmptyTrash: () -> Unit) {
@@ -317,6 +317,9 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
     var includeHidden by remember { mutableStateOf(false) }
     val matches = searchResults(vault, controller, search, includeHidden)
     val searchFocus = remember { FocusRequester() }
+    val listFocus = remember { FocusRequester() }
+    var listFocused by remember { mutableStateOf(false) }
+    var help by remember { mutableStateOf(false) }
     var confirmation by remember { mutableStateOf<ListConfirmation?>(null) }
     var notice by remember { mutableStateOf("") }
     val trashCount = vault.entries.count { it.deletedAt != null }
@@ -326,13 +329,62 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         shortcuts.search = { searchFocus.requestFocus() }
         onDispose { shortcuts.newEntry = null; shortcuts.search = null }
     }
+    // The list takes the focus when shown and again after its dialogs close, so arrow keys work immediately.
+    val listIdle = confirmation == null && !help
+    LaunchedEffect(listIdle) { if (listIdle) runCatching { listFocus.requestFocus() } }
+    val today by produceState(java.time.LocalDate.now()) {
+        while (true) { kotlinx.coroutines.delay(60_000); value = java.time.LocalDate.now() }
+    }
+    val entries = activeFilters.select(vault, matches.orEmpty(), today)
+    var selectionState by remember { mutableStateOf(EntrySelection()) }
+    val selection = selectionState.update(ListQuery(search, activeFilters, includeHidden), matches?.let { entries.map { it.id } })
+    SideEffect { if (selectionState != selection) selectionState = selection }
+    val selectedEntry = entries.firstOrNull { it.id == selection.selectedId }
+    fun quickAction(entry: Entry, kind: QuickField) {
+        val field = entry.data.quickField(kind)?.takeIf { EntryQuickActions.available(it) }
+        notice = when {
+            field == null -> UiText.text("list.noQuickField")
+            kind == QuickField.URL ->
+                if (runCatching { EntryQuickActions.open(field) }.isSuccess) "" else UiText.text("list.openFailed")
+            runCatching { EntryQuickActions.copy(field) }.isSuccess -> UiText.text("list.copied", entry.data.quickLabel(field))
+            else -> UiText.text("list.copyFailed")
+        }
+    }
+    fun shortcutContext(focus: ShortcutFocus) = ShortcutContext(unlocked = true, busy = busy, editing = false,
+        modal = confirmation != null || help, focus = focus, selection = selectedEntry != null, trash = trash)
+    fun handleListKey(event: KeyEvent): Boolean {
+        val action = keyboardShortcut(event, mac, shortcutContext(ShortcutFocus.LIST)) ?: return false
+        when (action) {
+            ShortcutAction.SELECT_PREVIOUS -> selectionState = selection.previous()
+            ShortcutAction.SELECT_NEXT -> selectionState = selection.next()
+            ShortcutAction.SELECT_FIRST -> selectionState = selection.first()
+            ShortcutAction.SELECT_LAST -> selectionState = selection.last()
+            else -> {
+                val entry = selectedEntry ?: return false
+                when (action) {
+                    ShortcutAction.COPY_PASSWORD -> quickAction(entry, QuickField.SECRET)
+                    ShortcutAction.COPY_USERNAME -> quickAction(entry, QuickField.USERNAME)
+                    ShortcutAction.OPEN_URL -> quickAction(entry, QuickField.URL)
+                    ShortcutAction.EDIT_ENTRY -> onEdit(entry)
+                    ShortcutAction.TRASH_ENTRY -> confirmation = ListConfirmation.Trash(entry.id, entry.title)
+                    else -> return false
+                }
+            }
+        }
+        return true
+    }
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedTextField(search, { if (it.length <= 256) search = it }, label = { Text(UiText.text("shell.search")) }, modifier = Modifier.weight(1f).focusRequester(searchFocus), singleLine = true)
+        OutlinedTextField(search, { if (it.length <= 256) search = it }, label = { Text(UiText.text("shell.search")) },
+            modifier = Modifier.weight(1f).focusRequester(searchFocus).onPreviewKeyEvent { event ->
+                if (keyboardShortcut(event, mac, shortcutContext(ShortcutFocus.SEARCH)) != ShortcutAction.FOCUS_LIST) false
+                else { runCatching { listFocus.requestFocus() }.isSuccess }
+            }, singleLine = true)
         Button(onClick = onCreate, enabled = !busy && !trash) { Text(UiText.text("shell.newEntry")) }
         TextButton(onClick = { filters = activeFilters.copy(trash = !trash) }, enabled = !busy) { Text(if (trash) UiText.text("shell.active") else UiText.text("shell.trash")) }
         if (trash) TextButton(enabled = !busy && trashCount > 0, onClick = { confirmation = ListConfirmation.EmptyTrash(trashCount) }) {
             Text(UiText.text("list.emptyTrash"))
         }
+        TextButton(onClick = { help = true }) { Text(UiText.text("shortcuts.title")) }
     }
     Row {
         Checkbox(includeHidden, onCheckedChange = { includeHidden = it })
@@ -361,51 +413,38 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         }
         TextButton(onClick = { filters = EntryListFilters(); search = ""; includeHidden = false }) { Text(UiText.text("shell.reset")) }
     }
-    val today by produceState(java.time.LocalDate.now()) {
-        while (true) { kotlinx.coroutines.delay(60_000); value = java.time.LocalDate.now() }
-    }
-    val entries = activeFilters.select(vault, matches.orEmpty(), today)
     if (notice.isNotEmpty()) Text(notice)
     if (matches == null) Text(UiText.text("shell.searching"))
     else if (entries.isEmpty()) Text(UiText.text("shell.noEntries"))
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(entries, key = { it.id }) { entry ->
-            Card(Modifier.fillMaxWidth(), elevation = 2.dp) {
-                Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Column(Modifier.weight(1f)) {
-                        Text(entry.title, style = MaterialTheme.typography.h6)
-                        Text(entry.data.type().label)
-                        if (entry.tags.isNotEmpty()) Text(entry.tags.joinToString(", "))
-                        if (!trash) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            QuickField.entries.forEach { kind ->
-                                val field = entry.data.quickField(kind)
-                                val present = remember(field) { field != null && EntryQuickActions.available(field) }
-                                if (field != null && present) {
-                                    val label = entry.data.quickLabel(field)
-                                    TextButton(enabled = !busy, onClick = {
-                                        notice = if (kind == QuickField.URL) {
-                                            if (runCatching { EntryQuickActions.open(field) }.isSuccess) "" else UiText.text("list.openFailed")
-                                        } else if (runCatching { EntryQuickActions.copy(field) }.isSuccess) UiText.text("list.copied", label)
-                                        else UiText.text("list.copyFailed")
-                                    }) { Text(UiText.text(if (kind == QuickField.URL) "list.openField" else "list.copyField", label)) }
-                                }
-                            }
-                        }
-                    }
-                    if (!trash) TextButton(enabled = !busy, onClick = { onEdit(entry) }) { Text(UiText.text("shell.edit")) }
-                    if (!trash) TextButton(enabled = !busy, onClick = { onDuplicate(entry) }) { Text(UiText.text("shell.duplicate")) }
-                    if (trash) {
-                        TextButton(enabled = !busy, onClick = { onRestore(entry.id) }) { Text(UiText.text("shell.restore")) }
-                        TextButton(enabled = !busy, onClick = { confirmation = ListConfirmation.Purge(entry.id, entry.title) }) {
-                            Text(UiText.text("list.purge"), color = MaterialTheme.colors.error)
-                        }
-                    } else TextButton(enabled = !busy, onClick = { confirmation = ListConfirmation.Trash(entry.id, entry.title) }) {
-                        Text(UiText.text("list.moveToTrash"))
-                    }
-                }
-            }
+    val listState = rememberLazyListState()
+    val selectedIndex = entries.indexOfFirst { it.id == selection.selectedId }
+    LaunchedEffect(selectedIndex, selection.selectedId) {
+        if (selectedIndex < 0) return@LaunchedEffect
+        val layout = listState.layoutInfo
+        val shown = layout.visibleItemsInfo.firstOrNull { it.index == selectedIndex }
+        if (shown == null || shown.offset < layout.viewportStartOffset || shown.offset + shown.size > layout.viewportEndOffset) {
+            listState.scrollToItem(selectedIndex)
         }
     }
+    LazyColumn(Modifier.focusRequester(listFocus).onFocusChanged { listFocused = it.hasFocus }
+        .onKeyEvent { handleListKey(it) }.focusable(), state = listState, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(entries, key = { it.id }) { entry ->
+            val info = remember(entry.id, entry.modifiedAt, vault.id, vault.revision, today, UiText.locale) {
+                entryCardInfo(entry, vault, today)
+            }
+            EntryCardView(entry, info, isSelected = entry.id == selection.selectedId, listFocused = listFocused,
+                trash = trash, busy = busy,
+                onClick = { selectionState = selectionState.select(entry.id); runCatching { listFocus.requestFocus() } },
+                onFocusInside = { selectionState = selectionState.select(entry.id) },
+                onQuick = { kind -> quickAction(entry, kind) },
+                onEdit = { onEdit(entry) }, onDuplicate = { onDuplicate(entry) }, onRestore = { onRestore(entry.id) },
+                onPurge = { confirmation = ListConfirmation.Purge(entry.id, entry.title) },
+                onTrash = { confirmation = ListConfirmation.Trash(entry.id, entry.title) })
+        }
+    }
+    if (help) AlertDialog(onDismissRequest = { help = false }, title = { Text(UiText.text("shortcuts.title")) },
+        text = { ShortcutHelpTable(mac) },
+        confirmButton = { TextButton(onClick = { help = false }) { Text(UiText.text("shell.close")) } })
     fun dismiss() { confirmation = null }
     when (val pending = confirmation) {
         is ListConfirmation.Trash -> ConfirmationDialog(UiText.text("list.trashTitle"), UiText.text("list.trashBody", pending.title),

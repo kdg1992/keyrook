@@ -4,18 +4,57 @@ Run `./gradlew :app:run` with JDK 25. The interface is available in German and E
 
 ## Keyboard navigation
 
-Use **Ctrl** on Windows/Linux or **Command (⌘)** on macOS:
+Use **Ctrl** on Windows/Linux or **Command (⌘)** on macOS. The same list is
+available in the application under **Tastenkürzel** next to the search field and
+in the **Info** dialog.
 
 | Shortcut | Action |
 | --- | --- |
 | Ctrl/⌘ + L | Lock immediately, including while vault work is running. |
 | Ctrl/⌘ + N | Create an entry from the active entry list; unavailable in the trash, while editing or during work. |
 | Ctrl/⌘ + F | Focus full-text search from the entry list. |
+| ↓ (in the search field) | Move the focus from the search field into the entry list. |
+| ↑ / ↓ | Select the previous/next entry (stops at the first and last entry). |
+| Home / End (Pos1 / Ende) | Select the first/last entry. |
+| Enter | Open the selected entry in the editor. |
+| Ctrl/⌘ + E | Edit the selected entry. |
+| Ctrl/⌘ + C | Copy the selected entry's password. |
+| Ctrl/⌘ + B | Copy the selected entry's username. |
+| Ctrl/⌘ + U | Open the selected entry's URL. |
+| Delete (Entf); on macOS also ⌫ | Move the selected entry to the trash after the usual **In den Papierkorb verschieben?** confirmation. |
 | Ctrl/⌘ + S | Validate and save the current editor through the same action as **Speichern**. |
 | Escape | Request cancellation in an idle editor. Unsaved changes require **Verwerfen** confirmation. |
 | Tab / Shift+Tab | Move between focusable controls. |
 
 Editors initially focus the title. Repeating Escape in the discard confirmation closes that confirmation and preserves the draft. Save/cancel shortcuts are unavailable during generation or storage operations; new/search shortcuts never replace an open editor. Security locking still discards unsaved input immediately, as described below.
+
+### Entry selection
+
+The entry list always has a selected entry while it shows any: it is marked by a
+colored border, a tint and a raised card, and is reported as selected to
+accessibility tools. The border is thicker while the list has keyboard focus.
+Clicking a card or moving the focus into one of its buttons selects it. The list
+receives the focus when it is shown, so ↑/↓ work right after unlocking or
+leaving the editor.
+
+Typing a search or changing a filter selects the first result. When the vault
+changes under the same search (for example after an entry was moved to the
+trash), the selection stays on its entry or, if it left the list, moves to the
+next remaining entry, otherwise to the previous one. The list scrolls to keep
+the selection visible. A typical flow: Ctrl/⌘ + F, type part of the title,
+↓, then Ctrl/⌘ + C.
+
+**Text-field rule:** entry shortcuts (arrows, Home/End, Enter, Delete/⌫ and
+Ctrl/⌘ + C/B/U/E) act only while the keyboard focus is in the entry list, that
+is on the list itself or on a button of one of its cards. While any text field
+has the focus, including the search field, every key keeps its normal editing
+meaning; Ctrl/⌘ + C copies selected text as usual. The only exception is ↓ in
+the single-line search field, which has no editing meaning there and moves into
+the list. With the focus on a card button, Enter activates that button. Entry
+shortcuts are ignored while work is running, a dialog is open or an editor is
+shown, and edit/copy/open/trash are not available in the trash view (only
+selection moves are). Global shortcuts (Ctrl/⌘ + L/N/F/S, Escape) behave as
+before, regardless of the list focus.
 
 ## Vaults and entries
 
@@ -129,8 +168,19 @@ for custom records) and open the URL of web and hosting-panel records (the first
 URL field for custom records). Buttons appear only when the field has a value.
 Copies use the same clipboard handling as the editor, including ownership
 checks and the configured expiry. Links pass the same validation as in the
-editor before the system browser receives them. Values are never shown in the
-list.
+editor before the system browser receives them. Secret values are never shown in the
+list. The copy and open shortcuts above use exactly these actions; when the
+selected entry has no such field, a notice says so and nothing is copied.
+
+Cards help to tell same-named entries apart: besides title, type and tags they
+show the customer (direct or inherited from the project) and project, the
+username, and the address where the type has one (URL for web and hosting-panel
+records, host for transfer and server records, the first IMAP/POP3/SMTP host for
+email, the domain name, and the first URL field of custom records). Only fields
+that are not masked are shown; a masked username or host stays hidden in the
+list. Long values are shortened. The expiry date is shown with a marker: expired
+dates, and dates from today through the next 30 days (the same window as the
+vault health check), are highlighted.
 
 ## Backups and encrypted export
 

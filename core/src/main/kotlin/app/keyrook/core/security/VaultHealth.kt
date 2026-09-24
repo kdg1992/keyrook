@@ -15,7 +15,7 @@ data class EntryHealth(val entryId: String, val issues: Set<HealthIssue>)
 
 /** Local heuristics, not a strength certificate. Results contain IDs and reasons, never secret values. */
 class VaultHealth(private val clock: Clock = Clock.systemDefaultZone()) {
-    fun inspect(vault: Vault, warningDays: Long = 30): List<EntryHealth> {
+    fun inspect(vault: Vault, warningDays: Long = EXPIRY_WARNING_DAYS): List<EntryHealth> {
         require(warningDays in 0..365)
         val today = LocalDate.now(clock)
         val issues = linkedMapOf<String, MutableSet<HealthIssue>>()
@@ -57,6 +57,11 @@ class VaultHealth(private val clock: Clock = Clock.systemDefaultZone()) {
         is EntryData.Ssh -> listOf(data.passphrase.value)
         is EntryData.Custom -> data.values.filterKeys { it.lowercase() in setOf("password", "passwort", "passphrase") }.values.map { it.value }
         is EntryData.Domain -> emptyList()
+    }
+
+    companion object {
+        /** Days before an expiry date (inclusive) that count as [HealthIssue.EXPIRING_SOON] by default. */
+        const val EXPIRY_WARNING_DAYS = 30L
     }
 
     private class Digest(private val bytes: ByteArray) {
