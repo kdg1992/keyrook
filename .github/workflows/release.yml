@@ -246,7 +246,14 @@ jobs:
             echo "Removed $root"
           }
 
-          echo "::group::Fresh install of $NEW_INSTALLER"
+          menu_entry=/usr/share/applications/keyrook-Keyrook.desktop
+
+          # The runner has no XDG desktop-directories directory, like servers, containers and WSL, where
+          # xdg-desktop-menu cannot register menu entries. Installation and removal must still succeed.
+          echo "::group::Fresh install of $NEW_INSTALLER without a desktop menu"
+          if [ -e /usr/share/desktop-directories ] || [ -e /usr/local/share/desktop-directories ]; then
+            echo "::warning::Runner has a desktop-directories directory; install without a menu is not exercised"
+          fi
           install_deb "$NEW_INSTALLER"
           expect_version "$NEW_VERSION"
           echo "Launcher: $(launcher)"
@@ -254,14 +261,28 @@ jobs:
           remove_and_verify
           echo "::endgroup::"
 
+          # A desktop system provides the directory; the menu entry must then be registered and removed.
+          sudo mkdir -p /usr/share/desktop-directories
+          echo "::group::Fresh install of $NEW_INSTALLER with a desktop menu"
+          install_deb "$NEW_INSTALLER"
+          expect_version "$NEW_VERSION"
+          [ -f "$menu_entry" ] || { echo "Menu entry was not registered"; exit 1; }
+          node scripts/installer-test.mjs self-test "$(launcher)"
+          remove_and_verify
+          [ ! -e "$menu_entry" ] || { echo "Menu entry remains"; exit 1; }
+          echo "::endgroup::"
+
+          # Runs with the desktop menu directory: packages up to 0.5.0 fail to configure without it.
           if [ -n "$OLD_INSTALLER" ]; then
             echo "::group::Upgrade from $OLD_VERSION to $NEW_VERSION"
             install_deb "$OLD_INSTALLER"
             expect_version "$OLD_VERSION"
             install_deb "$NEW_INSTALLER"
             expect_version "$NEW_VERSION"
+            [ -f "$menu_entry" ] || { echo "Menu entry missing after upgrade"; exit 1; }
             node scripts/installer-test.mjs self-test "$(launcher)"
             remove_and_verify
+            [ ! -e "$menu_entry" ] || { echo "Menu entry remains"; exit 1; }
             echo "::endgroup::"
           fi
 
@@ -319,8 +340,10 @@ jobs:
           if [ "$MODE" = fresh ]; then
             echo "Declared requirements:"
             rpm -qpR "/work/$NEW_INSTALLER"
+            ls -ld /usr/share/desktop-directories || echo "No desktop-directories directory in the image"
             dnf install -y "/work/$NEW_INSTALLER"
             expect_version "$NEW_VERSION"
+            ls -l /usr/share/applications/keyrook-Keyrook.desktop || echo "No menu entry registered"
           else
             dnf install -y "/work/$OLD_INSTALLER"
             expect_version "$OLD_VERSION"

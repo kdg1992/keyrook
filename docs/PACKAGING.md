@@ -165,6 +165,29 @@ This verifies the application image; it does not replace installation, upgrade,
 uninstall or operating-system session-lock tests. The diagnostic is covered by
 ordinary source tests and runs from each packaged launcher before publication.
 
+### Linux desktop menu registration
+
+jpackage's DEB and RPM scripts register the menu entry with `xdg-desktop-menu`.
+xdg-utils refuses with exit status 3 ("No writable system menu directory found")
+when neither `/usr/share/desktop-directories` nor
+`/usr/local/share/desktop-directories` exists, which is common on servers,
+containers, WSL and minimal window-manager installations. The DEB scripts run
+under `set -e`, so packages up to 0.5.0 stay half-configured on such systems and
+cannot be removed with `apt-get remove`. Compose passes its own jpackage resource
+directory, so the Linux DEB task rebuilds the finished package's control archive
+with the `postinst` registration and `prerm` removal made non-fatal: they print
+`keyrook: desktop menu entry not updated` instead. The payload member is copied
+unchanged and the build fails if jpackage's script lines change. Without the
+directory, the application is still installed and runs from
+`/opt/keyrook/bin/Keyrook`, but has no menu entry.
+
+The RPM is not rewritten. RPM treats a failing `%post` as a warning, but its
+`%preun` ends with the same menu removal, so on a system without the directory
+`dnf remove keyrook` can fail; `rpm -e --nopreun keyrook` removes it there.
+The Fedora installer test logs whether its image has the directory and whether
+the menu entry was registered; RPM installation without the directory is not
+tested separately.
+
 ### Installer tests
 
 The `installer-tests` job runs after all packages are built, on the same three
@@ -174,7 +197,7 @@ run's checksum manifest, and then, per format:
 
 | Format | Where | Fresh install | Upgrade | Removal |
 | --- | --- | --- | --- | --- |
-| DEB | Ubuntu runner | `apt-get install ./…deb`; `dpkg-query` shows one installed version | old DEB, then new DEB over it | `apt-get remove keyrook`; package no longer installed, install directory gone |
+| DEB | Ubuntu runner, first without and then with `/usr/share/desktop-directories` | `apt-get install ./…deb`; `dpkg-query` shows one installed version; with the directory, the menu entry exists | old DEB, then new DEB over it, with the directory | `apt-get remove keyrook`; package no longer installed, install directory and menu entry gone |
 | RPM | `fedora:44` container, pinned by digest, new container per scenario | `dnf install /…rpm`; `rpm -q` shows exactly one version | old RPM, then new RPM over it | `dnf remove keyrook`; package gone, install directory gone |
 | MSI | Windows runner account | `msiexec /i … /qn`; exactly one `Keyrook` uninstall entry with the new version | old MSI, then new MSI (same upgrade code, major upgrade) | `msiexec /x … /qn`; entry gone, launcher gone, no files left in the install directory |
 | DMG | macOS runner | attach read-only with `-nobrowse`, copy `Keyrook.app` into a temporary Applications directory, compare with the image | old bundle replaced completely by the new one, as Finder's Replace does | bundle deleted |
