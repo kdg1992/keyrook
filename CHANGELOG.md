@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.5.0](https://github.com/kdg1992/keyrook/compare/v0.4.0...v0.5.0) (2026-09-24)
+
+
+### Features
+
+* **desktop:** add keyboard navigation, copy shortcuts and richer entry cards ([#26](https://github.com/kdg1992/keyrook/issues/26)) ([7806e4b](https://github.com/kdg1992/keyrook/commit/7806e4bac567d58041ebd77d70cc7b257b3945e0))
+* **desktop:** add list/detail layout with read-only entry details ([#30](https://github.com/kdg1992/keyrook/issues/30)) ([be011bf](https://github.com/kdg1992/keyrook/commit/be011bfb429a051b1a1f45a3ac72715d54a37fe3))
+* **editor:** validate inputs per field and filter file dialogs ([#25](https://github.com/kdg1992/keyrook/issues/25)) ([8a8f05a](https://github.com/kdg1992/keyrook/commit/8a8f05a8e445dc7939926ab0a5524bab05e70691))
+* **security:** make window focus locking configurable ([#24](https://github.com/kdg1992/keyrook/issues/24)) ([67c90ca](https://github.com/kdg1992/keyrook/commit/67c90ca992118c3e84e93f412d4fdca00c2eb994))
+* **update:** add opt-in update check ([#29](https://github.com/kdg1992/keyrook/issues/29)) ([89e3c27](https://github.com/kdg1992/keyrook/commit/89e3c27b3a68a28c7a66708107d958566ce8a7f0))
+
+
+### Bug Fixes
+
+* **security:** address review findings in integrity checks and remembered backups ([#27](https://github.com/kdg1992/keyrook/issues/27)) ([f813f64](https://github.com/kdg1992/keyrook/commit/f813f6403c314136a23620b535e45289da35aa05))
+
 ## [0.4.0](https://github.com/kdg1992/keyrook/compare/v0.3.3...v0.4.0) (2026-09-24)
 
 
