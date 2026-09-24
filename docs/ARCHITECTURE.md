@@ -42,6 +42,13 @@ screens call the session directly through `controller.session` (backups in
 password change in `DataTools.kt`). Encrypted export in `DataTools.kt` uses a
 separate `VaultStore` to create a new file at revision zero.
 
+The main window is split into `Main.kt` (entry point and window setup),
+`KeyrookApp.kt` (header, settings row and screen selection), `AppState.kt`
+(window state, the vault worker, `operation`, `lockNow` and disposal),
+`UnlockScreen.kt` (open and create form), `Workspace.kt` (toolbar, entry list
+and detail pane), `EntryEditorScreen.kt` (entry editor) and `AppDialogs.kt`
+(warnings, about, worker dialogs and the question before quitting).
+
 ## Data flow
 
 **Open.** `VaultController.unlock` wraps the password in a `Secret` and the
@@ -65,7 +72,7 @@ success does the session adopt the new document and stamp. On failure it keeps
 the previous document and enters `ERROR` (`SessionState`).
 
 **Lock.** `VaultSession.lock` closes the document and credentials and clears
-path, stamp and backup configuration. In the UI, `lockNow` in `Main.kt`
+path, stamp and backup configuration. In the UI, `lockNow` in `AppState.kt`
 invalidates the `SessionEpoch`, cancels the dialog host and disposes remaining dialogs, closes the presented
 snapshot, clears the owned clipboard and queues `controller.lock()` on the
 vault worker. Triggers are the lock shortcut, `DesktopLockMonitor.kt`
@@ -86,7 +93,7 @@ vault at revision zero through `VaultStore`; it never overwrites the open vault.
 Core operations are synchronous. `VaultSession` methods are `@Synchronized`;
 `Secret` and `Credentials` synchronize their own state. The desktop app runs
 all session work on one daemon thread, `vault-worker`, created in
-`KeyrookApp` (`Main.kt`), so Argon2 and file I/O never run on the event thread.
+`AppState` (`AppState.kt`), so Argon2 and file I/O never run on the event thread.
 `operation { ... }` captures the current `SessionEpoch` token; results are
 delivered on the Swing thread only if the token is still current, otherwise the
 returned snapshot is closed (`SessionSecurity.kt`). `OperationGuard.kt` lets
@@ -98,7 +105,7 @@ it in a Compose dialog (`ComposeDialogs.kt`); locking cancels every request.
 Other threads never hold the session: `vault-search` (`SearchResults.kt`) takes
 its own snapshot and closes it, `clipboard-expiry` (`SecretClipboard.kt`) only
 clears the clipboard, and short-lived `ssh-key-worker` and `passphrase-worker`
-threads (`Main.kt`, `GeneratorTools.kt`) generate material and hand it to the
+threads (`EntryEditorScreen.kt`, `GeneratorTools.kt`) generate material and hand it to the
 editor on the Swing thread; it is persisted only when the user saves, through
 the vault worker.
 
@@ -110,7 +117,7 @@ the vault worker.
 | Derived AES key | Local variable in `VaultCodec` | `key.fill(0)` after each encrypt/decrypt |
 | Serialized plaintext JSON | `VaultCodec` | `plaintext.fill(0)` in `finally` |
 | Field values and notes | `Secret` inside `Vault` | `Vault.close()`; every snapshot is closed by its holder |
-| Presented snapshot | `vault` state in `Main.kt` | Closed on replacement, lock and window disposal |
+| Presented snapshot | `vault` state in `AppState.kt` | Closed on replacement, lock and window disposal |
 | Clipboard copies | `ClipboardGuard` | Expiry timer, lock, ownership loss |
 
 Immutable strings created by JSON serialization, Compose text fields and
