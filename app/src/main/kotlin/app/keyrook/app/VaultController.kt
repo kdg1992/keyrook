@@ -14,6 +14,9 @@ import java.nio.file.Path
 class VaultController(internal val session: VaultSession = VaultSession(),
                       private val backoff: UnlockBackoff = UnlockBackoff()) : AutoCloseable {
     internal val sessionEpoch = SessionEpoch()
+    /** Normalized path of the unlocked vault file; keys remembered per-vault settings. */
+    internal var vaultPath: Path? = null
+        private set
     fun unlockDelayMillis(): Long = backoff.remainingMillis()
     fun unlock(path: Path, password: CharArray, keyFile: Path?, create: Boolean,
                parameters: KdfParameters = KdfParameters()): Vault {
@@ -27,6 +30,7 @@ class VaultController(internal val session: VaultSession = VaultSession(),
                     }
                 }
                 try {
+                    vaultPath = null
                     Secret(password).use { secret ->
                         Credentials(secret, key).use { credentials ->
                             if (create) Vault().use { session.create(path, it, credentials, parameters) }
@@ -34,7 +38,10 @@ class VaultController(internal val session: VaultSession = VaultSession(),
                         }
                     }
                 } finally { key?.fill(0) }
-                return session.snapshot().also { backoff.succeeded() }
+                return session.snapshot().also {
+                    backoff.succeeded()
+                    vaultPath = path.toAbsolutePath().normalize()
+                }
             } catch (failure: Exception) {
                 backoff.failed()
                 throw failure
@@ -158,6 +165,6 @@ class VaultController(internal val session: VaultSession = VaultSession(),
         return session.snapshot()
     }
 
-    fun lock() = session.lock()
-    override fun close() = session.close()
+    fun lock() { vaultPath = null; session.lock() }
+    override fun close() { vaultPath = null; session.close() }
 }

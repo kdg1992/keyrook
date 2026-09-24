@@ -44,20 +44,21 @@ private fun chooseFile(save: Boolean): Path? {
 }
 
 @Composable
-fun KeyrookApp(window: java.awt.Window? = null) {
+internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore = remember { SettingsStore.platform() }) {
     val controller = remember { VaultController() }
     val worker = remember { Executors.newSingleThreadExecutor { task -> Thread(task, "vault-worker").apply { isDaemon = true } } }
     var vault by remember { mutableStateOf<Vault?>(null) }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
-    var dark by remember { mutableStateOf(false) }
+    var preferences by remember { mutableStateOf(settings.current()) }
+    val systemDark = isSystemInDarkTheme()
+    val dark = when (preferences.theme) { ThemeMode.SYSTEM -> systemDark; ThemeMode.LIGHT -> false; ThemeMode.DARK -> true }
     var about by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Entry?>(null) }
     var creating by remember { mutableStateOf(false) }
     var locking by remember { mutableStateOf(false) }
-    var settings by remember { mutableStateOf(false) }
-    var inactivityMinutes by remember { mutableStateOf(5) }
-    var clipboardSeconds by remember { mutableStateOf(20L) }
+    var showSettings by remember { mutableStateOf(false) }
+    remember { runCatching { SecretClipboard.configure(settings.current().clipboardSeconds) } }
     var unlockDelay by remember { mutableStateOf(0L) }
     val inactivity = remember { InactivityDeadline() }
     val live = remember { java.util.concurrent.atomic.AtomicBoolean(true) }
@@ -66,12 +67,17 @@ fun KeyrookApp(window: java.awt.Window? = null) {
     LaunchedEffect(vault?.id) { rootFocus.requestFocus() }
     val mac = remember { System.getProperty("os.name").startsWith("Mac", ignoreCase = true) }
     val shortcutPrefix = if (mac) "⌘" else "Strg+"
+    fun updatePreferences(change: (AppSettings) -> AppSettings) {
+        val saved = settings.update(change)
+        preferences = settings.current()
+        if (!saved) message = UiText.text("settings.saveFailed")
+    }
     fun lockNow() {
         if (locking || (vault == null && !busy)) return
         locking = true
         val token = controller.sessionEpoch.invalidate()
         java.awt.Window.getWindows().filterIsInstance<java.awt.Dialog>().filter { it.isVisible }.forEach { it.dispose() }
-        editing = null; creating = false; about = false; settings = false
+        editing = null; creating = false; about = false; showSettings = false
         vault?.close(); vault = null
         runCatching { SecretClipboard.clear() }
         busy = true
@@ -136,7 +142,7 @@ fun KeyrookApp(window: java.awt.Window? = null) {
             context = { ShortcutContext(vault != null, busy, creating || editing != null, locking, about) },
             lock = { latestLock() })
         val monitor = if (window == null) null else DesktopLockMonitor(
-            active = { vault != null || (busy && !locking) }, timeoutMinutes = { inactivityMinutes },
+            active = { vault != null || (busy && !locking) }, timeoutMinutes = { preferences.inactivityMinutes },
             lock = { latestLock() }, deadline = inactivity)
         val countdown = javax.swing.Timer(250) { unlockDelay = controller.unlockDelayMillis() }.apply { start() }
         onDispose { lockKeys?.close(); monitor?.close(); countdown.stop() }
@@ -157,18 +163,24 @@ fun KeyrookApp(window: java.awt.Window? = null) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Keyrook", style = MaterialTheme.typography.h4, modifier = Modifier.weight(1f))
-                    TextButton(onClick = { dark = !dark }) { Text(if (dark) UiText.text("shell.light") else UiText.text("shell.dark")) }
+                    TextButton(onClick = { updatePreferences { it.copy(theme = if (dark) ThemeMode.LIGHT else ThemeMode.DARK) } }) { Text(if (dark) UiText.text("shell.light") else UiText.text("shell.dark")) }
                     TextButton(onClick = { about = true }) { Text(UiText.text("shell.about")) }
-                    TextButton(onClick = { settings = !settings }) { Text(UiText.text("shell.security")) }
+                    TextButton(onClick = { showSettings = !showSettings }) { Text(UiText.text("shell.security")) }
                     if (vault != null || (busy && !locking)) Button(onClick = ::lockNow) { Text(UiText.text("shell.lock", shortcutPrefix)) }
                 }
-                if (settings) {
+                if (showSettings) {
                     Row {
-                        Choice(UiText.text("shell.lockMinutes"), inactivityMinutes.toString(), listOf(1, 2, 5, 10, 15, 30).map { it.toString() to it.toString() }, nullable = false) {
-                            it?.toInt()?.let { value -> inactivityMinutes = value }
+                        Choice(UiText.text("shell.theme"), preferences.theme.name, ThemeMode.entries.map { it.name to UiText.text("shell.theme.${it.name.lowercase()}") }, nullable = false) {
+                            it?.let { value -> updatePreferences { current -> current.copy(theme = ThemeMode.valueOf(value)) } }
                         }
-                        Choice(UiText.text("shell.clipboardSeconds"), clipboardSeconds.toString(), listOf(5L, 10L, 20L, 30L, 60L, 120L).map { it.toString() to it.toString() }, nullable = false) {
-                            it?.toLong()?.let { value -> clipboardSeconds = value; runCatching { SecretClipboard.configure(value) } }
+                        Choice(UiText.text("shell.lockMinutes"), preferences.inactivityMinutes.toString(), LOCK_MINUTE_CHOICES.map { it.toString() to it.toString() }, nullable = false) {
+                            it?.toInt()?.let { value -> updatePreferences { current -> current.copy(inactivityMinutes = value) } }
+                        }
+                        Choice(UiText.text("shell.clipboardSeconds"), preferences.clipboardSeconds.toString(), CLIPBOARD_SECOND_CHOICES.map { it.toString() to it.toString() }, nullable = false) {
+                            it?.toLong()?.let { value ->
+                                runCatching { SecretClipboard.configure(value) }
+                                updatePreferences { current -> current.copy(clipboardSeconds = value) }
+                            }
                         }
                     }
                     Text(UiText.text("shell.settingsHint"))
@@ -177,10 +189,18 @@ fun KeyrookApp(window: java.awt.Window? = null) {
                 if (message.isNotEmpty()) Text(message, color = MaterialTheme.colors.error)
                 if (vault == null) {
                     if (unlockDelay > 0) Text(UiText.text("shell.delay", (unlockDelay + 999) / 1000))
-                    UnlockForm(busy || unlockDelay > 0, generateKey = { target, done ->
+                    UnlockForm(busy || unlockDelay > 0, settings.current(), generateKey = { target, done ->
                         operation { generateKeyFile(target); credentialOnEdt(done); null }
                     }) { path, password, key, create, parameters ->
-                        operation { controller.unlock(path, password, key, create, parameters) }
+                        operation {
+                            controller.unlock(path, password, key, create, parameters).also {
+                                rememberUnlockedPaths(settings, path, key)
+                                val token = controller.sessionEpoch.capture()
+                                if (!restoreRememberedBackups(controller, settings)) SwingUtilities.invokeLater {
+                                    if (live.get() && controller.sessionEpoch.accepts(token)) message = UiText.text("settings.backupRestoreFailed")
+                                }
+                            }
+                        }
                     }
                 } else if (creating || editing != null) {
                     Editor(vault!!, editing, busy, shortcuts, onCancel = { editing = null; creating = false }) { entry ->
@@ -188,7 +208,7 @@ fun KeyrookApp(window: java.awt.Window? = null) {
                     }
                 } else {
                     HealthTools(vault!!, controller, busy, ::operation)
-                    DataTools(controller, busy, ::operation)
+                    DataTools(controller, settings, busy, ::operation)
                     OrganizationTools(vault!!, controller, busy, ::operation)
                     VaultList(vault!!, controller, busy, shortcuts, onCreate = { creating = true }, onEdit = { editing = it },
                         onDuplicate = { entry -> operation { controller.duplicate(entry.id) } },
@@ -209,10 +229,10 @@ fun KeyrookApp(window: java.awt.Window? = null) {
 }
 
 @Composable
-private fun UnlockForm(busy: Boolean, generateKey: (Path, () -> Unit) -> Unit,
+private fun UnlockForm(busy: Boolean, remembered: AppSettings, generateKey: (Path, () -> Unit) -> Unit,
                        onOpen: (Path, CharArray, Path?, Boolean, KdfParameters) -> Unit) {
-    var path by remember { mutableStateOf("") }
-    var key by remember { mutableStateOf("") }
+    var path by remember { mutableStateOf(remembered.lastVaultPath?.toString().orEmpty()) }
+    var key by remember { mutableStateOf(remembered.lastKeyFilePath?.toString().orEmpty()) }
     var password by remember { mutableStateOf("") }
     var confirmation by remember { mutableStateOf("") }
     var create by remember { mutableStateOf(false) }

@@ -16,8 +16,12 @@ internal fun parseBackupPolicy(latest: String, daily: String): BackupPolicy? {
     return try { BackupPolicy(versions, days) } catch (_: IllegalArgumentException) { null }
 }
 
-/** A null selection represents cancellation and must not replace a previous configuration. */
-internal fun applyBackupConfiguration(controller: VaultController, selection: BackupConfiguration?): Boolean {
+/**
+ * A null selection represents cancellation and must not replace a previous configuration.
+ * An accepted selection is remembered for the open vault file when settings are provided.
+ */
+internal fun applyBackupConfiguration(controller: VaultController, selection: BackupConfiguration?,
+                                      settings: SettingsStore? = null): Boolean {
     if (selection == null) return false
     ensureOperationCurrent()
     val folder = selection.folder.toAbsolutePath().normalize()
@@ -29,14 +33,31 @@ internal fun applyBackupConfiguration(controller: VaultController, selection: Ba
     require(Files.isDirectory(folder, LinkOption.NOFOLLOW_LINKS)) { "Backup folder must exist" }
     ensureOperationCurrent()
     controller.session.configureBackups(BackupService(folder, selection.policy))
+    val vault = controller.vaultPath
+    if (settings != null && vault != null) settings.update { it.withBackup(vault, StoredBackup(folder, selection.policy, true)) }
     return true
 }
 
-internal fun disableBackups(controller: VaultController, confirmed: Boolean): Boolean {
+/** Keeps the remembered folder and retention but stops restoring them for this vault file. */
+internal fun disableBackups(controller: VaultController, confirmed: Boolean, settings: SettingsStore? = null): Boolean {
     if (!confirmed) return false
     ensureOperationCurrent()
     controller.session.configureBackups(null)
+    val vault = controller.vaultPath
+    val stored = vault?.let { settings?.current()?.backupFor(it) }
+    if (settings != null && vault != null && stored != null) settings.update { it.withBackup(vault, stored.copy(enabled = false)) }
     return true
+}
+
+/**
+ * Reapplies the remembered backup configuration of the unlocked vault file with the same checks as a manual
+ * selection. Returns false when a remembered folder is no longer acceptable; the vault stays unlocked.
+ */
+internal fun restoreRememberedBackups(controller: VaultController, settings: SettingsStore): Boolean {
+    val vault = controller.vaultPath ?: return true
+    val stored = settings.current().backupFor(vault)?.takeIf { it.enabled } ?: return true
+    return try { applyBackupConfiguration(controller, BackupConfiguration(stored.folder, stored.policy)) }
+    catch (_: Exception) { false }
 }
 
 internal fun createManualBackup(controller: VaultController): Int {

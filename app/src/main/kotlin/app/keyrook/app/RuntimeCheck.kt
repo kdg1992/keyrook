@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package app.keyrook.app
 
+import androidx.compose.runtime.remember
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.ImageComposeScene
 import app.keyrook.core.crypto.Credentials
@@ -18,7 +19,7 @@ import javax.swing.SwingUtilities
 
 internal const val RUNTIME_CHECK_SUCCESS = "Keyrook runtime check passed\n"
 
-/** Explicit packaging diagnostic: synthetic in-memory data, no user vault or network access. */
+/** Explicit packaging diagnostic: synthetic in-memory data, no user vault, settings file or network access. */
 internal fun runRuntimeCheck(args: Array<String>): Int {
     if (args.size != 2 || args[0] != "--self-test") return 2
     return try {
@@ -55,7 +56,7 @@ internal fun verifyRuntime() {
         }
     }
     SwingUtilities.invokeAndWait {
-        val scene = ImageComposeScene(width = 1000, height = 800, content = { KeyrookApp() })
+        val scene = ImageComposeScene(width = 1000, height = 800, content = { KeyrookApp(settings = remember { SettingsStore(null) }) })
         try {
             scene.render(0).close()
             scene.render(100_000_000).use { image ->
