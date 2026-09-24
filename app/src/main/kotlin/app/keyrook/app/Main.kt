@@ -56,6 +56,7 @@ private fun chooseFile(save: Boolean): Path? =
 internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore = remember { SettingsStore.platform() }) {
     val controller = remember { VaultController() }
     val worker = remember { Executors.newSingleThreadExecutor { task -> Thread(task, "vault-worker").apply { isDaemon = true } } }
+    val dialogs = remember { DialogHost() }
     var vault by remember { mutableStateOf<Vault?>(null) }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
@@ -97,6 +98,8 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
         if (locking || (vault == null && !busy)) return
         locking = true
         val token = controller.sessionEpoch.invalidate()
+        // After invalidating: a worker's dialog request is either canceled here or refused by its guard.
+        dialogs.cancelAll()
         java.awt.Window.getWindows().filterIsInstance<java.awt.Dialog>().filter { it.isVisible }.forEach { it.dispose() }
         editing = null; creating = false; about = false; showSettings = false
         reveal = RevealState(); listView = ListView(); selection = EntrySelection(); organizer = false; warningsOpen = false
@@ -182,6 +185,7 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
         onDispose {
             live.set(false)
             controller.sessionEpoch.invalidate()
+            dialogs.close()
             runCatching { SecretClipboard.clear() }
             vault?.close()
             worker.execute { controller.close() }
@@ -233,8 +237,11 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
                 }
                 if (vault == null) {
                     if (unlockDelay > 0) Text(UiText.text("shell.delay", (unlockDelay + 999) / 1000))
-                    UnlockForm(busy || unlockDelay > 0, settings.current(), generateKey = { target, done ->
-                        operation { generateKeyFile(target); credentialOnEdt(done); null }
+                    UnlockForm(busy || unlockDelay > 0, settings.current(), generateKey = { done ->
+                        operation {
+                            chooseNewKeyFile(dialogs)?.let { target -> generateKeyFile(target); credentialOnEdt { done(target) } }
+                            null
+                        }
                     }) { path, password, key, create, parameters ->
                         operation {
                             val unlocked = controller.unlock(path, password, key, create, parameters)
@@ -242,7 +249,7 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
                                 rememberUnlockedPath(settings, path)
                                 val token = controller.sessionEpoch.capture()
                                 // Restored settings are unauthenticated: always show them, confirm destructive retention.
-                                val restored = restoreRememberedBackups(controller, settings) { text -> confirm(text) }
+                                val restored = restoreRememberedBackups(controller, settings) { text -> dialogs.confirm(text) }
                                 if (restored != null) SwingUtilities.invokeLater {
                                     if (live.get() && controller.sessionEpoch.accepts(token)) {
                                         if (restored.warning) message = restored.text else notice = restored.text
@@ -261,7 +268,7 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
                     }
                 } else {
                     val current = vault!!
-                    AppToolbar(dataActions(controller, settings, ::operation, settingsFailed = {
+                    AppToolbar(dataActions(controller, settings, dialogs, ::operation, settingsFailed = {
                         SwingUtilities.invokeLater { if (live.get()) message = UiText.text("settings.saveFailed") }
                     }), busy, organizer, onOrganizer = { organizer = !organizer })
                     if (organizer) OrganizationTools(current, controller, busy, ::operation, onClose = { organizer = false })
@@ -311,11 +318,12 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
             dismissButton = { TextButton(onClick = {
                 runCatching { Desktop.getDesktop().browse(URI("https://github.com/kdg1992/keyrook")) }
             }) { Text(UiText.text("shell.source")) } })
+        DialogHostView(dialogs)
     }
 }
 
 @Composable
-private fun UnlockForm(busy: Boolean, remembered: AppSettings, generateKey: (Path, () -> Unit) -> Unit,
+private fun UnlockForm(busy: Boolean, remembered: AppSettings, generateKey: ((Path) -> Unit) -> Unit,
                        onOpen: (Path, CharArray, Path?, Boolean, KdfParameters) -> Unit) {
     var path by remember { mutableStateOf(remembered.lastVaultPath?.toString().orEmpty()) }
     var key by remember { mutableStateOf("") }
@@ -338,9 +346,9 @@ private fun UnlockForm(busy: Boolean, remembered: AppSettings, generateKey: (Pat
         TextButton(enabled = !busy, onClick = { chooseFile(create)?.let { path = it.toString() } }) { Text(UiText.text("credentials.selectFile")) }
         OutlinedTextField(key, { key = it }, label = { Text(UiText.text("credentials.optionalKey")) }, enabled = !busy, modifier = Modifier.fillMaxWidth())
         Row {
-            TextButton(enabled = !busy, onClick = { chooseKeyFile(false)?.let { key = it.toString() } }) { Text(UiText.text("credentials.selectKey")) }
+            TextButton(enabled = !busy, onClick = { chooseKeyFile()?.let { key = it.toString() } }) { Text(UiText.text("credentials.selectKey")) }
             TextButton(enabled = !busy, onClick = {
-                chooseKeyFile(true)?.let { target -> generateKey(target) { key = target.toString() } }
+                generateKey { target -> key = target.toString() }
             }) { Text(UiText.text("credentials.generateKey")) }
             TextButton(enabled = !busy && key.isNotEmpty(), onClick = { key = "" }) { Text(UiText.text("credentials.noKey")) }
         }

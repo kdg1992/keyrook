@@ -14,7 +14,7 @@ import java.nio.channels.FileChannel
 import java.nio.file.*
 import java.nio.file.attribute.*
 import java.io.IOException
-import javax.swing.*
+import javax.swing.SwingUtilities
 
 /** A backup, transfer or account action of the data menu; [run] starts its vault operation. */
 internal class DataAction(private val labelKey: String, val run: () -> Unit) {
@@ -22,68 +22,68 @@ internal class DataAction(private val labelKey: String, val run: () -> Unit) {
 }
 
 /** The data menu's actions in groups (backups, transfer, account); each starts one guarded vault operation. */
-internal fun dataActions(controller: VaultController, settings: SettingsStore, operation: (() -> Vault?) -> Unit,
-                         settingsFailed: () -> Unit): List<List<DataAction>> = listOf(
+internal fun dataActions(controller: VaultController, settings: SettingsStore, dialogs: Dialogs,
+                         operation: (() -> Vault?) -> Unit, settingsFailed: () -> Unit): List<List<DataAction>> = listOf(
     listOf(
         DataAction("transfer.folder") {
             operation {
                 onEdt { chooseFolder() }?.let { folder ->
-                    val selection = askBackupConfiguration(folder)
+                    val selection = askBackupConfiguration(dialogs, folder)
                     if (applyBackupConfiguration(controller, selection, settings, settingsFailed)) {
                         val policy = selection!!.policy
-                        inform(UiText.text("transfer.configured", policy.latest, policy.daily))
+                        dialogs.inform(UiText.text("transfer.configured", policy.latest, policy.daily))
                     }
                 }
                 controller.session.snapshot()
             }
         },
         DataAction("transfer.status") { operation {
-            inform(backupStatusText(controller))
+            dialogs.inform(backupStatusText(controller))
             controller.session.snapshot()
         } },
         DataAction("transfer.now") { operation {
             ensureOperationCurrent()
-            if (!controller.session.backupStatus().configured) inform(backupStatusText(controller))
+            if (!controller.session.backupStatus().configured) dialogs.inform(backupStatusText(controller))
             else {
                 val removed = createManualBackup(controller)
-                inform(UiText.text("transfer.backedUp", removed))
+                dialogs.inform(UiText.text("transfer.backedUp", removed))
             }
             controller.session.snapshot()
         } },
         DataAction("transfer.disable") { operation {
             ensureOperationCurrent()
-            if (!controller.session.backupStatus().configured) inform(backupStatusText(controller))
-            else if (disableBackups(controller, confirm(UiText.text("transfer.disableConfirm")), settings, settingsFailed)) {
-                inform(UiText.text("transfer.disabled"))
+            if (!controller.session.backupStatus().configured) dialogs.inform(backupStatusText(controller))
+            else if (disableBackups(controller, dialogs.confirm(UiText.text("transfer.disableConfirm")), settings, settingsFailed)) {
+                dialogs.inform(UiText.text("transfer.disabled"))
             }
             controller.session.snapshot()
         } },
         DataAction("integrity.action") { operation {
-            showReport(UiText.text("integrity.title"), integrityReportText(controller))
+            dialogs.report(UiText.text("integrity.title"), integrityReportText(controller))
             controller.session.snapshot()
         } },
-        DataAction("transfer.restore") { operation { restoreBackup(); controller.session.snapshot() } },
+        DataAction("transfer.restore") { operation { restoreBackup(dialogs); controller.session.snapshot() } },
     ),
     listOf(
         DataAction("transfer.exportEncrypted") { operation {
             onEdt { chooseNewFile(DialogFile.VAULT, "keyrook-export.keyrook") }?.let { target ->
-                askCredentials(UiText.text("transfer.exportPassword"), confirm = true)?.use { credentials ->
+                askCredentials(dialogs, UiText.text("transfer.exportPassword"), confirm = true)?.use { credentials ->
                     controller.session.snapshot().use {
                         ensureOperationCurrent()
                         VaultStore().save(target, it.copy(revision = 0), credentials)
                     }
-                    inform(UiText.text("transfer.exported"))
+                    dialogs.inform(UiText.text("transfer.exported"))
                 }
             }
             controller.session.snapshot()
         } },
-        DataAction("transfer.import") { operation { importData(controller); controller.session.snapshot() } },
-        DataAction("transfer.exportPlain") { operation { exportPlaintext(controller); controller.session.snapshot() } },
+        DataAction("transfer.import") { operation { importData(controller, dialogs); controller.session.snapshot() } },
+        DataAction("transfer.exportPlain") { operation { exportPlaintext(controller, dialogs); controller.session.snapshot() } },
     ),
     listOf(
         DataAction("credentials.replaceTitle") { operation {
-            askCredentials(UiText.text("credentials.replaceTitle"), confirm = true, replacing = true)?.use {
-                if (confirm(UiText.text("credentials.replaceConfirm"))) {
+            askCredentials(dialogs, UiText.text("credentials.replaceTitle"), confirm = true, replacing = true)?.use {
+                if (dialogs.confirm(UiText.text("credentials.replaceConfirm"))) {
                     ensureOperationCurrent()
                     controller.session.changePassword(it)
                 }
@@ -91,54 +91,42 @@ internal fun dataActions(controller: VaultController, settings: SettingsStore, o
             controller.session.snapshot()
         } },
         DataAction("credentials.kdfTitle") { operation {
-            configureKdf(controller)
+            configureKdf(controller, dialogs)
             controller.session.snapshot()
         } },
         DataAction("credentials.generateKey") { operation {
-            generateKeyFileDialog()
+            generateKeyFileDialog(dialogs)
             controller.session.snapshot()
         } },
     ),
 )
 
-private fun askBackupConfiguration(folder: Path): BackupConfiguration? {
+private fun askBackupConfiguration(dialogs: Dialogs, folder: Path): BackupConfiguration? {
     var latest = "30"
     var daily = "30"
     while (true) {
-        val entered = onEdt {
-            val versions = JTextField(latest, 8)
-            val days = JTextField(daily, 8)
-            val panel = JPanel().apply {
-                layout = BoxLayout(this, BoxLayout.Y_AXIS)
-                add(JLabel(UiText.text("transfer.folderPath", folder.toAbsolutePath().normalize())))
-                add(JLabel(UiText.text("transfer.latest"))); add(versions)
-                add(JLabel(UiText.text("transfer.daily"))); add(days)
-                add(JLabel(UiText.text("transfer.combined")))
-                add(JLabel(UiText.text("transfer.rotation")))
-                add(JLabel(UiText.text("transfer.session")))
-            }
-            if (JOptionPane.showConfirmDialog(null, panel, UiText.text("transfer.retentionTitle"),
-                    JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE) == JOptionPane.OK_OPTION)
-                versions.text to days.text else null
-        } ?: return null
-        latest = entered.first
-        daily = entered.second
+        val entered = dialogs.ask(FieldsRequest(UiText.text("transfer.retentionTitle"),
+            listOf(UiText.text("transfer.folderPath", folder.toAbsolutePath().normalize())),
+            listOf(InputField(UiText.text("transfer.latest"), latest), InputField(UiText.text("transfer.daily"), daily)),
+            listOf(UiText.text("transfer.combined"), UiText.text("transfer.rotation"), UiText.text("transfer.session")))) ?: return null
+        latest = entered[0]
+        daily = entered[1]
         val policy = parseBackupPolicy(latest, daily)
         if (policy != null) return BackupConfiguration(folder, policy)
-        inform(UiText.text("transfer.retentionInvalid"))
+        dialogs.inform(UiText.text("transfer.retentionInvalid"))
     }
 }
 
-private fun restoreBackup() {
+private fun restoreBackup(dialogs: Dialogs) {
     val source = onEdt { chooseOpenFile(DialogFile.BACKUP) } ?: return
-    askCredentials(UiText.text("transfer.backupPassword"))?.use { credentials ->
+    askCredentials(dialogs, UiText.text("transfer.backupPassword"))?.use { credentials ->
         val service = BackupService(source.toAbsolutePath().parent)
         val preview = service.preview(source, credentials)
-        if (!confirm(UiText.text("transfer.preview", preview.entries, preview.revision, preview.modifiedAt))) return
+        if (!dialogs.confirm(UiText.text("transfer.preview", preview.entries, preview.revision, preview.modifiedAt))) return
         val target = onEdt { chooseNewFile(DialogFile.VAULT, "keyrook-restored.keyrook") } ?: return
         ensureOperationCurrent()
         service.restoreToNew(source, target, credentials, preview)
-        inform(UiText.text("transfer.restored"))
+        dialogs.inform(UiText.text("transfer.restored"))
     }
 }
 
@@ -175,18 +163,18 @@ internal fun exportTransfer(format: PlaintextFormat, vault: Vault, consent: Plai
     PlaintextFormat.CSV -> transfer.exportCsv(vault, consent)
 }
 
-private fun importData(controller: VaultController) {
-    val format = choose(UiText.text("transfer.importFormat"), ImportFormat.entries, ImportFormat::label) ?: return
+private fun importData(controller: VaultController, dialogs: Dialogs) {
+    val format = dialogs.choose(UiText.text("transfer.importFormat"), ImportFormat.entries, ImportFormat::label) ?: return
     val path = onEdt { chooseOpenFile(format.fileType) } ?: return
     val bytes = readTransfer(path)
     val imported = try {
-        importTransfer(format, bytes, selectMapping = { columns -> onEdt { askCsvMapping(columns) } }) ?: return
+        importTransfer(format, bytes, selectMapping = { columns -> askCsvMapping(dialogs, columns) }) ?: return
     } catch (_: KeePassCsvHeaderException) {
-        inform(UiText.text("csv.keepassMismatch"))
+        dialogs.inform(UiText.text("csv.keepassMismatch"))
         return
     } finally { bytes.fill(0) }
     imported.use {
-        if (!confirm(UiText.text("transfer.importConfirm", it.entries.size))) return
+        if (!dialogs.confirm(UiText.text("transfer.importConfirm", it.entries.size))) return
         controller.session.snapshot().use { current ->
             val candidate = current.copy(customers = current.customers + it.customers,
                 projects = current.projects + it.projects, entries = current.entries + it.entries)
@@ -197,17 +185,18 @@ private fun importData(controller: VaultController) {
     }
 }
 
-private fun exportPlaintext(controller: VaultController) {
-    if (!confirm(UiText.text("transfer.plainWarning"))) return
-    val format = choose(UiText.text("transfer.plainFormat"), PlaintextFormat.entries, PlaintextFormat::label) ?: return
+/** Two separate confirmations: before choosing the format and again after choosing the new target file. */
+private fun exportPlaintext(controller: VaultController, dialogs: Dialogs) {
+    if (!dialogs.confirm(UiText.text("transfer.plainWarning"))) return
+    val format = dialogs.choose(UiText.text("transfer.plainFormat"), PlaintextFormat.entries, PlaintextFormat::label) ?: return
     val target = onEdt { chooseNewFile(format.fileType, "keyrook-export.${format.fileType.extension}") } ?: return
-    if (!confirm(UiText.text("transfer.plainConfirm"))) return
+    if (!dialogs.confirm(UiText.text("transfer.plainConfirm"))) return
     controller.session.snapshot().use { vault ->
         val consent = PlaintextConsent(true, true)
         val bytes = exportTransfer(format, vault, consent)
         try { writePrivateNew(target, bytes) } finally { bytes.fill(0) }
     }
-    inform(UiText.text("transfer.plainDone"))
+    dialogs.inform(UiText.text("transfer.plainDone"))
 }
 
 internal interface TransferIo {
@@ -269,67 +258,26 @@ internal fun writePrivateFile(path: Path, bytes: ByteArray, operations: Transfer
     }
 }
 
-private fun askCredentials(title: String, confirm: Boolean = false, replacing: Boolean = false): Credentials? {
+/**
+ * Runs on the vault worker. The entered passwords arrive as owned char arrays and are erased on every path, as is
+ * the key material; an empty password, a mismatched repetition or an invalid key file fails the operation.
+ */
+internal fun askCredentials(dialogs: Dialogs, title: String, confirm: Boolean = false, replacing: Boolean = false): Credentials? {
     check(!SwingUtilities.isEventDispatchThread()) { "Credential processing requires a worker thread" }
-    var chars = charArrayOf()
-    var repeated = charArrayOf()
+    val input = dialogs.ask(CredentialRequest(title, confirm, replacing)) ?: return null
     var keyBytes: ByteArray? = null
     try {
-        val keyPath = onEdt {
-            val password = JPasswordField(24)
-            val repeat = JPasswordField(24)
-            val key = JTextField(24)
-            val panel = JPanel().apply {
-                layout = BoxLayout(this, BoxLayout.Y_AXIS)
-                add(JLabel(title)); add(password)
-                if (confirm) { add(JLabel(UiText.text("credentials.repeatPassword"))); add(repeat) }
-                add(JLabel(UiText.text("credentials.optionalKey"))); add(key)
-                if (replacing) add(JLabel(UiText.text("credentials.replaceKeyHelp")))
-                add(JButton(UiText.text("credentials.selectKey")).apply {
-                    addActionListener {
-                        chooseKeyFile(false)?.let { key.text = it.toString() }
-                    }
-                })
-            }
-            try {
-                if (JOptionPane.showConfirmDialog(null, panel, "Keyrook", JOptionPane.OK_CANCEL_OPTION) != JOptionPane.OK_OPTION) return@onEdt null
-                chars = password.password; repeated = repeat.password
-                key.text
-            } finally { password.text = ""; repeat.text = ""; key.text = "" }
-        } ?: return null
-        require(chars.isNotEmpty() && (!confirm || chars.contentEquals(repeated)))
-        if (keyPath.isNotBlank()) {
-            val material = readTransfer(Path.of(keyPath), 32)
+        require(input.password.isNotEmpty() && (!confirm || input.password.contentEquals(input.repeated)))
+        if (input.keyPath.isNotBlank()) {
+            val material = readTransfer(Path.of(input.keyPath), 32)
             keyBytes = material
             require(material.size == 32)
         }
-        return Secret(chars).use { Credentials(it, keyBytes) }
-    } finally { chars.fill('\u0000'); repeated.fill('\u0000'); keyBytes?.fill(0) }
+        return Secret(input.password).use { Credentials(it, keyBytes) }
+    } finally { input.close(); keyBytes?.fill(0) }
 }
 
-internal fun confirm(message: String): Boolean = onEdt {
-    JOptionPane.showConfirmDialog(null, message, "Keyrook", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION
-}
-private fun inform(message: String) = onEdt { JOptionPane.showMessageDialog(null, message, "Keyrook", JOptionPane.INFORMATION_MESSAGE) }
-/** Plain, read-only text area: report lines are never interpreted as Swing HTML. */
-private fun showReport(title: String, text: String) = onEdt {
-    val area = JTextArea(text, 20, 80).apply {
-        isEditable = false
-        lineWrap = true
-        wrapStyleWord = true
-        caretPosition = 0
-    }
-    JOptionPane.showMessageDialog(null, JScrollPane(area), title, JOptionPane.INFORMATION_MESSAGE)
-}
-private class LabeledChoice<T>(val value: T, private val label: String) { override fun toString() = label }
-
-/** The dialog shows catalog labels; the selection is mapped back by identity, so labels never act as keys. */
-private fun <T : Any> choose(title: String, values: List<T>, label: (T) -> String): T? = onEdt {
-    val options = values.map { LabeledChoice(it, label(it)) }
-    val selected = JOptionPane.showInputDialog(null, title, "Keyrook", JOptionPane.QUESTION_MESSAGE, null,
-        options.toTypedArray<Any>(), options[0])
-    options.firstOrNull { it === selected }?.value
-}
+/** Runs file choosers on the event thread for a worker, checking the worker's session before and after. */
 private fun <T> onEdt(action: () -> T): T {
     val guard = capturedOperationGuard()
     val guarded = { guard(); action().also { guard() } }

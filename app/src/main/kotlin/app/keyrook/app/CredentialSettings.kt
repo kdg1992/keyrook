@@ -7,7 +7,7 @@ import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.security.SecureRandom
-import javax.swing.*
+import javax.swing.SwingUtilities
 
 internal fun parseKdfParameters(memoryKiB: String, iterations: String, parallelism: String): KdfParameters? {
     val memory = memoryKiB.trim().toIntOrNull() ?: return null
@@ -40,58 +40,44 @@ internal fun applyKdfParameters(controller: VaultController, parameters: KdfPara
     return true
 }
 
-internal fun configureKdf(controller: VaultController) {
+internal fun configureKdf(controller: VaultController, dialogs: Dialogs) {
     ensureOperationCurrent()
     val current = controller.session.kdfParameters()
+    val title = UiText.text("credentials.kdfTitle")
     var memory = current.memoryKiB.toString()
     var rounds = current.iterations.toString()
     var lanes = current.parallelism.toString()
     while (true) {
-        val entered = credentialOnEdt {
-            val memoryField = JTextField(memory, 12)
-            val roundsField = JTextField(rounds, 12)
-            val lanesField = JTextField(lanes, 12)
-            val panel = JPanel().apply {
-                layout = BoxLayout(this, BoxLayout.Y_AXIS)
-                add(JLabel(UiText.text("credentials.memory"))); add(memoryField)
-                add(JLabel(UiText.text("credentials.iterations"))); add(roundsField)
-                add(JLabel(UiText.text("credentials.parallelism"))); add(lanesField)
-                add(JLabel(UiText.text("credentials.kdfExplanation")))
-            }
-            if (JOptionPane.showConfirmDialog(null, panel, UiText.text("credentials.kdfTitle"),
-                    JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION)
-                listOf(memoryField.text, roundsField.text, lanesField.text) else null
-        } ?: return
+        val entered = dialogs.ask(FieldsRequest(title, emptyList(),
+            listOf(InputField(UiText.text("credentials.memory"), memory), InputField(UiText.text("credentials.iterations"), rounds),
+                InputField(UiText.text("credentials.parallelism"), lanes)),
+            listOf(UiText.text("credentials.kdfExplanation")))) ?: return
         memory = entered[0]; rounds = entered[1]; lanes = entered[2]
         val parameters = parseKdfParameters(memory, rounds, lanes)
         if (parameters == null) {
-            credentialOnEdt { JOptionPane.showMessageDialog(null, UiText.text("credentials.kdfInvalid")) }
+            dialogs.inform(UiText.text("credentials.kdfInvalid"), title)
             continue
         }
-        val confirmed = credentialOnEdt {
-            JOptionPane.showConfirmDialog(null, UiText.text("credentials.kdfConfirm"), UiText.text("credentials.kdfTitle"),
-                JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION
-        }
-        if (applyKdfParameters(controller, parameters, confirmed)) credentialOnEdt {
-            JOptionPane.showMessageDialog(null, UiText.text("credentials.kdfChanged"))
-        }
+        val confirmed = dialogs.confirm(UiText.text("credentials.kdfConfirm"), title)
+        if (applyKdfParameters(controller, parameters, confirmed)) dialogs.inform(UiText.text("credentials.kdfChanged"), title)
         return
     }
 }
 
-internal fun generateKeyFileDialog() {
-    val target = chooseKeyFile(true) ?: return
+/** Runs on the vault worker: asks, lets the user pick a new file, creates the key file and reports it. */
+internal fun generateKeyFileDialog(dialogs: Dialogs) {
+    val target = chooseNewKeyFile(dialogs) ?: return
     generateKeyFile(target)
-    credentialOnEdt { JOptionPane.showMessageDialog(null, UiText.text("credentials.keyCreated")) }
+    dialogs.inform(UiText.text("credentials.keyCreated"), UiText.text("credentials.generateKey"))
 }
 
-internal fun chooseKeyFile(save: Boolean): Path? {
-    if (save && !credentialOnEdt {
-        JOptionPane.showConfirmDialog(null, UiText.text("credentials.keyCreateConfirm"), UiText.text("credentials.generateKey"),
-            JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION
-    }) return null
-    return credentialOnEdt { if (save) chooseNewFile(DialogFile.KEY, "keyrook.key") else chooseOpenFile(DialogFile.KEY) }
+/** Runs on the vault worker; the save dialog opens only after the user confirmed creating a key file. */
+internal fun chooseNewKeyFile(dialogs: Dialogs): Path? {
+    if (!dialogs.confirm(UiText.text("credentials.keyCreateConfirm"), UiText.text("credentials.generateKey"))) return null
+    return credentialOnEdt { chooseNewFile(DialogFile.KEY, "keyrook.key") }
 }
+
+internal fun chooseKeyFile(): Path? = credentialOnEdt { chooseOpenFile(DialogFile.KEY) }
 
 internal fun <T> credentialOnEdt(action: () -> T): T {
     val guard = capturedOperationGuard()

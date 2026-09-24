@@ -64,7 +64,7 @@ the previous document and enters `ERROR` (`SessionState`).
 
 **Lock.** `VaultSession.lock` closes the document and credentials and clears
 path, stamp and backup configuration. In the UI, `lockNow` in `Main.kt`
-invalidates the `SessionEpoch`, disposes dialogs, closes the presented
+invalidates the `SessionEpoch`, cancels the dialog host and disposes remaining dialogs, closes the presented
 snapshot, clears the owned clipboard and queues `controller.lock()` on the
 vault worker. Triggers are the lock shortcut, `DesktopLockMonitor.kt`
 (inactivity, AWT session and sleep events, and minimizing or window
@@ -88,7 +88,10 @@ all session work on one daemon thread, `vault-worker`, created in
 `operation { ... }` captures the current `SessionEpoch` token; results are
 delivered on the Swing thread only if the token is still current, otherwise the
 returned snapshot is closed (`SessionSecurity.kt`). `OperationGuard.kt` lets
-long operations and dialogs check the token mid-flight.
+long operations and dialogs check the token mid-flight. Messages, questions
+and input prompts of an operation go through `DialogHost` (`DialogHost.kt`,
+`DialogBridge.kt`): the worker queues a request and blocks until the UI answers
+it in a Compose dialog (`ComposeDialogs.kt`); locking cancels every request.
 
 Other threads never hold the session: `vault-search` (`SearchResults.kt`) takes
 its own snapshot and closes it, `clipboard-expiry` (`SecretClipboard.kt`) only
