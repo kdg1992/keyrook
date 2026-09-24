@@ -3,6 +3,7 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
+    id("keyrook.runtime-dependency-check")
 }
 kotlin { jvmToolchain(25) }
 dependencies {
@@ -16,18 +17,6 @@ dependencies {
     testRuntimeOnly(libs.junit.launcher)
 }
 dependencyLocking { lockAllConfigurations() }
-val checkRuntimeDependencies = tasks.register("checkRuntimeDependencies") {
-    group = "verification"
-    description = "Prevents separate test tooling from entering the application runtime."
-    doLast {
-        val testGroups = setOf("org.junit", "org.junit.jupiter", "org.junit.platform", "io.kotest", "org.opentest4j", "org.apiguardian")
-        val forbidden = configurations.runtimeClasspath.get().incoming.resolutionResult.allComponents
-            .mapNotNull { it.id as? org.gradle.api.artifacts.component.ModuleComponentIdentifier }
-            .filter { it.group in testGroups }
-        check(forbidden.isEmpty()) { "Test-only dependencies on runtime classpath: ${forbidden.joinToString()}" }
-    }
-}
-tasks.named("check") { dependsOn(checkRuntimeDependencies) }
 tasks.test {
     useJUnitPlatform()
     maxHeapSize = "1g"
