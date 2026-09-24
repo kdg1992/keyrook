@@ -23,6 +23,7 @@ session events, lock-on-focus-loss, failed-attempt delays and a local password/e
 warning list and authenticated PuTTY PPK 2/3 import are implemented. Unsigned native
 installers for Windows x64, macOS ARM64 and Linux x64 are published with each
 release; platform installation tests are still pending. See [desktop usage](docs/DESKTOP.md) and [packaging status](docs/PACKAGING.md).
+Release acceptance on real systems follows the [manual acceptance protocol](docs/ACCEPTANCE.md).
 
 ## Build and test
 
