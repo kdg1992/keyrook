@@ -30,7 +30,7 @@ The final operation uses `ATOMIC_MOVE`; unsupported atomic replacement is an err
 
 After a successful replacement the code attempts to force the parent directory. `SaveResult.directoryDurability` distinguishes `FORCED` from `NOT_SUPPORTED`; callers must not interpret the latter as a failed save or retry blindly. Java/Windows commonly cannot force directory metadata. Successful file flushing and rename cannot guarantee survival of every power loss on every disk/controller/filesystem. Real process-kill and power-loss tests on all target platforms remain necessary.
 
-Use a trusted local directory. The code refuses a symbolic-link vault leaf and canonicalizes its parent. File locks do not protect against non-cooperating programs, malicious directory manipulation, hard-link aliases or network filesystems with different locking semantics. A non-cooperating writer can still race between the final check and rename. NAS/cloud folders are therefore unsuitable as the live multi-writer store; later backup copies are the intended integration point. This is not a synchronization protocol.
+Use a trusted local directory. The code refuses a symbolic-link vault leaf and canonicalizes its parent. File locks do not protect against non-cooperating programs, malicious directory manipulation, hard-link aliases or network filesystems with different locking semantics. A non-cooperating writer can still race between the final check and rename. NAS/cloud folders are therefore unsuitable as the live multi-writer store; later backup copies are the intended integration point. This is not a synchronization protocol; the boundaries a later one must respect are described in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Session behavior
 
