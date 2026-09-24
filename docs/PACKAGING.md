@@ -5,7 +5,11 @@ They are built only in the `Release` GitHub Actions workflow on the three standa
 hosted runners. A package is built for that runner's actual CPU architecture;
 this is not a universal macOS binary or cross-compilation. The filenames include
 the target architecture. The application and package version both come from
-`version.txt`, including development versions such as `0.1.0`.
+`version.txt`, including development versions such as `0.1.0`. On macOS,
+jpackage rejects bundle versions whose first number is 0, so while Keyrook is
+at `0.x.y` the macOS app bundle and DMG metadata carry `1.0.0`. The
+application itself, the release and the installer file names keep the real
+version; from `1.0.0` on, the bundle uses the real version as well.
 See the [Compose native distribution documentation](https://kotlinlang.org/docs/multiplatform/compose-native-distribution.html).
 
 ## Recovering an unpublished release

@@ -90,7 +90,15 @@ jobs:
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y rpm
       - name: Test and build unsigned native installers
         shell: bash
-        run: bash ./gradlew check :app:packageDistributionForCurrentOS --no-daemon --console=plain
+        # Native installer tasks do not build the app image checked below; request it explicitly.
+        run: bash ./gradlew check :app:createDistributable :app:packageDistributionForCurrentOS --no-daemon --console=plain
+      - name: Show packaging tool output
+        if: failure()
+        shell: bash
+        run: |
+          if [ -d app/build/compose/logs ]; then
+            find app/build/compose/logs -type f -name '*.txt' -print -exec cat {} \;
+          fi
       - name: Verify packaged runtime and desktop rendering
         shell: bash
         run: |
