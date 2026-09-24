@@ -3,7 +3,11 @@
 package app.keyrook.app
 
 import app.keyrook.core.backup.BackupPolicy
+import app.keyrook.core.backup.BackupFolderState
 import app.keyrook.core.backup.BackupService
+import app.keyrook.core.backup.IntegrityFileKind
+import app.keyrook.core.backup.IntegrityReport
+import app.keyrook.core.backup.IntegrityState
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
@@ -76,4 +80,46 @@ internal fun backupStatusText(controller: VaultController): String {
     val saved = status.lastRevision?.let { UiText.text("backup.lastRevision", it) }
         ?: UiText.text("backup.noCopy")
     return UiText.text("backup.active", saved)
+}
+
+/** Runs on the vault worker; the check is read-only and the text never contains folder paths or exception messages. */
+internal fun integrityReportText(controller: VaultController): String {
+    ensureOperationCurrent()
+    val report = controller.session.checkIntegrity()
+    ensureOperationCurrent()
+    return formatIntegrityReport(report)
+}
+
+internal fun formatIntegrityReport(report: IntegrityReport): String {
+    val lines = mutableListOf(
+        UiText.text("integrity.summary", report.count(IntegrityState.OK), report.files.size),
+        UiText.text(if (report.intact) "integrity.intact" else "integrity.problems"),
+    )
+    when (report.backupFolder) {
+        BackupFolderState.NOT_CONFIGURED -> { lines += UiText.text("integrity.notConfigured") }
+        BackupFolderState.UNREADABLE -> { lines += UiText.text("integrity.folderUnreadable") }
+        BackupFolderState.CHECKED -> {
+            if (report.files.none { it.kind == IntegrityFileKind.BACKUP }) lines += UiText.text("integrity.noBackups")
+        }
+    }
+    lines += ""
+    for (file in report.files) {
+        val state = when (file.state) {
+            IntegrityState.OK -> UiText.text("integrity.ok", file.revision!!, file.entries!!, file.modifiedAt!!)
+            IntegrityState.MISMATCH -> UiText.text("integrity.mismatch", file.revision!!)
+            IntegrityState.AUTHENTICATION_FAILED -> UiText.text("integrity.authFailed")
+            IntegrityState.CORRUPT -> UiText.text("integrity.corrupt")
+            IntegrityState.UNREADABLE -> UiText.text("integrity.unreadable")
+            IntegrityState.APPROVAL_REQUIRED -> UiText.text("integrity.approval")
+        }
+        val kind = UiText.text(if (file.kind == IntegrityFileKind.VAULT) "integrity.vault" else "integrity.backup")
+        // File names are untrusted text; control characters could forge additional report lines.
+        val name = file.fileName.map { if (it.isISOControl()) ' ' else it }.joinToString("")
+        lines += UiText.text("integrity.line", kind, name, state)
+    }
+    if (report.files.any { it.state == IntegrityState.AUTHENTICATION_FAILED }) {
+        lines += ""
+        lines += UiText.text("integrity.authHint")
+    }
+    return lines.joinToString("\n")
 }

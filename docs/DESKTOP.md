@@ -109,6 +109,16 @@ Select an existing **Backup-Ordner** after unlocking, then confirm how many rece
 
 **Backup wiederherstellen** requests the backup's own credentials and previews its authenticated entry count and revision. After confirmation, choose a new destination. The open vault is not overwritten; lock and open the restored file separately. Older backups retain older credentials after password changes.
 
+**Integrität prüfen** authenticates the saved vault file and every managed backup of the open vault in the configured folder (the same `<vault-id>_<time>_<revision>_<uuid>.keyrook.bak` names that rotation manages) with the current session credentials, newest backup first. It is strictly read-only: no file is created, locked, rewritten, renamed or deleted. Symbolic links are never followed, file sizes use the same bounds as backups, and each decrypted model is wiped after its file. Other files in the folder, including backups of other vaults, are ignored. Each file is reported as:
+
+- *in Ordnung*: authenticated, with revision, entry count (including trash) and file date, as in the restore preview.
+- *kann mit den aktuellen Zugangsdaten nicht authentifiziert werden*: the AES-GCM tag does not verify. This is expected for backups written before a password or key-file change, but it is also what a tampered or truncated file produces. Authenticated encryption cannot distinguish a wrong key from modified ciphertext, so Keyrook does not guess and never labels such a file intact or corrupt. Check old backups with **Backup wiederherstellen** and the credentials in use at the time.
+- *beschädigt*: invalid header, size outside the bounds or invalid authenticated content.
+- *authentisch, passt aber nicht*: the content authenticates but its vault ID or revision differs from the file name, or the vault file differs from the opened revision (renamed, replaced or changed outside this session).
+- *nicht lesbar*: not a regular file, a symbolic link or a read error. A missing or unreadable backup folder is reported separately.
+
+Without a configured backup folder only the vault file is checked. The report shows file names only, never folder paths or error details.
+
 **Verschlüsselt exportieren** creates a new `.keyrook` file with explicitly chosen credentials, preserving the records and resetting its revision to zero. It is the preferred transfer format.
 
 ## Import and plaintext export

@@ -5,6 +5,8 @@ package app.keyrook.core.service
 import app.keyrook.core.crypto.Credentials
 import app.keyrook.core.backup.BackupService
 import app.keyrook.core.backup.BackupResult
+import app.keyrook.core.backup.IntegrityCheck
+import app.keyrook.core.backup.IntegrityReport
 import app.keyrook.core.crypto.KdfParameters
 import app.keyrook.core.format.VaultCodec
 import app.keyrook.core.model.Vault
@@ -42,6 +44,16 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
         requireDocument()
         val service = checkNotNull(backups) { "Backups are not configured" }
         return createBackup(service, allowExpensive)
+    }
+
+    /**
+     * Read-only authentication of the persisted vault and every managed backup of this vault in the configured
+     * folder, using the session credentials without exporting them. The live file must match the opened revision.
+     */
+    @Synchronized fun checkIntegrity(allowExpensive: Boolean = false): IntegrityReport {
+        val current = requireDocument()
+        return IntegrityCheck(codec).run(path!!, current.id, stamp!!.revision, backups?.directory,
+            credentials!!, allowExpensive)
     }
 
     private fun createBackup(service: BackupService, allowExpensive: Boolean): BackupResult =
