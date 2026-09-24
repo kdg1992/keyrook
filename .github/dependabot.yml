@@ -8,8 +8,10 @@ updates:
       time: "06:00"
       timezone: "Europe/Berlin"
     open-pull-requests-limit: 5
+    # Gradle updates usually change what ships in the app, so they use fix(deps) and Release Please
+    # releases them. Updates that only touch build or test tooling are retitled build(deps) when relocked.
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "fix(deps)"
     # Only minor and patch updates are grouped, so every major update gets its own pull request.
     # Security libraries (Bouncy Castle, Apache MINA SSHD) always stay outside the group.
     groups:
