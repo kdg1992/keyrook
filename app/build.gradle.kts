@@ -25,8 +25,9 @@ val desktopTarget = providers.gradleProperty("keyrook.target").getOrElse("$hostO
 check(desktopTarget in setOf("windows-x64", "linux-x64", "linux-arm64", "macos-x64", "macos-arm64"))
 dependencies {
     implementation(project(":core"))
+    // Per-target coordinate, so it is not a catalog entry; its version follows the catalog's `compose`.
     implementation("org.jetbrains.compose.desktop:desktop-jvm-$desktopTarget:${libs.versions.compose.get()}")
-    implementation("org.jetbrains.compose.material:material:1.12.1")
+    implementation(libs.compose.material)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.launcher)
