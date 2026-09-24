@@ -3,6 +3,7 @@
 package app.keyrook.app
 
 import app.keyrook.core.model.EntryData
+import app.keyrook.core.model.ReservedTags
 import app.keyrook.core.model.Vault
 import app.keyrook.core.otp.Totp
 import java.time.DateTimeException
@@ -20,6 +21,7 @@ internal enum class InputProblem(val key: String) {
     TOO_MANY_TAGS("validation.tagCount"),
     TAG_REQUIRED("validation.tagRequired"),
     TAG_COMMA("validation.tagComma"),
+    TAG_RESERVED("validation.tagReserved"),
     FIELD_EXISTS("validation.fieldExists"),
     INVALID_TOTP("validation.totp"),
 }
@@ -132,6 +134,7 @@ internal fun bulkTagError(tag: String): InputError? = when {
     tag.isBlank() -> InputError(InputProblem.TAG_REQUIRED)
     tag.length > MAX_TAG_CHARS -> InputError(InputProblem.TAG_TOO_LONG, MAX_TAG_CHARS)
     ',' in tag -> InputError(InputProblem.TAG_COMMA)
+    ReservedTags.isReserved(tag) -> InputError(InputProblem.TAG_RESERVED)
     else -> null
 }
 

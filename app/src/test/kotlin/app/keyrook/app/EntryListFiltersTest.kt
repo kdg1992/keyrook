@@ -84,4 +84,15 @@ class EntryListFiltersTest {
             assertEquals(listOf("one"), EntryListFilters(expiry = ExpiryFilter.UPCOMING, sort = sort).ids(vault))
         }
     }
+
+    @Test fun `favorites filter keeps only entries with the reserved tag in both lists`() {
+        Vault(entries = listOf(entry("plain", tags = listOf("favorite")), entry("star", tags = listOf(ReservedTags.FAVORITE)),
+            entry("both", tags = listOf("ops", ReservedTags.FAVORITE)), entry("gone", trash = true, tags = listOf(ReservedTags.FAVORITE))))
+            .use { vault ->
+                assertEquals(listOf("both", "star"), EntryListFilters(favorites = true).ids(vault))
+                assertEquals(listOf("both"), EntryListFilters(favorites = true, tag = "ops").ids(vault))
+                assertEquals(listOf("gone"), EntryListFilters(favorites = true, trash = true).ids(vault))
+                assertEquals(listOf("both", "plain", "star"), EntryListFilters().ids(vault))
+            }
+    }
 }

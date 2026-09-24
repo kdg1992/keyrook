@@ -223,4 +223,28 @@ class VaultControllerTest {
             assertEquals(start + 4, revision())
         }
     }
+
+    @Test fun `favorites are set and cleared as one revision and typed tags cannot set them`() {
+        VaultController().use { controller ->
+            controller.unlock(directory.resolve("favorites.keyrook"), "synthetic-master-passphrase".toCharArray(), null, true,
+                app.keyrook.core.crypto.KdfParameters(iterations = 1)).close()
+            val ids = listOf("First", "Second").map { title ->
+                val data = blankData(EntryType.CUSTOM)
+                val entry = editedEntry(null, data, title, "ops", "", "", listOf("synthetic-$title"), listOf(true))
+                data.fields().forEach { it.value.close() }
+                Vault(entries = listOf(entry)).use { controller.save(entry).close() }
+                entry.id
+            }
+            val start = controller.session.snapshot().use { it.revision }
+            controller.setFavorite(ids.toSet(), true).use { snapshot ->
+                assertEquals(start + 1, snapshot.revision)
+                assertTrue(snapshot.entries.all { it.favorite && ReservedTags.visible(it.tags) == listOf("ops") })
+            }
+            assertThrows(IllegalArgumentException::class.java) { controller.tagAll(ids.toSet(), ReservedTags.FAVORITE, add = false) }
+            controller.setFavorite(setOf(ids[0]), false).use { snapshot ->
+                assertEquals(start + 2, snapshot.revision)
+                assertEquals(listOf(false, true), snapshot.entries.map { it.favorite })
+            }
+        }
+    }
 }

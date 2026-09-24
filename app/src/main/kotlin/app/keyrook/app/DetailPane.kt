@@ -41,7 +41,8 @@ private fun formatInstant(value: String): String = runCatching {
  */
 @Composable
 internal fun EntryDetailPane(vault: Vault, entry: Entry?, issues: Set<HealthIssue>, reveal: RevealState, busy: Boolean,
-                             onReveal: (RevealState) -> Unit, onEdit: (Entry) -> Unit, modifier: Modifier = Modifier) {
+                             onReveal: (RevealState) -> Unit, onEdit: (Entry) -> Unit, onFavorite: (Entry) -> Unit,
+                             modifier: Modifier = Modifier) {
     val latestReveal by rememberUpdatedState(onReveal)
     DisposableEffect(Unit) { onDispose { latestReveal(RevealState()) } }
     val key = entry?.let { RevealKey(vault.id, it.id, it.modifiedAt) }
@@ -65,7 +66,10 @@ internal fun EntryDetailPane(vault: Vault, entry: Entry?, issues: Set<HealthIssu
     }
     Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(entry.title, style = MaterialTheme.typography.h5)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (actions) FavoriteToggle(entry.favorite, busy) { onFavorite(entry) }
+            Text(entry.title, style = MaterialTheme.typography.h5)
+        }
         Text(listOfNotNull(entry.data.type().label,
             info.customer?.let { UiText.text("list.customerValue", it) },
             info.project?.let { UiText.text("list.projectValue", it) }).joinToString(" · "))
@@ -75,7 +79,8 @@ internal fun EntryDetailPane(vault: Vault, entry: Entry?, issues: Set<HealthIssu
         if (markers.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             markers.forEach { WarningChip(healthIssueText(it), severe = false) }
         }
-        if (entry.tags.isNotEmpty()) Text(UiText.text("detail.tags", entry.tags.joinToString(", ")))
+        val tags = ReservedTags.visible(entry.tags)
+        if (tags.isNotEmpty()) Text(UiText.text("detail.tags", tags.joinToString(", ")))
         Text(UiText.text("detail.dates", formatInstant(entry.createdAt), formatInstant(entry.modifiedAt)),
             style = MaterialTheme.typography.caption)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

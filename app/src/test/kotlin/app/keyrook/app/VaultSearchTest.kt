@@ -59,4 +59,14 @@ class VaultSearchTest {
             assertThrows(IllegalArgumentException::class.java) { VaultSearch.find(vault, "x".repeat(257)) }
         }
     }
+
+    @Test fun `the reserved favorite tag is not searchable`() {
+        fixture().use { vault ->
+            val entry = vault.entries.single()
+            val favorite = vault.copy(entries = listOf(entry.copy(tags = entry.tags + ReservedTags.FAVORITE)))
+            assertTrue(VaultSearch.find(favorite, "keyrook:favorite").isEmpty())
+            assertTrue(VaultSearch.find(favorite, "favorite").isEmpty())
+            assertEquals(setOf(entry.id), VaultSearch.find(favorite, "production"))
+        }
+    }
 }

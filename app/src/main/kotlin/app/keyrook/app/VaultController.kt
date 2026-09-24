@@ -7,6 +7,7 @@ import app.keyrook.core.crypto.Credentials
 import app.keyrook.core.crypto.Secret
 import app.keyrook.core.crypto.KdfParameters
 import app.keyrook.core.model.Entry
+import app.keyrook.core.model.ReservedTags
 import app.keyrook.core.model.Vault
 import app.keyrook.core.model.tagEntries
 import app.keyrook.core.model.trashEntries
@@ -91,10 +92,16 @@ class VaultController(internal val session: VaultSession = VaultSession(),
 
     /**
      * Adds [tag] to, or removes it from, the entries [ids] as one save; on any failure nothing changes. When no entry
-     * changes, nothing is saved.
+     * changes, nothing is saved. Reserved tags are refused; favorites change only through [setFavorite].
      */
     fun tagAll(ids: Set<String>, tag: String, add: Boolean): Vault = bulkChange { current ->
+        require(!ReservedTags.isReserved(tag.trim())) { "Reserved tag" }
         current.tagEntries(ids, tag.trim(), add, java.time.Instant.now())
+    }
+
+    /** Marks the entries [ids] as favorites, or unmarks them, through the reserved tag as one save. */
+    fun setFavorite(ids: Set<String>, favorite: Boolean): Vault = bulkChange { current ->
+        current.tagEntries(ids, ReservedTags.FAVORITE, favorite, java.time.Instant.now())
     }
 
     /** [change] returns its argument unchanged to skip the save, otherwise a candidate saved as one revision. */

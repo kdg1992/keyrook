@@ -4,6 +4,23 @@ package app.keyrook.core.model
 
 import java.time.Instant
 
+/**
+ * Tags with a meaning of their own. They are stored in [Entry.tags] like any other tag, so the vault format, JSON/CSV
+ * export and import are unchanged, but the desktop app hides them from tag lists and never creates them from typed
+ * tag input. The `keyrook:` prefix keeps them apart from ordinary tags in practice.
+ */
+object ReservedTags {
+    /** Marks an entry as a favorite. */
+    const val FAVORITE = "keyrook:favorite"
+
+    fun isReserved(tag: String): Boolean = tag == FAVORITE
+
+    /** The tags shown to and edited by the user, in stored order. */
+    fun visible(tags: List<String>): List<String> = tags.filterNot(::isReserved)
+}
+
+val Entry.favorite: Boolean get() = ReservedTags.FAVORITE in tags
+
 /** A changed entry's new time: [now], but never before its last change, so a clock set back cannot reorder history. */
 private fun changeTime(entry: Entry, now: Instant): String = maxOf(now, Instant.parse(entry.modifiedAt)).toString()
 

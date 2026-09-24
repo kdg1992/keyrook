@@ -96,4 +96,23 @@ class EditorBehaviorTest {
             assertEquals("synthetic-secret", accepted.data.fields()[2].value.useChars(::String))
         }
     }
+
+    @Test fun `the editor hides the favorite tag keeps it on save and never creates it from typed tags`() {
+        val date = "2026-01-01T00:00:00Z"
+        val entry = Entry(java.util.UUID.randomUUID().toString(), "Favorite", EntryData.Custom(emptyMap()), date, date,
+            tags = listOf("ops", ReservedTags.FAVORITE, "db"))
+        assertEquals("ops, db", editorTags(entry))
+        assertEquals("", editorTags(null))
+        Vault(entries = listOf(entry)).use {
+            val kept = editedEntry(entry, entry.data, "Favorite", "db", "", "", emptyList(), emptyList())
+            assertEquals(listOf("db", ReservedTags.FAVORITE), kept.tags)
+            assertTrue(kept.favorite)
+            Vault(entries = listOf(kept)).close()
+        }
+        val typed = editedEntry(null, EntryData.Custom(emptyMap()), "Plain", "ops, ${ReservedTags.FAVORITE}", "", "",
+            emptyList(), emptyList())
+        assertEquals(listOf("ops"), typed.tags)
+        assertFalse(typed.favorite)
+        Vault(entries = listOf(typed)).close()
+    }
 }

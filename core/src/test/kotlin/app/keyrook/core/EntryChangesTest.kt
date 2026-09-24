@@ -3,6 +3,8 @@
 package app.keyrook.core
 
 import app.keyrook.core.model.*
+import app.keyrook.core.transfer.PlaintextConsent
+import app.keyrook.core.transfer.VaultTransfer
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.time.Instant
@@ -98,6 +100,41 @@ class EntryChangesTest {
                 if (index == 0) entry.copy(tags = (1..100).map { "t$it" }) else entry
             })
             assertThrows(IllegalArgumentException::class.java) { full.tagEntries(one, "ops", add = true, now).validate() }
+        }
+    }
+
+    @Test fun `the favorite tag is reserved hidden from visible tags and set like any other tag`() {
+        assertTrue(ReservedTags.isReserved(ReservedTags.FAVORITE))
+        assertFalse(ReservedTags.isReserved("favorite"))
+        assertFalse(ReservedTags.isReserved("Keyrook:Favorite"))
+        assertEquals(listOf("a", "b"), ReservedTags.visible(listOf("a", ReservedTags.FAVORITE, "b")))
+        vault().use { vault ->
+            val ids = setOf(vault.entries[0].id, vault.entries[7].id)
+            val favorites = vault.tagEntries(ids, ReservedTags.FAVORITE, add = true, now)
+            favorites.validate()
+            assertEquals(listOf(true, false, false, false, false, false, false, true), favorites.entries.map { it.favorite })
+            assertEquals(listOf("Tag-SENTINEL-9891"), ReservedTags.visible(favorites.entries[0].tags))
+            val cleared = favorites.tagEntries(setOf(vault.entries[0].id), ReservedTags.FAVORITE, add = false, now)
+            assertFalse(cleared.entries[0].favorite)
+            assertEquals(listOf("Tag-SENTINEL-9891"), cleared.entries[0].tags)
+        }
+    }
+
+    @Test fun `the favorite tag survives JSON and Keyrook CSV export and import`() {
+        val transfer = VaultTransfer()
+        val consent = PlaintextConsent(true, true)
+        vault().use { vault ->
+            val favorites = vault.tagEntries(setOf(vault.entries[0].id), ReservedTags.FAVORITE, add = true, now)
+            val json = transfer.exportJson(favorites, consent)
+            val csv = transfer.exportCsv(favorites, consent)
+            try {
+                listOf(transfer.importJson(json), transfer.importCsv(csv)).forEach { imported ->
+                    imported.use {
+                        assertEquals(listOf("Tag-SENTINEL-9891", ReservedTags.FAVORITE), it.entries[0].tags)
+                        assertEquals(1, it.entries.count { entry -> entry.favorite })
+                    }
+                }
+            } finally { json.fill(0); csv.fill(0) }
         }
     }
 }

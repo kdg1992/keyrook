@@ -148,4 +148,9 @@ class InputValidationTest {
         assertEquals(InputError(InputProblem.TAG_TOO_LONG, MAX_TAG_CHARS), bulkTagError("x".repeat(MAX_TAG_CHARS + 1)))
         assertEquals(InputProblem.TAG_COMMA, bulkTagError("a,b")?.problem)
     }
+
+    @Test fun `bulk tags cannot name the reserved favorite tag`() {
+        assertEquals(InputProblem.TAG_RESERVED, bulkTagError(ReservedTags.FAVORITE)?.problem)
+        assertNull(bulkTagError("favorite"))
+    }
 }

@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -22,7 +23,9 @@ import app.keyrook.core.model.Entry
 import app.keyrook.core.model.EntryData
 import app.keyrook.core.model.Field
 import app.keyrook.core.model.FieldKind
+import app.keyrook.core.model.ReservedTags
 import app.keyrook.core.model.Vault
+import app.keyrook.core.model.favorite
 import app.keyrook.core.security.HealthIssue
 import app.keyrook.core.security.VaultHealth
 import java.time.LocalDate
@@ -97,13 +100,14 @@ internal fun ExpiryBadge(date: LocalDate, state: ExpiryState) {
  * A list row. Selection is shown by border, tint and elevation and exposed to accessibility services. [markers] are
  * password warnings by reason only. [compact] cards, used next to the detail view, put their entry actions below the
  * text instead of beside it. With [onMark], a checkbox shows and toggles whether the entry is [marked] for a bulk action.
+ * With [onFavorite], a star shows and toggles the favorite mark; reserved tags are never listed as tags.
  */
 @Composable
 internal fun EntryCardView(entry: Entry, info: EntryCardInfo, isSelected: Boolean, listFocused: Boolean, trash: Boolean,
                            busy: Boolean, onClick: () -> Unit, onFocusInside: () -> Unit, onQuick: (QuickField) -> Unit,
                            onEdit: () -> Unit, onDuplicate: () -> Unit, onRestore: () -> Unit, onPurge: () -> Unit,
                            onTrash: () -> Unit, markers: List<HealthIssue> = emptyList(), compact: Boolean = false,
-                           marked: Boolean = false, onMark: (() -> Unit)? = null) {
+                           marked: Boolean = false, onMark: (() -> Unit)? = null, onFavorite: (() -> Unit)? = null) {
     val colors = MaterialTheme.colors
     val latestClick by rememberUpdatedState(onClick)
     Card(
@@ -118,7 +122,10 @@ internal fun EntryCardView(entry: Entry, info: EntryCardInfo, isSelected: Boolea
         Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             if (onMark != null) Checkbox(marked, onCheckedChange = { onMark() })
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(entry.title, style = MaterialTheme.typography.h6)
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    if (onFavorite != null) FavoriteToggle(entry.favorite, busy, onFavorite)
+                    Text(entry.title, style = MaterialTheme.typography.h6)
+                }
                 Text(listOfNotNull(entry.data.type().label,
                     info.customer?.let { UiText.text("list.customerValue", it) },
                     info.project?.let { UiText.text("list.projectValue", it) }).joinToString(" · "),
@@ -130,7 +137,8 @@ internal fun EntryCardView(entry: Entry, info: EntryCardInfo, isSelected: Boolea
                 if (markers.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     markers.forEach { WarningChip(healthIssueText(it), severe = false) }
                 }
-                if (entry.tags.isNotEmpty()) Text(entry.tags.joinToString(", "), style = MaterialTheme.typography.body2)
+                val tags = ReservedTags.visible(entry.tags)
+                if (tags.isNotEmpty()) Text(tags.joinToString(", "), style = MaterialTheme.typography.body2)
                 if (!trash) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     QuickField.entries.forEach { kind ->
                         val field = entry.data.quickField(kind)
@@ -153,6 +161,15 @@ internal fun EntryCardView(entry: Entry, info: EntryCardInfo, isSelected: Boolea
             }
             if (!compact) EntryCardActions(trash, busy, onEdit, onDuplicate, onRestore, onPurge, onTrash)
         }
+    }
+}
+
+/** A star that shows whether the entry is a favorite and toggles it; its accessible name states the action. */
+@Composable
+internal fun FavoriteToggle(favorite: Boolean, busy: Boolean, onToggle: () -> Unit) {
+    val label = UiText.text(if (favorite) "favorite.remove" else "favorite.add")
+    TextButton(enabled = !busy, onClick = onToggle, modifier = Modifier.semantics { contentDescription = label }) {
+        Text(if (favorite) "★" else "☆", style = MaterialTheme.typography.h6)
     }
 }
 

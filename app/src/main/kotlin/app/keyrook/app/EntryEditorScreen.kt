@@ -26,7 +26,7 @@ internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcu
     var data by remember(initialData) { mutableStateOf(initialData) }
     DisposableEffect(initialData) { onDispose { if (source == null) initialData.fields().forEach { it.value.close() } } }
     var title by remember { mutableStateOf(source?.title.orEmpty()) }
-    var tags by remember { mutableStateOf(source?.tags?.joinToString(", ").orEmpty()) }
+    var tags by remember { mutableStateOf(editorTags(source)) }
     val originalNotes = remember { source?.notes?.useChars { String(it) }.orEmpty() }
     var notes by remember { mutableStateOf(originalNotes) }
     var expires by remember { mutableStateOf(source?.expiresOn.orEmpty()) }
@@ -63,7 +63,7 @@ internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcu
     LaunchedEffect(Unit) { titleFocus.requestFocus() }
     val shownPorts = editorPorts(data, portDrafts)
     val validation = validateEditor(title, tags, notes, expires, values, shownPorts, data.totpSlot(initialData, originalValues))
-    val dirty = title != source?.title.orEmpty() || tags != source?.tags?.joinToString(", ").orEmpty() ||
+    val dirty = title != source?.title.orEmpty() || tags != editorTags(source) ||
         notes != originalNotes || expires != source?.expiresOn.orEmpty() || customerId != source?.customerId ||
         projectId != source?.projectId || values != originalValues || hidden != originalHidden ||
         data != initialData || type != (source?.data?.type() ?: EntryType.WEB) || customLabel.isNotEmpty() ||

@@ -50,7 +50,8 @@ internal fun Workspace(state: AppState, current: Vault, settings: SettingsStore,
                 onPurge = { id -> operation { controller.purge(setOf(id)) } },
                 onEmptyTrash = { operation { controller.emptyTrash() } },
                 onBulkTrash = { ids, restore -> operation { controller.trashAll(ids, restore) } },
-                onBulkTag = { ids, tag, add -> operation { controller.tagAll(ids, tag, add) } })
+                onBulkTag = { ids, tag, add -> operation { controller.tagAll(ids, tag, add) } },
+                onFavorite = { ids, favorite -> operation { controller.setFavorite(ids, favorite) } })
         }
         if (workspaceLayout(maxWidth.value) == WorkspaceLayout.LIST_DETAIL) {
             Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -61,6 +62,7 @@ internal fun Workspace(state: AppState, current: Vault, settings: SettingsStore,
                 val selected = current.entries.firstOrNull { it.id == selection.selectedId }
                 EntryDetailPane(current, selected, selected?.let { warningsByEntry[it.id] }.orEmpty(), reveal, busy,
                     onReveal = { reveal = it }, onEdit = { editing = it },
+                    onFavorite = { entry -> operation { controller.setFavorite(setOf(entry.id), !entry.favorite) } },
                     modifier = Modifier.weight(0.55f).fillMaxHeight())
             }
         } else Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { entryList(false) }
@@ -78,7 +80,8 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
                       onCreate: () -> Unit, onEdit: (Entry) -> Unit,
                       onDuplicate: (Entry) -> Unit, onTrash: (String) -> Unit, onRestore: (String) -> Unit,
                       onPurge: (String) -> Unit, onEmptyTrash: () -> Unit,
-                      onBulkTrash: (Set<String>, Boolean) -> Unit, onBulkTag: (Set<String>, String, Boolean) -> Unit) {
+                      onBulkTrash: (Set<String>, Boolean) -> Unit, onBulkTag: (Set<String>, String, Boolean) -> Unit,
+                      onFavorite: (Set<String>, Boolean) -> Unit) {
     val search = view.search
     val includeHidden = view.includeHidden
     val activeFilters = view.filters.normalized(vault)
@@ -178,9 +181,11 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         searchField(Modifier.weight(1f))
         listButtons()
     }
-    Row {
+    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
         Checkbox(includeHidden, onCheckedChange = { onView(view.copy(includeHidden = it)) })
         Text(UiText.text("shell.hiddenSearch"))
+        Checkbox(activeFilters.favorites, onCheckedChange = { applyFilters(activeFilters.copy(favorites = it)) })
+        Text(UiText.text("filters.favorites"))
     }
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Choice(UiText.text("shell.type"), activeFilters.type?.name, EntryType.entries.map { it.name to it.label }) {
@@ -192,7 +197,8 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         Choice(UiText.text("shell.project"), activeFilters.projectId, activeFilters.projects(vault).map { it.id to it.name }) {
             applyFilters(activeFilters.copy(projectId = it))
         }
-        Choice(UiText.text("shell.tag"), activeFilters.tag, vault.entries.flatMap { it.tags }.distinct().sorted().map { it to it }) {
+        Choice(UiText.text("shell.tag"), activeFilters.tag,
+            vault.entries.flatMap { ReservedTags.visible(it.tags) }.distinct().sorted().map { it to it }) {
             applyFilters(activeFilters.copy(tag = it))
         }
     }
@@ -207,7 +213,8 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
     }
     if (entries.isNotEmpty()) BulkBar(selection, entries, trash, busy, onSelection,
         onTrash = { confirmation = ListConfirmation.TrashMarked(selection.markedIds.toSet()) },
-        onRestore = { onBulkTrash(selection.markedIds.toSet(), true) }, onTag = { bulkTag = it })
+        onRestore = { onBulkTrash(selection.markedIds.toSet(), true) }, onTag = { bulkTag = it },
+        onFavorite = { onFavorite(selection.markedIds.toSet(), it) })
     if (notice.isNotEmpty()) Text(notice)
     if (matches == null) Text(UiText.text("shell.searching"))
     else if (entries.isEmpty()) Text(UiText.text("shell.noEntries"))
@@ -236,7 +243,8 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
                 onPurge = { confirmation = ListConfirmation.Purge(entry.id, entry.title) },
                 onTrash = { confirmation = ListConfirmation.Trash(entry.id, entry.title) },
                 markers = passwordMarkers(issues[entry.id].orEmpty()), compact = compact,
-                marked = entry.id in selection.marked, onMark = { onSelection(selection.toggleMark(entry.id)) })
+                marked = entry.id in selection.marked, onMark = { onSelection(selection.toggleMark(entry.id)) },
+                onFavorite = if (trash) null else ({ onFavorite(setOf(entry.id), !entry.favorite) }))
         }
     }
     if (help) AlertDialog(onDismissRequest = { help = false }, title = { Text(UiText.text("shortcuts.title")) },
@@ -271,9 +279,9 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
 @Composable
 private fun BulkBar(selection: EntrySelection, entries: List<Entry>, trash: Boolean, busy: Boolean,
                     onSelection: (EntrySelection) -> Unit, onTrash: () -> Unit, onRestore: () -> Unit,
-                    onTag: (Boolean) -> Unit) {
+                    onTag: (Boolean) -> Unit, onFavorite: (Boolean) -> Unit) {
     val count = selection.markedIds.size
-    val anyTag = entries.any { it.id in selection.marked && it.tags.isNotEmpty() }
+    val anyTag = entries.any { it.id in selection.marked && ReservedTags.visible(it.tags).isNotEmpty() }
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
         TextButton(onClick = { onSelection(selection.markAll()) }) {
@@ -285,6 +293,10 @@ private fun BulkBar(selection: EntrySelection, entries: List<Entry>, trash: Bool
             else TextButton(enabled = !busy, onClick = onTrash) { Text(UiText.text("bulk.trash")) }
             TextButton(enabled = !busy, onClick = { onTag(true) }) { Text(UiText.text("bulk.addTag")) }
             TextButton(enabled = !busy && anyTag, onClick = { onTag(false) }) { Text(UiText.text("bulk.removeTag")) }
+            if (!trash) {
+                TextButton(enabled = !busy, onClick = { onFavorite(true) }) { Text(UiText.text("bulk.favorite")) }
+                TextButton(enabled = !busy, onClick = { onFavorite(false) }) { Text(UiText.text("bulk.unfavorite")) }
+            }
             if (count < entries.size) TextButton(onClick = { onSelection(selection.clearMarks()) }) { Text(UiText.text("bulk.clear")) }
         }
     }
@@ -296,7 +308,7 @@ private fun BulkTagDialog(add: Boolean, entries: List<Entry>, busy: Boolean, onD
                           onConfirm: (String) -> Unit) {
     var text by remember { mutableStateOf("") }
     var chosen by remember { mutableStateOf<String?>(null) }
-    val tags = entries.flatMap { it.tags }.distinct().sorted()
+    val tags = entries.flatMap { ReservedTags.visible(it.tags) }.distinct().sorted()
     val tag = if (add) text.trim() else chosen.orEmpty()
     val error = bulkTagError(tag)
     AlertDialog(
