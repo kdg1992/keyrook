@@ -33,4 +33,4 @@ Linux before release 1.0 is approved.
 | Packaged-runtime self-test of each application image before publication | Window lock policies, OS screen lock, user switching, sleep, lid close and inactivity locking with real OS events |
 | Silent install, upgrade from the previous release and removal of each installer, with the installed launcher's self-test ([installer tests](PACKAGING.md#installer-tests)) | |
 | CodeQL, dependency review, license and inventory gates | Clipboard expiry and ownership against the real system clipboard |
-| | Update check network behavior, keyboard-only use and language switching in the installed application |
+| | Update check and breach check network behavior, keyboard-only use and language switching in the installed application |
