@@ -26,7 +26,8 @@ For an unpublished `0.x.y` version, run **Recover release pull request** on
 `main`, supplying the old release PR number. It checks the version and manifest,
 refuses an existing tag, release or replacement PR, removes the old PR's pending
 label, and invokes release-please to generate a replacement at the same version.
-It restores the old label if recovery fails. No tag or release is created by
+It restores the old label if recovery fails and otherwise dispatches the
+[release PR checks](CI.md#release-process) for the replacement. No tag or release is created by
 this recovery workflow, and it uses only `GITHUB_TOKEN`.
 The single root package uses the default release branch
 `release-please--branches--main`; recovery also accepts the previous

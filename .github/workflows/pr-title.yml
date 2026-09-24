@@ -1,0 +1,39 @@
+# SPDX-FileCopyrightText: 2026 Kim Daniel Geisthardt
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: PR title
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      title:
+        description: Pull request title to validate against the dispatched branch head
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-title-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pr-title:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check Conventional Commit title
+        shell: bash
+        env:
+          PR_TITLE: ${{ github.event_name == 'workflow_dispatch' && inputs.title || github.event.pull_request.title }}
+        run: |
+          node <<'NODE'
+          const title = process.env.PR_TITLE || '';
+          const pattern = /^(feat|fix|docs|test|refactor|ci|chore|build|perf|revert)(\([a-z0-9][a-z0-9._/-]*\))?!?: \S[^\r\n]*$/;
+          if (!pattern.test(title)) {
+            console.error('PR title must follow Conventional Commits, for example: fix(storage): preserve the original file');
+            process.exit(1);
+          }
+          NODE

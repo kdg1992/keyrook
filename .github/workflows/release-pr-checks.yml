@@ -1,0 +1,59 @@
+# SPDX-FileCopyrightText: 2026 Kim Daniel Geisthardt
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Release PR checks
+
+# Pull requests created or updated with GITHUB_TOKEN do not start pull_request workflows, but
+# workflow_dispatch events do. The dispatched runs report on the release branch head commit,
+# which is the release PR's head, under the same check names as ordinary pull request runs.
+on:
+  workflow_call:
+    inputs:
+      title:
+        description: Release pull request title
+        required: true
+        type: string
+      branch:
+        description: Release pull request head branch
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      title:
+        description: Release pull request title
+        required: true
+        type: string
+      branch:
+        description: Release pull request head branch
+        required: true
+        type: string
+        default: release-please--branches--main
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PR_TITLE: ${{ inputs.title }}
+      PR_BRANCH: ${{ inputs.branch }}
+    steps:
+      - name: Start pull request verification on the release branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$PR_BRANCH" in
+            release-please--branches--main | release-please--branches--main--components--keyrook) ;;
+            *) echo 'Not a Release Please branch'; exit 1 ;;
+          esac
+          # The graph is submitted first; Dependency review waits for both snapshots.
+          gh workflow run dependency-submission.yml --ref "$PR_BRANCH"
+          gh workflow run ci.yml --ref "$PR_BRANCH"
+          gh workflow run codeql.yml --ref "$PR_BRANCH"
+          gh workflow run dependency-review.yml --ref "$PR_BRANCH"
+          gh workflow run pr-title.yml --ref "$PR_BRANCH" -f title="$PR_TITLE"

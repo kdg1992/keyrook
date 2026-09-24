@@ -4,7 +4,7 @@ name: CI
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, edited, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
   workflow_dispatch:
@@ -14,7 +14,8 @@ permissions:
 
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # Pushes to main write the Gradle cache and must finish; only superseded PR runs are canceled.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   changes:
@@ -32,39 +33,7 @@ jobs:
         shell: bash
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: |
-          node <<'NODE'
-          const fs = require('node:fs');
-          const {execFileSync} = require('node:child_process');
-          const base = process.env.BASE_SHA || '';
-          let docsOnly = false;
-          if (/^[a-f0-9]{40}$/.test(base) && !/^0+$/.test(base)) {
-            const paths = execFileSync('git', ['diff', '--no-renames', '--name-only', '-z', base, process.env.GITHUB_SHA], {encoding: 'utf8'})
-              .split('\0').filter(Boolean);
-            docsOnly = paths.length > 0 && paths.every(path =>
-              path.endsWith('.md') && path.split('/').at(-1) !== 'CHANGELOG.md');
-          }
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, `docs-only=${docsOnly}\n`);
-          NODE
-
-  pr-title:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Check Conventional Commit title
-        shell: bash
-        env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-        run: |
-          node <<'NODE'
-          const title = process.env.PR_TITLE || '';
-          const pattern = /^(feat|fix|docs|test|refactor|ci|chore|build|perf|revert)(\([a-z0-9][a-z0-9._/-]*\))?!?: \S[^\r\n]*$/;
-          if (!pattern.test(title)) {
-            console.error('PR title must follow Conventional Commits, for example: fix(storage): preserve the original file');
-            process.exit(1);
-          }
-          NODE
+        run: node scripts/classify-changes.mjs
 
   build:
     name: build-${{ matrix.platform }}
@@ -106,18 +75,15 @@ jobs:
           cache-provider: basic
           cache-read-only: ${{ github.event_name == 'pull_request' || github.ref != 'refs/heads/main' }}
           validate-wrappers: true
-      - name: Compile, lint and test
-        if: needs.changes.outputs.docs-only != 'true' || matrix.platform == 'linux'
-        shell: bash
-        run: bash ./gradlew check --no-daemon --console=plain
-      - name: Verify native desktop event routing
+      - name: Compile, lint, test and verify native desktop event routing
         if: needs.changes.outputs.docs-only != 'true' || matrix.platform == 'linux'
         shell: bash
         run: |
+          tasks=(check :app:desktopWindowCheck --no-daemon --console=plain)
           if [ "$RUNNER_OS" = "Linux" ]; then
-            xvfb-run -a bash ./gradlew :app:desktopWindowCheck --no-daemon --console=plain
+            xvfb-run -a bash ./gradlew "${tasks[@]}"
           else
-            bash ./gradlew :app:desktopWindowCheck --no-daemon --console=plain
+            bash ./gradlew "${tasks[@]}"
           fi
       - name: Upload failed test reports
         if: failure()

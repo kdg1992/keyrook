@@ -25,6 +25,8 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+    outputs:
+      pr: ${{ steps.replacement.outputs.pr }}
     steps:
       - name: Validate unpublished release and current main
         id: candidate
@@ -105,3 +107,14 @@ jobs:
           RELEASE_PR: ${{ steps.candidate.outputs.number }}
         run: |
           gh api --method POST "repos/$GH_REPO/issues/$RELEASE_PR/labels" -f 'labels[]=autorelease: pending'
+
+  # The replacement PR is created with GITHUB_TOKEN, which starts no pull_request workflows.
+  release-pr-checks:
+    needs: recover
+    permissions:
+      contents: read
+      actions: write
+    uses: ./.github/workflows/release-pr-checks.yml
+    with:
+      title: ${{ fromJSON(needs.recover.outputs.pr).title }}
+      branch: ${{ fromJSON(needs.recover.outputs.pr).headBranchName }}
