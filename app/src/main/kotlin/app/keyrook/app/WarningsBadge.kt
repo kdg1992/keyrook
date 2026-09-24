@@ -13,7 +13,6 @@ import app.keyrook.core.model.Vault
 import app.keyrook.core.security.EntryHealth
 import app.keyrook.core.security.HealthIssue
 import app.keyrook.core.security.VaultHealth
-import java.time.LocalDate
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.swing.SwingUtilities
@@ -27,9 +26,7 @@ import javax.swing.SwingUtilities
 internal fun vaultWarnings(vault: Vault?, controller: VaultController): List<EntryHealth>? {
     val worker = remember { Executors.newSingleThreadExecutor { Thread(it, "vault-health").apply { isDaemon = true } } }
     DisposableEffect(Unit) { onDispose { worker.shutdown() } }
-    val today by produceState(LocalDate.now()) {
-        while (true) { kotlinx.coroutines.delay(60_000); value = LocalDate.now() }
-    }
+    val today by rememberToday()
     val id = vault?.id
     val revision = vault?.revision
     var result by remember(id, revision, today) { mutableStateOf<List<EntryHealth>?>(null) }

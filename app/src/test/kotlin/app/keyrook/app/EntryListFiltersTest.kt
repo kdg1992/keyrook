@@ -110,4 +110,30 @@ class EntryListFiltersTest {
             assertEquals(listOf("a", "b", "c"), EntryListFilters().select(vault, all, today, recent).map { it.id })
         }
     }
+
+    @Test fun `keyed sorting keeps the order of comparing the parsed values per comparison`() {
+        val titles = listOf("alpha", "Alpha", "ALPHA", "beta", "Beta", "Ärger", "zeta", "Zeta", "", "10", "9")
+        val instants = listOf("2026-01-01T00:00:00Z", "2026-01-01T01:00:00+01:00", "2026-01-01T00:00:00.5Z",
+            "2025-12-31T23:59:59Z", "2026-06-01T12:00:00-02:00")
+        val random = java.util.Random(7)
+        val entries = (0 until 400).map { index ->
+            entry("id-%03d".format(random.nextInt(1000)) + "-$index", title = titles[random.nextInt(titles.size)],
+                modified = instants[random.nextInt(instants.size)],
+                expires = if (random.nextInt(4) == 0) null else today.plusDays(random.nextInt(5).toLong() - 2))
+        }
+        val titleOrder = compareBy<Entry> { it.title.lowercase(java.util.Locale.ROOT) }.thenBy { it.title }.thenBy { it.id }
+        val reference = mapOf(
+            EntrySort.TITLE to titleOrder,
+            EntrySort.MODIFIED to compareByDescending<Entry> { java.time.Instant.parse(it.modifiedAt) }.then(titleOrder),
+            EntrySort.EXPIRY to compareBy<Entry, LocalDate?>(nullsLast()) { it.expiresOn?.let(LocalDate::parse) }.then(titleOrder),
+        )
+        Vault(entries = entries).use { vault ->
+            EntrySort.entries.forEach { sort ->
+                val expected = vault.entries.sortedWith(reference.getValue(sort)).map { it.id }
+                assertEquals(expected, sortEntries(vault.entries, sort).map { it.id }, sort.name)
+                assertEquals(expected, sortEntries(vault.entries.shuffled(random), sort).map { it.id }, sort.name)
+                assertEquals(expected, EntryListFilters(sort = sort).ids(vault), sort.name)
+            }
+        }
+    }
 }

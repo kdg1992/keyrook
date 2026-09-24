@@ -38,6 +38,8 @@ internal data class EntrySelection(val selectedId: String? = null, val visible: 
     /** [ids] is null while results are pending; the previous list and a pending [target] are then kept unchanged. */
     fun update(query: Any, ids: List<String>?): EntrySelection = when {
         ids == null -> this
+        // The same list again, as on every recomposition: nothing to follow, so skip the scans below.
+        ids === visible && target == null && query == this.query && (selectedId != null || ids.isEmpty()) -> this
         target != null && target in ids -> EntrySelection(target, ids, query, marked = kept(query, ids))
         query != this.query -> EntrySelection(ids.firstOrNull(), ids, query)
         else -> copy(selectedId = follow(ids), visible = ids, target = null, marked = kept(query, ids))

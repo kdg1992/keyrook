@@ -101,7 +101,10 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
                       onFavorite: (Set<String>, Boolean) -> Unit) {
     val search = view.search
     val includeHidden = view.includeHidden
-    val activeFilters = view.filters.normalized(vault)
+    // Keyed on the snapshot instance: every save presents a new one, and a list of 5,000–10,000 entries is filtered,
+    // sorted and scanned for tags only when the snapshot, the search results or the filters change.
+    val snapshot = SameInstance(vault)
+    val activeFilters = remember(view.filters, snapshot) { view.filters.normalized(vault) }
     val trash = activeFilters.trash
     SideEffect { if (view.filters != activeFilters) onView(view.copy(filters = activeFilters)) }
     fun applyFilters(next: EntryListFilters) = onView(view.copy(filters = next))
@@ -115,7 +118,7 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
     // Open bulk tag dialog: true adds a tag to the marked entries, false removes one.
     var bulkTag by remember { mutableStateOf<Boolean?>(null) }
     var choosingTemplate by remember { mutableStateOf(false) }
-    val trashCount = vault.entries.count { it.deletedAt != null }
+    val trashCount = remember(snapshot) { vault.entries.count { it.deletedAt != null } }
     val latestNew by rememberUpdatedState({ if (!busy && !trash && confirmation == null) onCreate() })
     DisposableEffect(shortcuts) {
         shortcuts.newEntry = { latestNew() }
@@ -125,13 +128,16 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
     // The list takes the focus when shown and again after its dialogs close, so arrow keys work immediately.
     val listIdle = confirmation == null && !help && bulkTag == null && !choosingTemplate
     LaunchedEffect(listIdle) { if (listIdle) runCatching { listFocus.requestFocus() } }
-    val today by produceState(java.time.LocalDate.now()) {
-        while (true) { kotlinx.coroutines.delay(60_000); value = java.time.LocalDate.now() }
+    val today by rememberToday()
+    val entries = remember(activeFilters, snapshot, matches, today, recent) {
+        activeFilters.select(vault, matches.orEmpty(), today, recent)
     }
-    val entries = activeFilters.select(vault, matches.orEmpty(), today, recent)
-    val selection = selectionState.update(view.query(activeFilters), matches?.let { entries.map { it.id } })
+    val entryIds = remember(SameInstance(entries)) { entries.map { it.id } }
+    val selection = selectionState.update(view.query(activeFilters), matches?.let { entryIds })
     SideEffect { if (selectionState != selection) onSelection(selection) }
-    val selectedEntry = entries.firstOrNull { it.id == selection.selectedId }
+    val selectedIndex = remember(entryIds, selection.selectedId) { entryIds.indexOf(selection.selectedId) }
+    val selectedEntry = entries.getOrNull(selectedIndex)
+    val visibleTags = remember(snapshot) { vault.entries.flatMap { ReservedTags.visible(it.tags) }.distinct().sorted() }
     fun quickAction(entry: Entry, kind: QuickField) {
         if (entry.data.quickField(kind) != null) onUsed(entry.id)
         if (kind == QuickField.TOTP) { notice = EntryQuickActions.copyTotpNotice(entry.data); return }
@@ -218,8 +224,7 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         Choice(UiText.text("shell.project"), activeFilters.projectId, activeFilters.projects(vault).map { it.id to it.name }) {
             applyFilters(activeFilters.copy(projectId = it))
         }
-        Choice(UiText.text("shell.tag"), activeFilters.tag,
-            vault.entries.flatMap { ReservedTags.visible(it.tags) }.distinct().sorted().map { it to it }) {
+        Choice(UiText.text("shell.tag"), activeFilters.tag, visibleTags.map { it to it }) {
             applyFilters(activeFilters.copy(tag = it))
         }
     }
@@ -240,7 +245,6 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
     if (matches == null) Text(UiText.text("shell.searching"))
     else if (entries.isEmpty()) Text(UiText.text("shell.noEntries"))
     val listState = rememberLazyListState()
-    val selectedIndex = entries.indexOfFirst { it.id == selection.selectedId }
     LaunchedEffect(selectedIndex, selection.selectedId) {
         if (selectedIndex < 0) return@LaunchedEffect
         val layout = listState.layoutInfo
@@ -307,7 +311,9 @@ private fun BulkBar(selection: EntrySelection, entries: List<Entry>, trash: Bool
                     onSelection: (EntrySelection) -> Unit, onTrash: () -> Unit, onRestore: () -> Unit,
                     onTag: (Boolean) -> Unit, onFavorite: (Boolean) -> Unit) {
     val count = selection.markedIds.size
-    val anyTag = entries.any { it.id in selection.marked && ReservedTags.visible(it.tags).isNotEmpty() }
+    val anyTag = remember(SameInstance(entries), selection.marked) {
+        entries.any { it.id in selection.marked && ReservedTags.visible(it.tags).isNotEmpty() }
+    }
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
         TextButton(onClick = { onSelection(selection.markAll()) }) {
