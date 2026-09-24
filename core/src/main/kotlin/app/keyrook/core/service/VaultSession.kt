@@ -100,7 +100,7 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
     }
 
     /** An independent, caller-owned copy for editing and saving. Secrets are copied as character arrays. */
-    @Synchronized fun snapshot(): Vault = requireDocument().independentCopy()
+    @Synchronized fun snapshot(): Vault = requireDocument().deepCopy()
 
     /**
      * Runs a read-only scan such as search or health on the current document and returns only what [block] derives.

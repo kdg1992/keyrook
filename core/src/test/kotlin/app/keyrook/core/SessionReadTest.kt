@@ -37,9 +37,9 @@ class SessionReadTest {
         }
     }
 
-    @Test fun `independent copy owns every secret and keeps the document unchanged`() {
+    @Test fun `deep copy owns every secret and keeps the document unchanged`() {
         sampleVault().use { original ->
-            original.independentCopy().use { copy ->
+            original.deepCopy().use { copy ->
                 val originals = secretsOf(original)
                 val copies = secretsOf(copy)
                 assertEquals(originals.size, copies.size)

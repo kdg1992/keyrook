@@ -164,7 +164,7 @@ data class Vault(
      * serialization round trip. Non-secret values are immutable and shared. If copying fails, secrets copied so far
      * are erased.
      */
-    internal fun independentCopy(): Vault {
+    internal fun deepCopy(): Vault {
         val copied = mutableListOf<Secret>()
         fun secret(value: Secret): Secret = value.copy().also(copied::add)
         fun field(value: Field): Field = value.copy(value = secret(value.value))
