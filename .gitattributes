@@ -1,2 +1,5 @@
 # Reviewed native inventories are hashed byte for byte by the packaging gate.
 /licenses/native/** text eol=lf
+# Release notices are collected on every platform and must be byte-identical.
+/LICENSE text eol=lf
+/THIRD-PARTY-NOTICES text eol=lf
