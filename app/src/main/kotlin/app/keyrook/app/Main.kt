@@ -122,9 +122,12 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
         val token = controller.sessionEpoch.capture()
         worker.execute {
             val result = runCatching { withOperationGuard(controller, token) { action() } }
+            // A save stays successful when old backups cannot be removed; that is only reported as a notice.
+            val rotation = runCatching { rotationNotice(controller) }.getOrNull()
             SwingUtilities.invokeLater {
                 if (!live.get()) { result.getOrNull()?.close() }
                 else controller.sessionEpoch.deliver(token, result.getOrNull()) { snapshot ->
+                    rotation?.let { notice = it }
                     if (result.isSuccess) {
                         vault?.close()
                         vault = snapshot

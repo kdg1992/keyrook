@@ -13,12 +13,6 @@ import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.channels.OverlappingFileLockException
 import java.nio.file.*
-import java.nio.file.attribute.AclEntry
-import java.nio.file.attribute.AclEntryPermission
-import java.nio.file.attribute.AclEntryType
-import java.nio.file.attribute.AclFileAttributeView
-import java.nio.file.attribute.PosixFileAttributeView
-import java.nio.file.attribute.PosixFilePermissions
 import java.security.MessageDigest
 
 class VaultConflictException : IOException("Vault changed or is already in use")
@@ -56,8 +50,7 @@ class VaultStore internal constructor(private val codec: VaultCodec, private val
                       parameters: KdfParameters, allowExpensive: Boolean): SaveResult {
         val target = resolve(path)
         val lockPath = target.resolveSibling(".${target.fileName}.lock")
-        val attributes = if (Files.getFileAttributeView(target.parent, PosixFileAttributeView::class.java) != null)
-            arrayOf(PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"))) else emptyArray()
+        val attributes = PrivateFiles.attributes(target.parent)
         FileChannel.open(lockPath, setOf(StandardOpenOption.CREATE, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS), *attributes).use { channel ->
             val lock = try { channel.tryLock() } catch (_: OverlappingFileLockException) { null }
             if (lock == null) throw VaultConflictException()
@@ -70,7 +63,7 @@ class VaultStore internal constructor(private val codec: VaultCodec, private val
                 val bytes = codec.encrypt(vault, credentials, parameters, allowExpensive)
                 val temp = Files.createTempFile(target.parent, ".keyrook-", ".tmp", *attributes)
                 try {
-                    restrictAccess(temp)
+                    PrivateFiles.restrictToOwner(temp)
                     FileChannel.open(temp, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS).use { output ->
                         val buffer = ByteBuffer.wrap(bytes)
                         while (buffer.hasRemaining()) output.write(buffer)
@@ -108,12 +101,6 @@ class VaultStore internal constructor(private val codec: VaultCodec, private val
         return absolute.parent.toRealPath().resolve(absolute.fileName)
     }
 
-    private fun restrictAccess(path: Path) {
-        val acl = Files.getFileAttributeView(path, AclFileAttributeView::class.java, LinkOption.NOFOLLOW_LINKS) ?: return
-        acl.acl = listOf(AclEntry.newBuilder().setType(AclEntryType.ALLOW).setPrincipal(acl.owner)
-            .setPermissions(AclEntryPermission.entries.toSet()).build())
-    }
-
     private fun forceDirectory(path: Path): DirectoryDurability = try {
         FileChannel.open(path, StandardOpenOption.READ).use { it.force(true) }
         DirectoryDurability.FORCED
@@ -128,14 +115,7 @@ class VaultStore internal constructor(private val codec: VaultCodec, private val
             if (!Files.exists(path, LinkOption.NOFOLLOW_LINKS)) throw NoSuchFileException(path.toString())
             throw IOException("Vault must be a regular file without symbolic links")
         }
-        FileChannel.open(path, StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS).use { channel ->
-            val size = channel.size()
-            if (size !in 92..VaultCodec.MAX_FILE_BYTES.toLong()) throw InvalidVaultException()
-            val bytes = ByteArray(size.toInt())
-            val buffer = ByteBuffer.wrap(bytes)
-            while (buffer.hasRemaining()) if (channel.read(buffer) < 0) throw InvalidVaultException()
-            if (channel.read(ByteBuffer.allocate(1)) != -1) throw InvalidVaultException()
-            return bytes
-        }
+        return PrivateFiles.readBounded(path, 92..VaultCodec.MAX_FILE_BYTES.toLong(),
+            { InvalidVaultException() }, { InvalidVaultException() })
     }
 }

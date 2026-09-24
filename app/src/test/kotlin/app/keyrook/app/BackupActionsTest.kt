@@ -34,6 +34,23 @@ class BackupActionsTest {
         }
     }
 
+    @Test fun `complete rotation shows no notice`() {
+        withConfiguredVault { controller, _ ->
+            repeat(3) { createManualBackup(controller) }
+            assertNull(rotationNotice(controller))
+            controller.lock()
+            assertNull(rotationNotice(controller))
+        }
+    }
+
+    @Test fun `rotation notices name the count and never a path`() {
+        for (language in listOf(AppLanguage.GERMAN, AppLanguage.ENGLISH)) {
+            val count = UiText.localized(language.locale(), "backup.rotationIncomplete", 3)
+            assertTrue(count.contains("3"))
+            assertFalse(UiText.localized(language.locale(), "backup.rotationUnchecked").contains("%"))
+        }
+    }
+
     @Test fun `expired modal cannot disable backups or start manual backup`() {
         withConfiguredVault { controller, folder ->
             val token = controller.sessionEpoch.capture()

@@ -28,6 +28,7 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
     private var currentState = SessionState.LOCKED
     private var backups: BackupService? = null
     private var lastBackupRevision: Long? = null
+    private var incompleteRotation: BackupResult? = null
     val state: SessionState @Synchronized get() = currentState
 
     /** A configured backup must succeed before an existing vault is replaced. */
@@ -35,6 +36,7 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
         requireDocument()
         backups = service
         lastBackupRevision = null
+        incompleteRotation = null
     }
 
     @Synchronized fun backupStatus(): BackupStatus = BackupStatus(backups != null, lastBackupRevision)
@@ -60,8 +62,17 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
             credentials!!, allowExpensive, cancelled)
     }
 
+    /**
+     * Returns and forgets the latest backup, automatic or manual, whose rotation could not remove every old backup,
+     * or null. Such a backup and the save it preceded succeeded; callers show a non-blocking notice.
+     */
+    @Synchronized fun takeIncompleteRotation(): BackupResult? = incompleteRotation.also { incompleteRotation = null }
+
     private fun createBackup(service: BackupService, allowExpensive: Boolean): BackupResult =
-        service.create(path!!, credentials!!, stamp!!, allowExpensive).also { lastBackupRevision = stamp!!.revision }
+        service.create(path!!, credentials!!, stamp!!, allowExpensive).also {
+            lastBackupRevision = stamp!!.revision
+            if (!it.rotationComplete) incompleteRotation = it
+        }
 
     @Synchronized fun create(path: Path, vault: Vault, credentials: Credentials,
                              parameters: KdfParameters = KdfParameters(), allowExpensive: Boolean = false): SaveResult {
@@ -155,6 +166,7 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
         document?.close(); credentials?.close()
         document = null; credentials = null; path = null; stamp = null; backups = null
         lastBackupRevision = null
+        incompleteRotation = null
         currentState = SessionState.LOCKED
     }
     override fun close() = lock()

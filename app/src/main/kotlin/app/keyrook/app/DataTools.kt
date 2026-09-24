@@ -7,12 +7,12 @@ import app.keyrook.core.crypto.Credentials
 import app.keyrook.core.crypto.Secret
 import app.keyrook.core.format.VaultCodec
 import app.keyrook.core.model.Vault
+import app.keyrook.core.storage.PrivateFiles
 import app.keyrook.core.storage.VaultStore
 import app.keyrook.core.transfer.*
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.file.*
-import java.nio.file.attribute.*
 import java.io.IOException
 import javax.swing.SwingUtilities
 
@@ -70,7 +70,7 @@ internal fun dataActions(controller: VaultController, settings: SettingsStore, d
                 askCredentials(dialogs, UiText.text("transfer.exportPassword"), confirm = true)?.use { credentials ->
                     controller.session.snapshot().use {
                         ensureOperationCurrent()
-                        VaultStore().save(target, it.copy(revision = 0), credentials)
+                        VaultStore().save(target, it.independentCopy(), credentials)
                     }
                     dialogs.inform(UiText.text("transfer.exported"))
                 }
@@ -210,21 +210,9 @@ internal fun readTransfer(path: Path, maximumBytes: Int = VaultCodec.MAX_FILE_BY
                           operations: TransferIo = FileTransferIo): ByteArray {
     require(maximumBytes in 0..VaultCodec.MAX_FILE_BYTES)
     require(Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS))
-    var owned: ByteArray? = null
-    try {
-        FileChannel.open(path, StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS).use { input ->
-            val size = input.size()
-            require(size in 0..maximumBytes.toLong()) { "Import exceeds size limit" }
-            val bytes = ByteArray(size.toInt()).also { owned = it }
-            val extra = ByteBuffer.allocate(1)
-            try {
-                val buffer = ByteBuffer.wrap(bytes)
-                while (buffer.hasRemaining()) if (operations.read(input, buffer) < 0) throw IOException("Import changed while reading")
-                if (operations.read(input, extra) != -1) throw IOException("Import changed while reading")
-                return bytes
-            } finally { extra.array().fill(0) }
-        }
-    } catch (failure: Exception) { owned?.fill(0); throw failure }
+    return PrivateFiles.readBounded(path, 0..maximumBytes.toLong(),
+        { IllegalArgumentException("Import exceeds size limit") }, { IOException("Import changed while reading") },
+        operations::read)
 }
 
 /** Writes only a new user-selected file; permissions are restricted before any plaintext is written. */
@@ -237,17 +225,9 @@ internal fun writePrivateNew(path: Path, bytes: ByteArray, operations: TransferI
 internal fun writePrivateFile(path: Path, bytes: ByteArray, operations: TransferIo = FileTransferIo) {
     val target = path.toAbsolutePath().normalize()
     require(target.fileName != null && bytes.size <= VaultCodec.MAX_FILE_BYTES)
-    val posix = Files.getFileAttributeView(target.parent, PosixFileAttributeView::class.java) != null
-    val attributes = if (posix)
-        arrayOf(PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"))) else emptyArray()
-    val file = FileChannel.open(target, setOf(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS), *attributes)
+    val file = PrivateFiles.createNew(target)
     try {
         file.use {
-            val acl = Files.getFileAttributeView(target, AclFileAttributeView::class.java, LinkOption.NOFOLLOW_LINKS)
-            if (acl != null) {
-                acl.acl = listOf(AclEntry.newBuilder().setType(AclEntryType.ALLOW).setPrincipal(acl.owner)
-                    .setPermissions(AclEntryPermission.entries.toSet()).build())
-            } else if (!posix) throw IOException("Private file permissions are unavailable")
             val buffer = ByteBuffer.wrap(bytes)
             operations.write(file, buffer)
             operations.force(file)

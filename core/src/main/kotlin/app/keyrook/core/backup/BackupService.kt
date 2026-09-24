@@ -8,6 +8,7 @@ import app.keyrook.core.crypto.InvalidVaultException
 import app.keyrook.core.format.VaultCodec
 import app.keyrook.core.format.VaultHeader
 import app.keyrook.core.storage.FileStamp
+import app.keyrook.core.storage.PrivateFiles
 import app.keyrook.core.storage.SaveResult
 import app.keyrook.core.storage.VaultConflictException
 import app.keyrook.core.storage.VaultStore
@@ -16,8 +17,6 @@ import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.channels.OverlappingFileLockException
 import java.nio.file.*
-import java.nio.file.attribute.PosixFileAttributeView
-import java.nio.file.attribute.PosixFilePermissions
 import java.security.MessageDigest
 import java.time.Clock
 import java.time.Instant
@@ -36,7 +35,13 @@ class BackupPreview internal constructor(
     val vaultId: String, val revision: Long, val entries: Int, val modifiedAt: Instant,
     internal val digest: ByteArray,
 )
-data class BackupResult(val path: Path, val removed: Int)
+/**
+ * [removed] old backups were deleted by rotation. Rotation is best effort after the new backup is verified:
+ * [notRemoved] backups selected for deletion could not be deleted, and [rotationComplete] is false when some could
+ * not be deleted or the folder could not be listed for rotation. The new backup at [path] is valid either way.
+ */
+data class BackupResult(val path: Path, val removed: Int, val notRemoved: Int = 0,
+                        val rotationComplete: Boolean = notRemoved == 0)
 
 /** Copies authenticated ciphertext. Backup names disclose only a random vault ID, revision and time. */
 class BackupService internal constructor(
@@ -44,6 +49,7 @@ class BackupService internal constructor(
     private val policy: BackupPolicy,
     private val clock: Clock,
     private val codec: VaultCodec,
+    private val remove: (Path) -> Unit = { Files.delete(it) },
 ) {
     constructor(directory: Path, policy: BackupPolicy = BackupPolicy(), clock: Clock = Clock.systemUTC()) :
         this(directory, policy, clock, VaultCodec())
@@ -62,10 +68,8 @@ class BackupService internal constructor(
                 if (lock == null) throw VaultConflictException()
                 lock.use {
                     val target = root.resolve("${vault.id}_${clock.instant().toEpochMilli()}_${vault.revision}_${UUID.randomUUID()}.keyrook.bak")
-                    val attributes = if (Files.getFileAttributeView(root, PosixFileAttributeView::class.java) != null)
-                        arrayOf(PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"))) else emptyArray()
                     // CREATE_NEW never replaces a conflicting target, even when another process races us.
-                    FileChannel.open(target, setOf(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS), *attributes).use { output ->
+                    PrivateFiles.createNew(target).use { output ->
                         try {
                             val buffer = ByteBuffer.wrap(bytes)
                             while (buffer.hasRemaining()) output.write(buffer)
@@ -79,7 +83,7 @@ class BackupService internal constructor(
                     try {
                         if (!MessageDigest.isEqual(bytes, read(target))) throw IOException("Backup verification failed")
                     } catch (failure: Exception) { Files.deleteIfExists(target); throw failure }
-                    return BackupResult(target, rotate(root, vault.id, target))
+                    return rotate(root, vault.id, target)
                 }
             }
         }
@@ -93,41 +97,57 @@ class BackupService internal constructor(
         }
     }
 
-    /** Restores only to an absent file; the source and any existing target remain untouched. */
+    /**
+     * Restores only to an absent file; the source and any existing target remain untouched. The restored file is an
+     * independent vault with a new ID at revision zero, so its backups never mix with those of the original.
+     */
     fun restoreToNew(backup: Path, target: Path, credentials: Credentials, preview: BackupPreview,
                      allowExpensive: Boolean = false): SaveResult {
         val bytes = read(backup)
         if (!MessageDigest.isEqual(hash(bytes), preview.digest)) throw VaultConflictException()
         val destination = safePath(target)
         return authenticate(bytes, credentials, allowExpensive).use { vault ->
-            VaultStore().save(destination, vault.copy(revision = 0), credentials,
+            VaultStore().save(destination, vault.independentCopy(), credentials,
                 parameters = VaultHeader.parse(bytes, allowExpensive).kdf, allowExpensive = allowExpensive)
         }
     }
 
-    private fun rotate(root: Path, vaultId: String, newest: Path): Int {
+    /**
+     * Deletes managed backups outside the retention after [newest] was verified. Failures only reduce what is
+     * removed: they are counted in the result and never undo the new backup or fail the caller's save.
+     */
+    private fun rotate(root: Path, vaultId: String, newest: Path): BackupResult {
         val pattern = backupNamePattern(vaultId)
-        val candidates = Files.newDirectoryStream(root).use { stream ->
-            stream.mapNotNull { path ->
-                val match = pattern.matchEntire(path.fileName.toString()) ?: return@mapNotNull null
-                if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) return@mapNotNull null
-                val time = match.groupValues[1].toLongOrNull() ?: return@mapNotNull null
-                path to Instant.ofEpochMilli(time)
-            }.sortedWith(compareByDescending<Pair<Path, Instant>> { it.second }
-                .thenByDescending { it.first == newest }.thenByDescending { it.first.fileName.toString() })
-        }
+        val candidates = try {
+            Files.newDirectoryStream(root).use { stream ->
+                stream.mapNotNull { path ->
+                    val match = pattern.matchEntire(path.fileName.toString()) ?: return@mapNotNull null
+                    if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) return@mapNotNull null
+                    val time = match.groupValues[1].toLongOrNull() ?: return@mapNotNull null
+                    path to Instant.ofEpochMilli(time)
+                }.sortedWith(compareByDescending<Pair<Path, Instant>> { it.second }
+                    .thenByDescending { it.first == newest }.thenByDescending { it.first.fileName.toString() })
+            }
+        } catch (_: IOException) { return BackupResult(newest, 0, rotationComplete = false) }
+          catch (_: DirectoryIteratorException) { return BackupResult(newest, 0, rotationComplete = false) }
+          catch (_: SecurityException) { return BackupResult(newest, 0, rotationComplete = false) }
         val keep = candidates.take(policy.latest).map { it.first }.toMutableSet()
         keep.add(newest)
         candidates.groupBy { it.second.atZone(ZoneOffset.UTC).toLocalDate() }.values.take(policy.daily)
             .forEach { keep.add(it.first().first) }
         var removed = 0
+        var notRemoved = 0
         for ((path) in candidates) {
-            if (path !in keep && Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
-                Files.delete(path)
+            if (path in keep || !Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) continue
+            try {
+                remove(path)
                 removed++
-            }
+            } catch (_: NoSuchFileException) {
+                // Already gone, for example removed by hand: nothing is left to rotate.
+            } catch (_: IOException) { notRemoved++ }
+              catch (_: SecurityException) { notRemoved++ }
         }
-        return removed
+        return BackupResult(newest, removed, notRemoved)
     }
 
     private fun read(path: Path): ByteArray = readBackupFile(path)
@@ -164,15 +184,8 @@ fun countManagedBackups(directory: Path, vaultId: String): Int {
 internal fun readBackupFile(path: Path): ByteArray {
     val resolved = resolveWithoutFinalLink(path)
     if (!Files.isRegularFile(resolved, LinkOption.NOFOLLOW_LINKS)) throw IOException("Backup input must be a regular file")
-    FileChannel.open(resolved, StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS).use { input ->
-        val size = input.size()
-        if (size !in 92..VaultCodec.MAX_FILE_BYTES.toLong()) throw InvalidVaultException()
-        val bytes = ByteArray(size.toInt())
-        val buffer = ByteBuffer.wrap(bytes)
-        while (buffer.hasRemaining()) if (input.read(buffer) < 0) throw InvalidVaultException()
-        if (input.read(ByteBuffer.allocate(1)) != -1) throw InvalidVaultException()
-        return bytes
-    }
+    return PrivateFiles.readBounded(resolved, 92..VaultCodec.MAX_FILE_BYTES.toLong(),
+        { InvalidVaultException() }, { InvalidVaultException() })
 }
 
 /**

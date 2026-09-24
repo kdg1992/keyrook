@@ -50,8 +50,9 @@ class BackupTest {
             val target = directory.toRealPath().resolve("restored.keyrook")
             backups.restoreToNew(backup, target, c, preview)
             store.load(target, c).use { loaded ->
-                assertEquals(vault.id, loaded.vault.id)
-                assertEquals(vault.entries.size, loaded.vault.entries.size)
+                assertNotEquals(vault.id, loaded.vault.id)
+                assertEquals(0L, loaded.vault.revision)
+                assertEquals(vault.entries.map { it.id }, loaded.vault.entries.map { it.id })
             }
             val before = Files.readAllBytes(target)
             assertThrows(VaultConflictException::class.java) { backups.restoreToNew(backup, target, c, preview) }
