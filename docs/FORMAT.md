@@ -112,3 +112,13 @@ Releases that know only schema 1 read `schemaVersion` 2 as a newer schema withou
 A future incompatible change must never be silent. It requires, together: a version bump (schema or envelope), a registered migration step (or header branch) from the previous version, a frozen fixture of the previous version, and tests proving the step applies, that output validates like a fresh document, that values and secrets survive, and that newer or unbridged versions are still rejected. `SchemaV2MigrationTest` covers the production step from schema 1 with a realistic document, and `FormatMigrationTest` demonstrates the mechanism with a synthetic test-only schema 0 chained to it.
 
 Planned extensions that would require such a change are listed in [ARCHITECTURE.md](ARCHITECTURE.md).
+
+## Compatibility promise from 1.0.0
+
+From release 1.0.0 on, these rules apply to every 1.x release:
+
+- Every 1.x release reads every vault file, backup and Keyrook JSON/CSV or encrypted export written by any earlier Keyrook release, including the 0.x releases.
+- The schema or envelope changes only together with a registered migration from the previous version, as described above. A migrated vault is written in the new format on its next save, and the unchanged older file is kept as `<vault file>.schema-v<old version>-r<revision>.keyrook.bak`.
+- There is no forward compatibility: an older release refuses a vault or export written in a newer schema or envelope without modifying it. Downgrading after a conversion means opening the kept copy with the older release.
+- `settings.json` is kept compatible on a best-effort basis only: later releases read the preferences of earlier ones, while a settings file a release cannot read (for example one written by a newer release) is ignored and default preferences apply. Preferences never affect the vault contents.
+- Semantic Versioning covers the vault format and the application's behaviour. The Kotlin API of the `core` module is an internal library of the application, not a public API, and may change in any release.

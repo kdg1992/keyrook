@@ -96,6 +96,11 @@ The core JAR remains a library; start the desktop application with `:app:run`.
 
 ## Core API
 
+The `core` module is the application's internal library. Its Kotlin API is
+not covered by Semantic Versioning and can change in any release; the
+[compatibility promise](docs/FORMAT.md#compatibility-promise-from-100) covers
+the vault format and application behaviour only.
+
 `VaultCodec` encrypts/decrypts in-memory vaults. `VaultStore` reads/writes files
 with concurrency tokens. `VaultSession` owns a document and credentials,
 provides independent snapshots, and exposes `create`, `open`, `save`,
