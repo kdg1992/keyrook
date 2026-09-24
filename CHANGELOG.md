@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/kdg1992/keyrook/compare/v0.3.1...v0.3.2) (2026-09-24)
+
+
+### Bug Fixes
+
+* **release:** build the app image verified before publication ([#12](https://github.com/kdg1992/keyrook/issues/12)) ([d7d1227](https://github.com/kdg1992/keyrook/commit/d7d122780f0c8f274a72db8abed2d86dcbcc5f05))
+
 ## [0.3.1](https://github.com/kdg1992/keyrook/compare/v0.3.0...v0.3.1) (2026-09-23)
 
 
