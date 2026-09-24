@@ -323,7 +323,7 @@ not preview row values. Canceling or locking while choosing a mapping aborts the
 import and clears the owned input buffer. Unassigned source columns are omitted;
 check the mapping before confirming the import.
 
-**Klartext exportieren** warns twice before writing. JSON is the full Keyrook model. Keyrook CSV uses a `keyrook-json` header and one quoted JSON record so every type, reference and history roundtrips without flattening losses. It is not intended for spreadsheet editing. Both include secrets and deleted/history records. Keep them private and use encrypted export when possible.
+**Klartext exportieren** warns twice before writing, in two separate questions: before the format is chosen and again after the new target file is selected. Questions start with the focus on **Nein**, so Enter alone never confirms; Escape cancels. JSON is the full Keyrook model. Keyrook CSV uses a `keyrook-json` header and one quoted JSON record so every type, reference and history roundtrips without flattening losses. It is not intended for spreadsheet editing. Both include secrets and deleted/history records. Keep them private and use encrypted export when possible.
 
 ## Warning list
 
@@ -363,7 +363,7 @@ Use **Sicherheit** (**Security** in English) to choose the appearance (follow sy
 
 Under every choice, supported operating-system session/sleep notifications (screen lock, user switch, sleep) trigger locking and the inactivity timer keeps running; notification coverage varies by platform. A suspend is also recognized from the system clock, so an unlocked vault locks right after resume even when no sleep notification arrives. The trade-off: with **minimiert wird** or **nie**, an unlocked vault stays unlocked behind other windows until the inactivity deadline, an OS lock or sleep event, or **Sperren**. Choose **den Fokus verliert oder minimiert wird** on shared or unattended machines. The window choice does not change clipboard expiry: copied values are still cleared after the configured seconds and on lock. See [SECURITY.md](SECURITY.md) for the limits of OS-event detection.
 
-**Sperren** remains available during vault operations. Locking discards unsaved edits, clears the displayed snapshot and owned clipboard, and closes open application dialogs. Already-started atomic writes finish before the worker clears session credentials. Results from before the lock cannot reopen the display. Reopen the vault to check the saved state if locking happened during a save.
+**Sperren** remains available during vault operations. Locking discards unsaved edits, clears the displayed snapshot and owned clipboard, and closes open application dialogs; an open question or password prompt counts as canceled. Already-started atomic writes finish before the worker clears session credentials. Results from before the lock cannot reopen the display. Reopen the vault to check the saved state if locking happened during a save.
 
 Failed unlock attempts produce increasing waiting periods, capped at 60 seconds. A countdown shows when the next attempt is available. Locking does not reset that delay; a successful unlock or application restart does. This is not protection against attacks on a copied vault file.
 
@@ -406,10 +406,12 @@ Desktop text uses German and English resource catalogs. The language choice
 applies immediately without restarting or locking; messages already shown stay
 in the language they were created in. User-supplied names, custom field
 identifiers and persisted data are not translated, and protocol and file-format
-names such as SSH, SFTP, IMAP, JSON or KeePass CSV stay as they are. The buttons
-of standard system dialogs (file chooser, confirmation and input dialogs) are
-provided by the Java runtime and follow its default locale (normally the
-operating-system language), not the Keyrook language choice.
+names such as SSH, SFTP, IMAP, JSON or KeePass CSV stay as they are. Messages,
+questions and input dialogs are part of the main window: they follow the
+selected appearance and language, including their buttons, and cannot open
+behind the window or on another screen. Only the system file chooser is
+provided by the Java runtime; its buttons follow the runtime's default locale
+(normally the operating-system language).
 
 Settings files written before the language preference existed load unchanged
 and use the system language. Files written before the update-check option
