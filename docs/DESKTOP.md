@@ -1,6 +1,6 @@
 # Desktop usage
 
-Run `./gradlew :app:run` with JDK 25. The interface is German and supports light/dark themes. Use test data while the application remains a development build.
+Run `./gradlew :app:run` with JDK 25. The interface is German and supports light/dark themes; by default it follows the operating system. Use test data while the application remains a development build.
 
 ## Keyboard navigation
 
@@ -103,7 +103,7 @@ list.
 
 ## Backups and encrypted export
 
-Select an existing **Backup-Ordner** after unlocking, then confirm how many recent versions (1–1000) and additional daily representatives (0–3660) to retain. The dialog starts with 30 versions and 30 daily representatives; zero disables daily retention. Both retention rules apply together. Canceling leaves the current backup configuration unchanged. The confirmed settings enable automatic backups for this session; future backups can remove older managed backups outside those limits. Each backup preserves the previous saved revision before it is replaced. Locking clears the configuration. A failed backup prevents the update; fix the folder access before retrying.
+Select an existing **Backup-Ordner** after unlocking, then confirm how many recent versions (1–1000) and additional daily representatives (0–3660) to retain. The dialog starts with 30 versions and 30 daily representatives; zero disables daily retention. Both retention rules apply together. Canceling leaves the current backup configuration unchanged. The confirmed settings enable automatic backups and are remembered for this vault file; future backups can remove older managed backups outside those limits. Each backup preserves the previous saved revision before it is replaced. Locking clears the active configuration; after the same vault file is unlocked again, including after a restart, the remembered folder and retention are reapplied with the same folder checks. If the folder is no longer usable, the vault still opens without backups and a notice asks you to configure them again. Disabling backups stops this restoration for that vault file. A failed backup prevents the update; fix the folder access before retrying.
 
 **Sicherung jetzt** authenticates and copies the currently saved vault to the configured backup folder, applying the same retention rules without changing the vault revision. **Backupstatus** shows whether backups are enabled and the last successfully backed-up revision for the current configuration. **Backups deaktivieren** requires confirmation and clears the session configuration without deleting existing backup files. Canceling preserves the configuration; locking clears it and its status.
 
@@ -149,13 +149,17 @@ heuristics; a password without a warning is not guaranteed strong.
 
 ## Locking and current boundaries
 
-Use **Sicherheit** to choose the inactivity deadline (default five minutes) and clipboard expiry (default 20 seconds). These preferences apply to the current application session. Switching to another application or minimizing Keyrook also locks it. Supported operating-system session/sleep notifications trigger locking; notification coverage varies by platform. The application additionally uses its own inactivity timer. See [SECURITY.md](SECURITY.md) for the limits of OS-event detection.
+Use **Sicherheit** to choose the appearance (follow system, light or dark), the inactivity deadline (default five minutes) and clipboard expiry (default 20 seconds). These preferences are saved and survive restarts. Switching to another application or minimizing Keyrook also locks it. Supported operating-system session/sleep notifications trigger locking; notification coverage varies by platform. The application additionally uses its own inactivity timer. See [SECURITY.md](SECURITY.md) for the limits of OS-event detection.
 
 **Sperren** remains available during vault operations. Locking discards unsaved edits, clears the displayed snapshot and owned clipboard, and closes open application dialogs. Already-started atomic writes finish before the worker clears session credentials. Results from before the lock cannot reopen the display. Reopen the vault to check the saved state if locking happened during a save.
 
 Failed unlock attempts produce increasing waiting periods, capped at 60 seconds. A countdown shows when the next attempt is available. Locking does not reset that delay; a successful unlock or application restart does. This is not protection against attacks on a copied vault file.
 
-Backup configuration is session-local and cleared on lock. Do not treat the clipboard timer as protection against OS clipboard history. Native packaging and platform-specific end-to-end verification are separate from the local offscreen UI test.
+Do not treat the clipboard timer as protection against OS clipboard history. Native packaging and platform-specific end-to-end verification are separate from the local offscreen UI test.
+
+## Saved settings
+
+Keyrook stores non-secret preferences in `settings.json` in the platform configuration directory: `%APPDATA%\Keyrook` on Windows, `~/Library/Application Support/Keyrook` on macOS and `$XDG_CONFIG_HOME/keyrook` (or `~/.config/keyrook`) on Linux. The file contains the appearance, inactivity deadline, clipboard expiry, the last opened vault path and per-vault backup settings (folder, retention, enabled). The unlock form is pre-filled with the last vault path. Passwords, key-file paths, key-file contents and vault contents are never saved there, so an optional key file must be selected again. If the file cannot be written, a notice appears and the changed preference applies until the application exits. A damaged, unknown or out-of-range file or value falls back to defaults; delete the file to reset all preferences. See [SECURITY.md](SECURITY.md#saved-settings).
 
 Desktop text uses German and English resource catalogs. German remains the
 product language; a language selector is not yet exposed. User-supplied names,

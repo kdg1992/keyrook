@@ -24,13 +24,14 @@ import java.io.IOException
 import javax.swing.*
 
 @Composable
-internal fun DataTools(controller: VaultController, busy: Boolean, operation: (() -> Vault?) -> Unit) {
+internal fun DataTools(controller: VaultController, settings: SettingsStore, busy: Boolean, operation: (() -> Vault?) -> Unit,
+                       settingsFailed: () -> Unit) {
     Row(Modifier.horizontalScroll(rememberScrollState())) {
         TextButton(enabled = !busy, onClick = {
             operation {
                 selectPath(directory = true)?.let { folder ->
                     val selection = askBackupConfiguration(folder)
-                    if (applyBackupConfiguration(controller, selection)) {
+                    if (applyBackupConfiguration(controller, selection, settings, settingsFailed)) {
                         val policy = selection!!.policy
                         inform(UiText.text("transfer.configured", policy.latest, policy.daily))
                     }
@@ -54,7 +55,7 @@ internal fun DataTools(controller: VaultController, busy: Boolean, operation: ((
         TextButton(enabled = !busy, onClick = { operation {
             ensureOperationCurrent()
             if (!controller.session.backupStatus().configured) inform(backupStatusText(controller))
-            else if (disableBackups(controller, confirm(UiText.text("transfer.disableConfirm")))) {
+            else if (disableBackups(controller, confirm(UiText.text("transfer.disableConfirm")), settings, settingsFailed)) {
                 inform(UiText.text("transfer.disabled"))
             }
             controller.session.snapshot()
@@ -211,6 +212,11 @@ internal fun readTransfer(path: Path, maximumBytes: Int = VaultCodec.MAX_FILE_BY
 /** Writes only a new user-selected file; permissions are restricted before any plaintext is written. */
 internal fun writePrivateNew(path: Path, bytes: ByteArray, operations: TransferIo = FileTransferIo) {
     ensureOperationCurrent()
+    writePrivateFile(path, bytes, operations)
+}
+
+/** Creates a new owner-only file without consulting the current vault operation. */
+internal fun writePrivateFile(path: Path, bytes: ByteArray, operations: TransferIo = FileTransferIo) {
     val target = path.toAbsolutePath().normalize()
     require(target.fileName != null && bytes.size <= VaultCodec.MAX_FILE_BYTES)
     val posix = Files.getFileAttributeView(target.parent, PosixFileAttributeView::class.java) != null
