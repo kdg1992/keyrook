@@ -5,6 +5,7 @@ package app.keyrook.app
 import app.keyrook.core.model.Entry
 import app.keyrook.core.model.Project
 import app.keyrook.core.model.Vault
+import app.keyrook.core.security.VaultHealth
 import java.time.Instant
 import java.time.LocalDate
 import java.util.Locale
@@ -56,7 +57,7 @@ internal data class EntryListFilters(
                     ExpiryFilter.ALL -> true
                     ExpiryFilter.NONE -> entry.expiresOn == null
                     ExpiryFilter.EXPIRED -> entry.expiresOn?.let { LocalDate.parse(it) < today } == true
-                    ExpiryFilter.UPCOMING -> entry.expiresOn?.let { LocalDate.parse(it) in today..today.plusDays(30) } == true
+                    ExpiryFilter.UPCOMING -> entry.expiresOn?.let { LocalDate.parse(it) in today..today.plusDays(VaultHealth.EXPIRY_WARNING_DAYS) } == true
                 }
         }.sortedWith(order)
     }
