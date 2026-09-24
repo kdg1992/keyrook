@@ -3,15 +3,18 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.compose.desktop.application.tasks.AbstractJLinkTask
 import org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask
-import java.security.MessageDigest
-import java.util.Properties
+import app.keyrook.build.CheckNativeDistributionLicenses
+import app.keyrook.build.CollectNativeDistributionInventory
+import app.keyrook.build.NativeInventoryTask
+import app.keyrook.build.TolerateDebMenuFailures
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import java.time.Duration
-import org.gradle.api.artifacts.result.ResolvedArtifactResult
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.compose.compiler)
+    id("keyrook.runtime-dependency-check")
 }
 kotlin { jvmToolchain(25) }
 val hostOs = System.getProperty("os.name").lowercase().let {
@@ -22,8 +25,9 @@ val desktopTarget = providers.gradleProperty("keyrook.target").getOrElse("$hostO
 check(desktopTarget in setOf("windows-x64", "linux-x64", "linux-arm64", "macos-x64", "macos-arm64"))
 dependencies {
     implementation(project(":core"))
+    // Per-target coordinate, so it is not a catalog entry; its version follows the catalog's `compose`.
     implementation("org.jetbrains.compose.desktop:desktop-jvm-$desktopTarget:${libs.versions.compose.get()}")
-    implementation("org.jetbrains.compose.material:material:1.12.1")
+    implementation(libs.compose.material)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.launcher)
@@ -52,151 +56,44 @@ tasks.register<JavaExec>("desktopWindowCheck") {
         check(System.getenv("GITHUB_ACTIONS") == "true") { "Native window checks require an isolated CI desktop" }
     }
 }
-val checkRuntimeDependencies = tasks.register("checkRuntimeDependencies") {
-    group = "verification"
-    doLast {
-        val testGroups = setOf("org.junit", "org.junit.jupiter", "org.junit.platform", "io.kotest", "org.opentest4j", "org.apiguardian")
-        check(configurations.runtimeClasspath.get().incoming.resolutionResult.allComponents
-            .mapNotNull { it.id as? org.gradle.api.artifacts.component.ModuleComponentIdentifier }
-            .none { it.group in testGroups }) { "Test-only dependency in application runtime" }
-    }
-}
-tasks.named("check") { dependsOn(checkRuntimeDependencies) }
 val nativeInventory = rootProject.layout.projectDirectory.dir("licenses/native/$desktopTarget")
 val packagingResources = layout.buildDirectory.dir("packagingResources")
 val packagingJavaHome = file(System.getProperty("java.home"))
-val runtimeFiles = configurations.runtimeClasspath
-val externalRuntimeArtifacts = runtimeFiles.get().incoming.artifactView {
-    componentFilter { it is org.gradle.api.artifacts.component.ModuleComponentIdentifier }
+val packagingJdkLegal = packagingJavaHome.resolve("legal")
+val externalRuntimeArtifacts = configurations.runtimeClasspath.get().incoming.artifactView {
+    componentFilter { it is ModuleComponentIdentifier }
 }.artifacts
-fun nativeDigest(file: File): String {
-    val hash = MessageDigest.getInstance("SHA-256")
-    file.inputStream().use { input ->
-        val buffer = ByteArray(65536)
-        while (true) { val count = input.read(buffer); if (count < 0) break; hash.update(buffer, 0, count) }
-    }
-    return hash.digest().joinToString("") { "%02x".format(it) }
-}
-fun nativeLegalRecords(root: File): String {
-    check(root.isDirectory) { "Bundled JDK legal notices are unavailable" }
-    return root.walkTopDown().filter { it.isFile }.map {
-        "${it.relativeTo(root).invariantSeparatorsPath} ${nativeDigest(it)}\n"
-    }.sorted().joinToString("").also { check(it.isNotEmpty()) { "Bundled JDK legal notices are empty" } }
-}
-fun nativeTextDigest(text: String): String = MessageDigest.getInstance("SHA-256")
-    .digest(text.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
-fun nativeArtifactKey(artifact: ResolvedArtifactResult): String {
-    val id = artifact.id.componentIdentifier as org.gradle.api.artifacts.component.ModuleComponentIdentifier
-    return "artifact.${id.group}:${id.module}:${id.version}/${artifact.file.name}.sha256"
-}
-
 val nativeInventoryReport = layout.buildDirectory.dir("reports/native-inventory/$desktopTarget")
-val inventoryApplicationVersion = project.version.toString()
-val inventoryGradleVersion = gradle.gradleVersion
-val inventoryComposeVersion = libs.versions.compose.get()
 val collectNativeLegalFiles = tasks.register<Sync>("collectNativeLegalFiles") {
-    from(packagingJavaHome.resolve("legal"))
+    from(packagingJdkLegal)
     into(nativeInventoryReport.map { it.dir("jdk-legal") })
 }
-val collectNativeDistributionInventory = tasks.register("collectNativeDistributionInventory") {
+tasks.withType<NativeInventoryTask>().configureEach {
+    target = desktopTarget
+    hostTarget = "$hostOs-$hostArch"
+    runtimeArtifacts(externalRuntimeArtifacts)
+    jdkLegalDirectory = packagingJdkLegal
+}
+tasks.register<CollectNativeDistributionInventory>("collectNativeDistributionInventory") {
     group = "verification"
     description = "Collects exact runtime and JDK evidence without approving or building native packages."
     dependsOn(collectNativeLegalFiles)
-    outputs.dir(nativeInventoryReport)
-    outputs.upToDateWhen { false }
-    doLast {
-        check(desktopTarget == "$hostOs-$hostArch") { "Inventory evidence requires its matching host architecture" }
-        val artifacts = externalRuntimeArtifacts.artifacts.sortedBy(::nativeArtifactKey)
-        check(artifacts.isNotEmpty() && artifacts.map(::nativeArtifactKey).distinct().size == artifacts.size) {
-            "Runtime artifact inventory is empty or has ambiguous full artifact identities"
-        }
-        val legalRoot = packagingJavaHome.resolve("legal")
-        val legalRecords = nativeLegalRecords(legalRoot)
-        val properties = sortedMapOf(
-            "reviewed" to "false",
-            "target" to desktopTarget,
-            "jdk.vendor" to System.getProperty("java.vendor"),
-            "jdk.version" to System.getProperty("java.runtime.version"),
-            "jdk.legal.sha256" to nativeTextDigest(legalRecords),
-            "packaging.compose.version" to inventoryComposeVersion,
-            "packaging.gradle.version" to inventoryGradleVersion,
-            "application.version" to inventoryApplicationVersion,
-        )
-        artifacts.forEach { properties[nativeArtifactKey(it)] = nativeDigest(it.file) }
-        fun escapeProperty(value: String): String = buildString {
-            value.forEach { char ->
-                when (char) {
-                    '\\', '=', ':', '#', '!', ' ' -> { append('\\'); append(char) }
-                    '\n' -> append("\\n")
-                    '\r' -> append("\\r")
-                    '\t' -> append("\\t")
-                    else -> if (char.code !in 32..126) append("\\u%04x".format(char.code)) else append(char)
-                }
-            }
-        }
-        val report = nativeInventoryReport.get().asFile
-        report.mkdirs()
-        val reportNames = setOf("candidate.properties", "jdk-legal.sha256", "runtime-artifacts.tsv", "jdk-legal", "README.txt")
-        check(report.listFiles().orEmpty().all { it.name in reportNames }) { "Inventory report directory contains unexpected files" }
-        val candidate = properties.entries.joinToString("") { "${escapeProperty(it.key)}=${escapeProperty(it.value)}\n" }
-        report.resolve("candidate.properties").writeText(candidate, Charsets.US_ASCII)
-        report.resolve("jdk-legal.sha256").writeText(legalRecords, Charsets.UTF_8)
-        val coordinateRows = artifacts.map {
-            val id = it.id.componentIdentifier as org.gradle.api.artifacts.component.ModuleComponentIdentifier
-            listOf("${id.group}:${id.module}:${id.version}", it.file.name, properties.getValue(nativeArtifactKey(it)))
-                .joinToString("\t") { cell -> cell.replace("\\", "\\\\").replace("\t", "\\t").replace("\r", "\\r").replace("\n", "\\n") }
-        }
-        report.resolve("runtime-artifacts.tsv").writeText("coordinate\tfilename\tsha256\n" + coordinateRows.joinToString("\n", postfix = "\n"), Charsets.UTF_8)
-        report.resolve("README.txt").writeText(
-            "Unreviewed native redistribution evidence. This report does not approve packaging.\n" +
-                "candidate.properties always sets reviewed=false and contains no reviewed notice/source hashes.\n" +
-                "Only external runtime artifacts and public JDK legal files are included; no native binaries are copied.\n",
-            Charsets.UTF_8,
-        )
-    }
+    applicationVersion = project.version.toString()
+    gradleVersion = gradle.gradleVersion
+    composeVersion = libs.versions.compose
+    reportDirectory = nativeInventoryReport
 }
-val checkNativeDistributionLicenses = tasks.register("checkNativeDistributionLicenses") {
+val checkNativeDistributionLicenses = tasks.register<CheckNativeDistributionLicenses>("checkNativeDistributionLicenses") {
     group = "verification"
     description = "Refuses native redistribution without an exact reviewed native and JDK notice inventory."
-    doLast {
-        check(desktopTarget == "$hostOs-$hostArch") { "Native packages require their matching host architecture" }
-        val inventoryFile = nativeInventory.file("inventory.properties").asFile
-        check(inventoryFile.isFile) {
-            "Native redistribution is blocked: missing reviewed inventory for $desktopTarget; see docs/PACKAGING.md"
-        }
-        val inventory = Properties().apply { inventoryFile.inputStream().use(::load) }
-        check(inventory.getProperty("reviewed") == "true") { "Native inventory has not been reviewed" }
-        for (name in listOf("NOTICE.txt", "SOURCES.md")) {
-            val notice = nativeInventory.file(name).asFile
-            check(notice.isFile && inventory.getProperty("notice.$name.sha256") == nativeDigest(notice)) {
-                "Reviewed native notices or source availability records are missing or changed"
-            }
-        }
-        val runtimeArtifacts = externalRuntimeArtifacts.artifacts
-        val expectedKeys = runtimeArtifacts.map(::nativeArtifactKey).toSet()
-        check(expectedKeys.size == runtimeArtifacts.size) { "Ambiguous full runtime artifact identities" }
-        check(inventory.stringPropertyNames().filter { it.startsWith("artifact.") }.toSet() == expectedKeys) {
-            "Reviewed native inventory does not cover exactly the resolved runtime artifacts"
-        }
-        runtimeArtifacts.forEach {
-            check(inventory.getProperty(nativeArtifactKey(it)) == nativeDigest(it.file)) {
-                "Runtime artifact changed since native license review"
-            }
-        }
-        check(inventory.getProperty("jdk.vendor") == System.getProperty("java.vendor") &&
-            inventory.getProperty("jdk.version") == System.getProperty("java.runtime.version")) {
-            "Bundled JDK differs from the reviewed version/vendor"
-        }
-        val legalRoot = packagingJavaHome.resolve("legal")
-        val legalHash = nativeTextDigest(nativeLegalRecords(legalRoot))
-        check(inventory.getProperty("jdk.legal.sha256") == legalHash) { "Bundled JDK legal notices changed since review" }
-    }
+    inventoryDirectory = nativeInventory
 }
 val preparePackagingResources = tasks.register<Sync>("preparePackagingResources") {
     into(packagingResources.map { it.dir("common") })
     from(rootProject.file("LICENSE"), rootProject.file("THIRD-PARTY-NOTICES"))
-    from(rootProject.file("licenses")) { into("licenses") }
-    from(packagingJavaHome.resolve("legal")) { into("licenses/bundled-jdk") }
+    // Collected review evidence stays in the repository; the packaged notices are what users receive.
+    from(rootProject.file("licenses")) { into("licenses"); exclude("native-evidence/**") }
+    from(packagingJdkLegal) { into("licenses/bundled-jdk") }
 }
 val requireCiPackaging = tasks.register("requireCiPackaging") {
     doLast { check(System.getenv("GITHUB_ACTIONS") == "true") { "Native installers are built only by the GitHub release workflow" } }
@@ -219,48 +116,8 @@ val debMenuCommands = mapOf(
         "xdg-desktop-menu uninstall /opt/keyrook/lib/keyrook-Keyrook.desktop",
 )
 val debMenuWarning = "keyrook: desktop menu entry not updated (xdg-desktop-menu status \$?)"
-fun runPackagingTool(directory: File, vararg command: String): String {
-    val process = ProcessBuilder(*command).directory(directory).redirectErrorStream(true).start()
-    val output = process.inputStream.bufferedReader().readText()
-    check(process.waitFor() == 0) { "${command.joinToString(" ")} failed:\n$output" }
-    return output
-}
-fun tolerateDebMenuFailures(deb: File, work: File) {
-    work.deleteRecursively()
-    val control = work.resolve("control")
-    check(control.mkdirs()) { "Cannot create $control" }
-    val members = runPackagingTool(work, "ar", "t", deb.absolutePath).lines().filter(String::isNotEmpty)
-    check(members.size == 3 && members[0] == "debian-binary" && members[1].startsWith("control.tar.") &&
-        members[2].startsWith("data.tar.")) { "Unexpected DEB layout: $members" }
-    runPackagingTool(work, "ar", "x", deb.absolutePath, members[0], members[2])
-    runPackagingTool(work, "dpkg-deb", "--control", deb.absolutePath, control.absolutePath)
-    for ((name, command) in debMenuCommands) {
-        val script = control.resolve(name)
-        val lines = script.readLines()
-        check(lines.count { it == command } == 1) { "jpackage $name changed; review the menu registration handling" }
-        script.writeText(lines.joinToString("\n", postfix = "\n") {
-            if (it == command) "$it || echo \"$debMenuWarning\" >&2" else it
-        })
-    }
-    runPackagingTool(work, "tar", "--create", "--gzip", "--format=gnu", "--owner=0", "--group=0", "--numeric-owner",
-        "--sort=name", "--file", "control.tar.gz", "--directory", control.absolutePath, ".")
-    val rebuilt = work.resolve(deb.name)
-    runPackagingTool(work, "ar", "rcD", rebuilt.absolutePath, members[0], "control.tar.gz", members[2])
-    for (name in debMenuCommands.keys) {
-        check("|| echo \"$debMenuWarning\" >&2" in runPackagingTool(work, "dpkg-deb", "--info", rebuilt.absolutePath, name)) {
-            "Rebuilt DEB lacks the $name menu registration handling"
-        }
-    }
-    runPackagingTool(work, "dpkg-deb", "--contents", rebuilt.absolutePath)
-    rebuilt.copyTo(deb, overwrite = true)
-    work.deleteRecursively()
-}
 tasks.withType<AbstractJPackageTask>().matching { it.targetFormat == TargetFormat.Deb }.configureEach {
-    doLast {
-        val packages = destinationDir.get().asFile.walk().filter { it.isFile && it.extension == "deb" }.toList()
-        check(packages.size == 1) { "Expected one DEB package, found $packages" }
-        tolerateDebMenuFailures(packages.single(), temporaryDir.resolve("deb-control"))
-    }
+    doLast(TolerateDebMenuFailures(destinationDir, debMenuCommands, debMenuWarning))
 }
 compose.desktop {
     application {
@@ -302,5 +159,5 @@ compose.desktop {
 tasks.jar {
     from(rootProject.file("LICENSE")) { into("META-INF") }
     from(rootProject.file("THIRD-PARTY-NOTICES")) { into("META-INF") }
-    from(rootProject.file("licenses")) { into("META-INF/licenses") }
+    from(rootProject.file("licenses")) { into("META-INF/licenses"); exclude("native-evidence/**") }
 }

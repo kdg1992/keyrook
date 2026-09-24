@@ -3,31 +3,22 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
+    id("keyrook.runtime-dependency-check")
 }
 kotlin { jvmToolchain(25) }
 dependencies {
     implementation(libs.serialization.json)
     implementation(libs.bouncycastle)
-    implementation(libs.bouncycastle.pkix)
+    // No bcpkix API in main sources: Apache SSHD's Bouncy Castle support loads it at run time; tests use it directly.
+    runtimeOnly(libs.bouncycastle.pkix)
     implementation(libs.sshd.common)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.kotest.assertions)
+    testImplementation(libs.bouncycastle.pkix)
     testRuntimeOnly(libs.junit.launcher)
 }
 dependencyLocking { lockAllConfigurations() }
-val checkRuntimeDependencies = tasks.register("checkRuntimeDependencies") {
-    group = "verification"
-    description = "Prevents separate test tooling from entering the application runtime."
-    doLast {
-        val testGroups = setOf("org.junit", "org.junit.jupiter", "org.junit.platform", "io.kotest", "org.opentest4j", "org.apiguardian")
-        val forbidden = configurations.runtimeClasspath.get().incoming.resolutionResult.allComponents
-            .mapNotNull { it.id as? org.gradle.api.artifacts.component.ModuleComponentIdentifier }
-            .filter { it.group in testGroups }
-        check(forbidden.isEmpty()) { "Test-only dependencies on runtime classpath: ${forbidden.joinToString()}" }
-    }
-}
-tasks.named("check") { dependsOn(checkRuntimeDependencies) }
 tasks.test {
     useJUnitPlatform()
     maxHeapSize = "1g"
@@ -36,5 +27,6 @@ tasks.test {
 tasks.jar {
     from(rootProject.file("LICENSE")) { into("META-INF") }
     from(rootProject.file("THIRD-PARTY-NOTICES")) { into("META-INF") }
-    from(rootProject.file("licenses")) { into("META-INF/licenses") }
+    // Collected review evidence stays in the repository; the notices themselves are packaged.
+    from(rootProject.file("licenses")) { into("META-INF/licenses"); exclude("native-evidence/**") }
 }

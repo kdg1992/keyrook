@@ -102,6 +102,7 @@ jobs:
             pkg:maven/org.jetbrains.androidx.navigationevent/navigationevent-compose-desktop@1.1.0,
             pkg:maven/org.jetbrains.kotlinx/kotlinx-coroutines-bom@1.9.0,
             pkg:maven/org.jetbrains.kotlinx/kotlinx-coroutines-bom@1.11.0,
+            pkg:maven/org.gradle/github-dependency-graph-gradle-plugin@1.4.2,
             pkg:githubactions/gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb,
             pkg:githubactions/gradle/actions/dependency-submission@9c971963bec38e04b3d30dcc455b5382be2fdbfb
           retry-on-snapshot-warnings: true
