@@ -71,6 +71,14 @@ class UiTextTest {
         }
     }
 
+    @Test fun `every window lock policy has a label in both languages`() {
+        listOf(Locale.GERMAN, Locale.ENGLISH).forEach { locale ->
+            assertTrue(UiText.localized(locale, "shell.windowLock").isNotBlank())
+            assertEquals(WindowLockPolicy.entries.size,
+                WindowLockPolicy.entries.map { UiText.localized(locale, "shell.windowLock.${it.name.lowercase()}") }.toSet().size)
+        }
+    }
+
     @Test fun `translated field labels preserve custom names and do not control generation`() {
         EntryType.entries.forEach { type ->
             val data = blankData(type)

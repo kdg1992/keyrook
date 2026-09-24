@@ -98,6 +98,28 @@ class AppSettingsTest {
         val loaded = SettingsStore(config).current()
         assertEquals(AppSettings(ThemeMode.DARK, 15, 60, vault, mapOf(vaultKey(vault) to StoredBackup(folder, BackupPolicy(3, 4), true))), loaded)
         assertEquals(AppLanguage.SYSTEM, loaded.language)
+        assertEquals(WindowLockPolicy.MINIMIZE, loaded.windowLock)
+    }
+
+    @Test fun `window lock policy survives a restart and missing or unknown values fall back to minimize`() {
+        val config = directory.toRealPath().resolve("config")
+        val file = config.resolve(SettingsStore.FILE_NAME)
+        val store = SettingsStore(config)
+        assertEquals(WindowLockPolicy.MINIMIZE, store.current().windowLock)
+        WindowLockPolicy.entries.forEach { policy ->
+            assertTrue(store.update { it.copy(windowLock = policy, theme = ThemeMode.DARK) })
+            assertTrue(Files.readString(file).contains("\"windowLock\": \"${policy.name}\""))
+            assertEquals(policy, SettingsStore(config).current().windowLock)
+        }
+        Files.writeString(file, """{"version":1,"theme":"DARK","language":"ENGLISH","inactivityMinutes":10,"clipboardSeconds":30}""")
+        assertEquals(AppSettings(theme = ThemeMode.DARK, inactivityMinutes = 10, clipboardSeconds = 30, language = AppLanguage.ENGLISH),
+            SettingsStore(config).current())
+        listOf("\"ALWAYS\"", "\"minimize\"", "\"\"", "null").forEach { value ->
+            Files.writeString(file, """{"version":1,"theme":"DARK","windowLock":$value}""")
+            val loaded = SettingsStore(config).current()
+            assertEquals(WindowLockPolicy.MINIMIZE, loaded.windowLock, value)
+            assertEquals(ThemeMode.DARK, loaded.theme, value)
+        }
     }
 
     @Test fun `corrupt unknown and out of range files fall back to defaults`() {
