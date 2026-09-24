@@ -230,7 +230,14 @@ compose.desktop {
                 dirChooser = true
                 upgradeUuid = "b5e7cbba-4582-4cee-82d3-b73b1e3baf0e"
             }
-            macOS { bundleID = "app.keyrook.desktop"; dockName = "Keyrook"; appCategory = "public.app-category.utilities" }
+            macOS {
+                bundleID = "app.keyrook.desktop"; dockName = "Keyrook"; appCategory = "public.app-category.utilities"
+                // jpackage rejects macOS bundle versions starting with 0. Until 1.0.0 the bundle carries
+                // 1.0.0; the application, release and installer file names keep the real version.
+                val macBundleVersion = project.version.toString().takeUnless { it.startsWith("0.") } ?: "1.0.0"
+                packageVersion = macBundleVersion
+                dmgPackageVersion = macBundleVersion
+            }
             linux { packageName = "keyrook"; menuGroup = "Utility"; appCategory = "utils"; rpmLicenseType = "GPL-3.0-or-later" }
         }
     }
