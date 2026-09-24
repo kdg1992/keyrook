@@ -76,8 +76,8 @@ account (**Passwort / Schlüsseldatei ändern**, **Argon2-Einstellungen**,
 **Schlüsseldatei erzeugen**). The actions behave as described in the sections
 below. The menu is keyboard accessible: move the focus to **Daten** with Tab,
 open it with Enter, move between actions with ↑/↓, run one with Enter or close
-the menu with Escape. **Kunden und Projekte** next to it shows the customers and
-projects section above the list until it is closed again.
+the menu with Escape. **Kunden und Projekte** next to it shows the customers,
+projects and templates section above the list until it is closed again.
 
 When the content area is at least 900 dp wide, the entry list and the details
 of the selected entry are shown side by side; narrower windows show the list
@@ -166,11 +166,31 @@ Entries are saved immediately through authenticated, atomic vault storage. Field
 
 **Kunden und Projekte** above the entry list opens the section for adding
 customers and projects; **Kunden und Projekte ausblenden** or **Schließen**
-closes it. There, existing customers and projects can be renamed.
-Changing a project's customer moves all its entries, including trash, to that
-customer in one save. Clearing only the project's customer preserves the entries'
-individual customer assignments. Removal requires confirmation and is available
-only when no entries (including trash) or projects still reference the item.
+closes it. There, existing customers and projects can be edited:
+
+- A customer has a name and optional **Ansprechpartner** (*Contact person*),
+  **E-Mail**, **Telefon** (*Phone*) and **Website**. Values are trimmed and an
+  empty value is stored as unset. The checks are lenient but bounded: an e-mail
+  address needs one `@` and a domain with a dot (at most 254 characters), a phone
+  number consists of digits, spaces and `+ ( ) . / -` (at most 64), a website has
+  no spaces and, if it names a scheme, uses `http://` or `https://` (at most
+  2,048); the contact person has at most 256 characters. Invalid fields are
+  marked and **Speichern** stays disabled.
+- A project has a name, a customer and an optional **Beschreibung**
+  (*Description*, at most 4,096 characters, may span several lines).
+- Customers and projects both have **Notizen (vertraulich)** (*Notes
+  (confidential)*). Notes are encrypted and erased like entry notes and never
+  appear in the customer overview, the handover sheet or the expiry export. They
+  are shown as plain text only in the edit dialog while it is open.
+
+Contact details and project descriptions are plain metadata and appear in the
+[customer overview](#customer-reports).
+Changing a project's customer moves all its entries, including trash, and the
+templates that preset that project, to that customer in one save. Clearing only
+the project's customer preserves the entries' individual customer assignments.
+Removal requires confirmation and is available only when no entries (including
+trash) or projects still reference the item; templates that preset the removed
+customer or project keep their other settings and lose only that preset.
 
 Selecting a project with a customer also selects that customer for the entry.
 Web records can gain or remove a TOTP-secret field after import; removal asks
@@ -236,6 +256,31 @@ host are accepted; embedded usernames/passwords, control characters and invalid
 ports are refused. Use ASCII/punycode hostnames. Opening a link hands it to the
 system browser and may cause network requests there; Keyrook itself does not
 resolve or fetch the address while validating it.
+
+### Templates
+
+A template presets a new entry: its type, the field layout (which fields a web
+login or mailbox has, the names of custom fields, which fields are masked and
+which custom fields are links), default tags, and optionally a customer and a
+project. It never holds a value, password, note, port or reference to another
+entry.
+
+- **Als Vorlage speichern** (*Save as template*) on an active list card or in
+  the detail view asks for a name (the entry title is suggested) and saves the
+  entry's layout as a new template. The entry is not changed.
+- **Aus Vorlage …** (*From template …*) next to **Neuer Eintrag** appears when
+  the vault has templates. It lists them by name with their type; choosing one
+  opens the editor for a new entry titled *Neuer Eintrag aus Vorlage „…“* with
+  the template's type, fields, tags, customer and project. All values start
+  empty; ports, protocol and key type take the usual defaults. Choosing another
+  type in the editor starts that type blank. Canceling an unchanged new entry
+  asks nothing.
+- Templates are listed at the end of the **Kunden und Projekte** section as
+  **Vorlage löschen: …** (*Delete template: …*); deleting asks for confirmation
+  and does not change entries created from the template.
+
+Templates are stored in the encrypted vault, count toward its revisions and are
+included in encrypted and Keyrook JSON/CSV exports and imports.
 
 ## Trash and quick actions
 
@@ -312,23 +357,23 @@ Changing the mark is saved like any other change: it takes one vault revision
 and records the change time, so it moves the entry in the **Zuletzt geändert**
 order and masks values shown in the detail view.
 
-A favorite is stored as the reserved tag `keyrook:favorite` in the entry's tag
-list, so the vault format is unchanged. The name is compared exactly
-(case-sensitive); ordinary tags such as `favorite` or `Favorit` are unaffected.
-The reserved tag is never listed among the tags of a card, the detail view, the
-tag filter or the bulk tag dialog, is not matched by the full-text search, and
-is not shown in the editor's tag field. The editor keeps it when saving, and a
-typed `keyrook:favorite` is dropped instead of creating the mark; **Tag
-hinzufügen** refuses it. It counts toward the limit of 100 tags per entry.
+A favorite is stored in the entry's own `pinned` field (document schema 2, see
+[FORMAT.md](FORMAT.md)); it is not a tag and does not count toward the 100 tags
+per entry. Earlier releases stored it as the tag `keyrook:favorite`; opening such
+a vault converts every such tag into the mark, and the next save writes the new
+format. Schema 2 reserves that tag name (compared exactly, case-sensitive;
+ordinary tags such as `favorite` or `Favorit` are unaffected): a typed
+`keyrook:favorite` is dropped in the editor and refused by **Tag hinzufügen**,
+and the full-text search does not match favorites by that name.
 
-Because it is an ordinary tag in the document, the favorite mark is kept by
-saves, backups, **Verschlüsselt exportieren**, and the plaintext Keyrook JSON and
-Keyrook CSV exports and their imports. Other applications see it as a tag named
-`keyrook:favorite`. A KeePass XML import turns a tag of exactly that name into a
-favorite. Bitwarden favorites are imported as the ordinary tag `favorite`; to
-turn them into Keyrook favorites, filter by that tag, select all and use **Als
-Favoriten markieren**. CSV imports with a column mapping and KeePass CSV import
-no tags.
+The favorite mark is kept by saves, backups, **Verschlüsselt exportieren**, and
+the plaintext Keyrook JSON and Keyrook CSV exports (as `"pinned": true`) and
+their imports. Importing a Keyrook JSON or CSV export of an earlier release, or
+any import whose tags contain `keyrook:favorite` (KeePass XML tags, the tag
+column of a mapped CSV), marks the entry as a favorite instead of keeping the
+tag. Bitwarden favorites become Keyrook favorites. A mapped CSV can also assign a
+favorite column (`true`/`false`, `1`/`0`, `yes`/`no`, `ja`/`nein`, `x`/empty;
+other values reject the import). KeePass CSV imports no favorites.
 
 ### Recently used entries
 
@@ -381,12 +426,28 @@ Without a configured backup folder only the vault file is checked. The report sh
 
 **Verschlüsselt exportieren** creates a new `.keyrook` file with explicitly chosen credentials, preserving the records and resetting its revision to zero. Like a restored backup it is a separate vault with a new vault ID, so its backups never mix with the original's. It is the preferred transfer format.
 
+### Vaults of earlier releases
+
+Vaults saved by a release before document schema 2 (without favorites as a
+field, customer details or templates) open normally; their favorite tags become
+favorites in memory, and a notice above the list says that the next save
+converts the vault. Opening changes nothing on disk. The first save afterwards
+keeps the unchanged old file next to the vault as
+`<vault file>.schema-v1-r<revision>.keyrook.bak`, whether or not a backup folder
+is configured, and then writes the new format; if that copy cannot be written,
+nothing is saved. The copy is encrypted with the same password and key file, is
+never rotated or deleted by Keyrook, and can be opened by the earlier release
+(rename it to `.keyrook` first) or restored with **Backup wiederherstellen**.
+Delete it once the converted vault works as expected. Earlier releases cannot
+open a converted vault; they report it as invalid or unsupported and leave it
+unchanged. See [FORMAT.md](FORMAT.md#compatibility-and-migrations).
+
 ## Import and plaintext export
 
 Import parses and validates first, then asks for confirmation showing the entry count. It adds records to the current vault; duplicate IDs fail rather than overwrite records. Enable backups before importing into a valuable vault. Supported inputs:
 
 - Keyrook JSON: all entry types, references, metadata and history.
-- CSV: select the actual header names from dropdowns for title, URL, username, password and notes. The title column is required; optional fields can remain unassigned. Common German and English column names are suggested. Quoted commas, escaped quotes and multiline values are supported. Headers must be unique and nonblank, with at most 100 columns and 512 characters per name; otherwise nothing is imported and a message states these rules. A UTF-8 BOM is accepted. Keyrook's own CSV format is recognized automatically without a mapping dialog.
+- CSV: select the actual header names from dropdowns for title, URL, username, password, notes, tags and favorite. Tags are separated by commas or semicolons. The title column is required; optional fields can remain unassigned. Common German and English column names are suggested. Quoted commas, escaped quotes and multiline values are supported. Headers must be unique and nonblank, with at most 100 columns and 512 characters per name; otherwise nothing is imported and a message states these rules. A UTF-8 BOM is accepted. Keyrook's own CSV format is recognized automatically without a mapping dialog.
 - KeePass CSV: a fixed mapping without a dialog, using the same CSV parser and limits. The header is checked before any row is read and must contain exactly one of these column sets, in any order; otherwise nothing is imported and a message names the expected columns:
 
   | KeePass CSV 1.x (KeePass 2.x *Export → KeePass CSV (1.x)*) | KeePass 2.x field names | Keyrook field |
@@ -416,13 +477,15 @@ The reports in the **Daten** menu group entries by the customer assignment that
 **Kunden und Projekte** already manages: an entry belongs to its own customer or,
 without one, to the customer of its project (the same rule as the customer filter
 of the entry list). Tags play no role. Trashed entries are never included. Reports
-never show passwords, private keys, passphrases, TOTP secrets, notes, history or
-custom field values, and they never show a field whose hidden option is set.
+never show passwords, private keys, passphrases, TOTP secrets, notes (of entries,
+customers or projects), history or custom field values, and they never show a
+field whose hidden option is set.
 
 **Kundenübersicht** lists every customer sorted by name, followed by *Ohne Kunde*
-for entries without a customer: the number of active entries per type, the
-domain entries with their domain and expiry date, and the server and file-transfer
-entries with host and port. A hidden domain or host field appears as *Verborgen*.
+for entries without a customer: the customer's contact person, e-mail, phone and
+website when set, its projects with their descriptions, the number of active
+entries per type, the domain entries with their domain and expiry date, and the
+server and file-transfer entries with host and port. A hidden domain or host field appears as *Verborgen*.
 The overview is shown as read-only plain text and is not saved.
 
 **Übergabeblatt exportieren** asks for a customer and a new `.html` file and

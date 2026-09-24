@@ -28,7 +28,7 @@ Core packages, from bottom to top:
 | `model` (`Vault.kt`) | Serializable `Vault`, `Entry`, eight `EntryData` variants, `validate()` and `close()` |
 | `format` (`VaultCodec.kt`, `VaultHeader.kt`) | Header encoding, JSON limits, encrypt/decrypt of a complete document |
 | `storage` (`VaultStore.kt`, `VaultRepository.kt`) | Atomic file replacement, sidecar lock, `FileStamp` concurrency tokens |
-| `backup` (`BackupService.kt`) | Ciphertext copies, rotation, authenticated preview, restore to a new file |
+| `backup` (`BackupService.kt`, `MigrationBackup.kt`) | Ciphertext copies, rotation, authenticated preview, restore to a new file, the copy of an older-schema file kept before its first rewrite |
 | `service` (`VaultSession.kt`) | Owns the unlocked document and credentials; serializes create/open/save/lock |
 | `transfer`, `ssh`, `generator`, `security` | Import/export, SSH key handling, password generation, local warning list, network-free hashing and range matching of the breach check (`BreachCheck.kt`; the requests are made in `app`, `BreachChecks.kt`) |
 | `otp` (`Totp.kt`) | RFC 6238 TOTP code generation from Base32 secrets and `otpauth://totp` URIs |
@@ -36,7 +36,8 @@ Core packages, from bottom to top:
 | `update` (`ReleaseCheck.kt`) | Network-free validation of a release document and version comparison; the request itself is made in `app` (`UpdateCheck.kt`) |
 
 In `app`, `VaultController.kt` wraps one `VaultSession` and implements the
-document edits the UI offers (entries, trash, customers, projects). Some
+document edits the UI offers (entries, trash, favorites, customers, projects,
+templates). Some
 screens call the session directly through `controller.session` (backups in
 `BackupConfiguration.kt`, KDF settings in `CredentialSettings.kt`, transfer and
 password change in `DataTools.kt`). Encrypted export in `DataTools.kt` uses a
@@ -55,16 +56,19 @@ and detail pane), `EntryEditorScreen.kt` (entry editor) and `AppDialogs.kt`
 optional 32-byte key file in `Credentials`, then calls `VaultSession.open`. The
 session copies the credentials and calls `VaultStore.load`, which reads the
 file with a size bound, `VaultCodec.decrypt` parses the header, derives the key,
-authenticates and validates the JSON, and returns `LoadedVault` with a
-`FileStamp` (SHA-256 of the ciphertext, vault ID, revision) and the stored KDF
-parameters. The session keeps the document, credentials, path and stamp; the
+authenticates and validates the JSON (migrating an older schema in memory, see
+FORMAT.md), and returns `LoadedVault` with a `FileStamp` (SHA-256 of the
+ciphertext, vault ID, revision), the stored KDF parameters and the stored schema
+version. The session keeps the document, credentials, path and stamp; the
 controller returns an independent `snapshot()` to the UI.
 
 **Save.** Every edit takes a snapshot, builds a candidate `Vault` with ordinary
 `copy`, validates it and calls `VaultSession.save`. The session requires the
 candidate's ID and revision to match its current document, duplicates it with
-`revision + 1` and commits: a configured `BackupService` first copies the
-currently persisted ciphertext, then `VaultStore.save` takes the sidecar lock,
+`revision + 1` and commits: if the file still stores an older schema,
+`preserveBeforeMigration` first keeps its unchanged ciphertext next to it (once
+per session), a configured `BackupService` then copies the currently persisted
+ciphertext, then `VaultStore.save` takes the sidecar lock,
 checks the expected stamp, encrypts with a fresh salt and nonce, writes and
 flushes a private temporary file, reads it back, compares and decrypts it,
 checks the stamp again and replaces the target with `ATOMIC_MOVE`. Only after
@@ -116,7 +120,7 @@ the vault worker.
 | Master password, key-file bytes | `Credentials` inside `VaultSession` | `VaultSession.lock`/`close`; input arrays are filled in `VaultController.unlock` |
 | Derived AES key | Local variable in `VaultCodec` | `key.fill(0)` after each encrypt/decrypt |
 | Serialized plaintext JSON | `VaultCodec` | `plaintext.fill(0)` in `finally` |
-| Field values and notes | `Secret` inside `Vault` | `Vault.close()`; every snapshot is closed by its holder |
+| Field values, entry notes, customer and project notes | `Secret` inside `Vault` | `Vault.close()`; every snapshot is closed by its holder |
 | Presented snapshot | `vault` state in `AppState.kt` | Closed on replacement, lock and window disposal |
 | Clipboard copies | `ClipboardGuard` | Expiry timer, lock, ownership loss |
 
