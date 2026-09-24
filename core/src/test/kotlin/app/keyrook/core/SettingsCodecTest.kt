@@ -3,6 +3,7 @@
 package app.keyrook.core
 
 import app.keyrook.core.settings.BackupSettingsDocument
+import app.keyrook.core.settings.GeneratorSettingsDocument
 import app.keyrook.core.settings.SettingsCodec
 import app.keyrook.core.settings.SettingsDocument
 import app.keyrook.core.settings.WindowSettingsDocument
@@ -14,7 +15,9 @@ class SettingsCodecTest {
         val document = SettingsDocument(theme = "DARK", language = "ENGLISH", inactivityMinutes = 10, clipboardSeconds = 30,
             windowLock = "FOCUS_LOSS", lastVaultPath = "/vaults/a.keyrook",
             backups = mapOf("/vaults/a.keyrook" to BackupSettingsDocument("/backups", 5, 7, true)), updateCheck = "ON_START",
-            window = WindowSettingsDocument(x = -40, y = 25, width = 1200, height = 800, maximized = true))
+            window = WindowSettingsDocument(x = -40, y = 25, width = 1200, height = 800, maximized = true),
+            generator = GeneratorSettingsDocument(preset = "SHELL_SAFE", length = 20, lowercase = true, uppercase = false, digits = true,
+                symbols = true, excludeAmbiguous = true, wordListPath = "/lists/words.txt", wordCount = 7, separator = " "))
         val bytes = SettingsCodec.encode(document)
         assertTrue(String(bytes, Charsets.UTF_8).contains("\"version\": ${SettingsCodec.VERSION}"))
         assertEquals(document, SettingsCodec.decode(bytes))
@@ -46,6 +49,7 @@ class SettingsCodecTest {
         assertNull(decoded.windowLock)
         assertNull(decoded.updateCheck)
         assertNull(decoded.window)
+        assertNull(decoded.generator)
         assertEquals(expected, SettingsCodec.decode(SettingsCodec.encode(expected)))
     }
 
@@ -56,9 +60,17 @@ class SettingsCodecTest {
         assertEquals(SettingsDocument(), SettingsCodec.decode("{\"window\":null}".toByteArray()))
     }
 
+    @Test fun `partial generator entries decode with missing fields left empty`() {
+        assertEquals(SettingsDocument(generator = GeneratorSettingsDocument()), SettingsCodec.decode("{\"generator\":{}}".toByteArray()))
+        assertEquals(SettingsDocument(generator = GeneratorSettingsDocument(preset = "MAX_16", excludeAmbiguous = true)),
+            SettingsCodec.decode("{\"generator\":{\"preset\":\"MAX_16\",\"excludeAmbiguous\":true}}".toByteArray()))
+        assertEquals(SettingsDocument(), SettingsCodec.decode("{\"generator\":null}".toByteArray()))
+    }
+
     @Test fun `corrupt unknown and oversized input is rejected without exceptions`() {
         listOf("", "{", "null", "[]", "{\"version\":2}", "{\"version\":0}", "{\"theme\":1}", "{\"language\":1}", "{\"windowLock\":1}", "{\"updateCheck\":true}",
-            "{\"window\":1}", "{\"window\":{\"width\":\"wide\"}}", "{\"window\":{\"depth\":3}}",
+            "{\"window\":1}", "{\"generator\":1}", "{\"generator\":{\"length\":\"long\"}}", "{\"generator\":{\"words\":[]}}",
+"{\"window\":{\"width\":\"wide\"}}", "{\"window\":{\"depth\":3}}",
             "{\"unexpected\":true}", "{\"lastKeyFilePath\":\"/keys/a.key\"}", "{\"backups\":{\"/a\":{\"folder\":\"/b\"}}}").forEach {
             assertNull(SettingsCodec.decode(it.toByteArray()), it)
         }
