@@ -20,7 +20,8 @@ internal enum class DialogFile(private val labelKey: String, val extension: Stri
     CSV("files.csv", "csv"),
     XML("files.xml", "xml"),
     PUBLIC_KEY("files.publicKey", "pub"),
-    WORD_LIST("files.wordList", "txt");
+    WORD_LIST("files.wordList", "txt"),
+    HTML("files.html", "html");
 
     val label: String get() = UiText.text(labelKey)
 }

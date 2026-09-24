@@ -262,7 +262,7 @@ internal fun askCredentials(dialogs: Dialogs, title: String, confirm: Boolean = 
 }
 
 /** Runs file choosers on the event thread for a worker, checking the worker's session before and after. */
-private fun <T> onEdt(action: () -> T): T {
+internal fun <T> onEdt(action: () -> T): T {
     val guard = capturedOperationGuard()
     val guarded = { guard(); action().also { guard() } }
     if (SwingUtilities.isEventDispatchThread()) return guarded()

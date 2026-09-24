@@ -64,6 +64,7 @@ class FileDialogsTest {
                     DialogFile.XML -> "files.xml"
                     DialogFile.PUBLIC_KEY -> "files.publicKey"
                     DialogFile.WORD_LIST -> "files.wordList"
+                    DialogFile.HTML -> "files.html"
                 }
                 assertTrue(UiText.localized(locale, key).contains("*.${type.extension}"), "$locale $type")
             }

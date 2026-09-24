@@ -344,6 +344,19 @@ domain entries with their domain and expiry date, and the server and file-transf
 entries with host and port. A hidden domain or host field appears as *Verborgen*.
 The overview is shown as read-only plain text and is not saved.
 
+**Übergabeblatt exportieren** asks for a customer and a new `.html` file and
+writes a handover sheet for that customer's active entries, grouped by type:
+title, type, project, tags, expiry date, ports, protocols, SSH key type and the
+titles of linked servers and registrar logins, plus these fields when they are
+not marked hidden: URLs, hosts, user names, e-mail addresses and mail servers,
+start directories, roles, operating systems, SSH fingerprints, domain names and
+registrars. Custom entries show title and metadata only; SSH public keys are
+left out. The page is a single self-contained file without links, scripts or
+external resources; every value is HTML-escaped, and it can be printed from a
+browser. Like other exports, the file is created new (never replacing an existing
+file) and readable only by your user account. Check it before handing it over:
+titles, tags and visible fields appear as entered.
+
 ## Warning list
 
 The vault health check looks at active entries for expiry within 30 days, expired
