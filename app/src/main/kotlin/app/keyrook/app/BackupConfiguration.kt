@@ -18,10 +18,11 @@ internal fun parseBackupPolicy(latest: String, daily: String): BackupPolicy? {
 
 /**
  * A null selection represents cancellation and must not replace a previous configuration.
- * An accepted selection is remembered for the open vault file when settings are provided.
+ * An accepted selection is remembered for the open vault file when settings are provided;
+ * [settingsFailed] reports that it could not be written although backups are active.
  */
 internal fun applyBackupConfiguration(controller: VaultController, selection: BackupConfiguration?,
-                                      settings: SettingsStore? = null): Boolean {
+                                      settings: SettingsStore? = null, settingsFailed: () -> Unit = {}): Boolean {
     if (selection == null) return false
     ensureOperationCurrent()
     val folder = selection.folder.toAbsolutePath().normalize()
@@ -34,18 +35,21 @@ internal fun applyBackupConfiguration(controller: VaultController, selection: Ba
     ensureOperationCurrent()
     controller.session.configureBackups(BackupService(folder, selection.policy))
     val vault = controller.vaultPath
-    if (settings != null && vault != null) settings.update { it.withBackup(vault, StoredBackup(folder, selection.policy, true)) }
+    if (settings != null && vault != null &&
+        !settings.update { it.withBackup(vault, StoredBackup(folder, selection.policy, true)) }) settingsFailed()
     return true
 }
 
 /** Keeps the remembered folder and retention but stops restoring them for this vault file. */
-internal fun disableBackups(controller: VaultController, confirmed: Boolean, settings: SettingsStore? = null): Boolean {
+internal fun disableBackups(controller: VaultController, confirmed: Boolean, settings: SettingsStore? = null,
+                            settingsFailed: () -> Unit = {}): Boolean {
     if (!confirmed) return false
     ensureOperationCurrent()
     controller.session.configureBackups(null)
     val vault = controller.vaultPath
     val stored = vault?.let { settings?.current()?.backupFor(it) }
-    if (settings != null && vault != null && stored != null) settings.update { it.withBackup(vault, stored.copy(enabled = false)) }
+    if (settings != null && vault != null && stored != null &&
+        !settings.update { it.withBackup(vault, stored.copy(enabled = false)) }) settingsFailed()
     return true
 }
 

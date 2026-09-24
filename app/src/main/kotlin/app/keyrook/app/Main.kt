@@ -194,7 +194,7 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
                     }) { path, password, key, create, parameters ->
                         operation {
                             controller.unlock(path, password, key, create, parameters).also {
-                                rememberUnlockedPaths(settings, path, key)
+                                rememberUnlockedPath(settings, path)
                                 val token = controller.sessionEpoch.capture()
                                 if (!restoreRememberedBackups(controller, settings)) SwingUtilities.invokeLater {
                                     if (live.get() && controller.sessionEpoch.accepts(token)) message = UiText.text("settings.backupRestoreFailed")
@@ -208,7 +208,9 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
                     }
                 } else {
                     HealthTools(vault!!, controller, busy, ::operation)
-                    DataTools(controller, settings, busy, ::operation)
+                    DataTools(controller, settings, busy, ::operation, settingsFailed = {
+                        SwingUtilities.invokeLater { if (live.get()) message = UiText.text("settings.saveFailed") }
+                    })
                     OrganizationTools(vault!!, controller, busy, ::operation)
                     VaultList(vault!!, controller, busy, shortcuts, onCreate = { creating = true }, onEdit = { editing = it },
                         onDuplicate = { entry -> operation { controller.duplicate(entry.id) } },
@@ -232,7 +234,7 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
 private fun UnlockForm(busy: Boolean, remembered: AppSettings, generateKey: (Path, () -> Unit) -> Unit,
                        onOpen: (Path, CharArray, Path?, Boolean, KdfParameters) -> Unit) {
     var path by remember { mutableStateOf(remembered.lastVaultPath?.toString().orEmpty()) }
-    var key by remember { mutableStateOf(remembered.lastKeyFilePath?.toString().orEmpty()) }
+    var key by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmation by remember { mutableStateOf("") }
     var create by remember { mutableStateOf(false) }

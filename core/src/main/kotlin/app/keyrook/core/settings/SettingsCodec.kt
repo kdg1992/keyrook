@@ -7,7 +7,7 @@ import kotlinx.serialization.json.Json
 import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
 
-/** Plaintext application preferences. Holds file paths and choices only, never credentials or vault content. */
+/** Plaintext application preferences. Holds vault and backup paths and choices only, never credentials, key-file paths or vault content. */
 @Serializable
 data class SettingsDocument(
     val version: Int = SettingsCodec.VERSION,
@@ -15,7 +15,6 @@ data class SettingsDocument(
     val inactivityMinutes: Int? = null,
     val clipboardSeconds: Long? = null,
     val lastVaultPath: String? = null,
-    val lastKeyFilePath: String? = null,
     val backups: Map<String, BackupSettingsDocument> = emptyMap(),
 )
 

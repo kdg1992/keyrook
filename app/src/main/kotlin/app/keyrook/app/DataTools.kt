@@ -24,13 +24,14 @@ import java.io.IOException
 import javax.swing.*
 
 @Composable
-internal fun DataTools(controller: VaultController, settings: SettingsStore, busy: Boolean, operation: (() -> Vault?) -> Unit) {
+internal fun DataTools(controller: VaultController, settings: SettingsStore, busy: Boolean, operation: (() -> Vault?) -> Unit,
+                       settingsFailed: () -> Unit) {
     Row(Modifier.horizontalScroll(rememberScrollState())) {
         TextButton(enabled = !busy, onClick = {
             operation {
                 selectPath(directory = true)?.let { folder ->
                     val selection = askBackupConfiguration(folder)
-                    if (applyBackupConfiguration(controller, selection, settings)) {
+                    if (applyBackupConfiguration(controller, selection, settings, settingsFailed)) {
                         val policy = selection!!.policy
                         inform(UiText.text("transfer.configured", policy.latest, policy.daily))
                     }
@@ -54,7 +55,7 @@ internal fun DataTools(controller: VaultController, settings: SettingsStore, bus
         TextButton(enabled = !busy, onClick = { operation {
             ensureOperationCurrent()
             if (!controller.session.backupStatus().configured) inform(backupStatusText(controller))
-            else if (disableBackups(controller, confirm(UiText.text("transfer.disableConfirm")), settings)) {
+            else if (disableBackups(controller, confirm(UiText.text("transfer.disableConfirm")), settings, settingsFailed)) {
                 inform(UiText.text("transfer.disabled"))
             }
             controller.session.snapshot()

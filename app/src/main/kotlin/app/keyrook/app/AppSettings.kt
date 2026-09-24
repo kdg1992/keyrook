@@ -18,13 +18,12 @@ internal val CLIPBOARD_SECOND_CHOICES = listOf(5L, 10L, 20L, 30L, 60L, 120L)
 
 internal data class StoredBackup(val folder: Path, val policy: BackupPolicy, val enabled: Boolean)
 
-/** Non-secret preferences only. Paths are metadata; passwords, key material and vault content never enter here. */
+/** Non-secret preferences only. Vault and backup paths are metadata; key-file paths, passwords and vault content never enter here. */
 internal data class AppSettings(
     val theme: ThemeMode = ThemeMode.SYSTEM,
     val inactivityMinutes: Int = 5,
     val clipboardSeconds: Long = 20,
     val lastVaultPath: Path? = null,
-    val lastKeyFilePath: Path? = null,
     val backups: Map<String, StoredBackup> = emptyMap(),
 ) {
     fun backupFor(vault: Path): StoredBackup? = backups[vaultKey(vault)]
@@ -37,7 +36,7 @@ internal data class AppSettings(
 
     fun toDocument() = SettingsDocument(
         theme = theme.name, inactivityMinutes = inactivityMinutes, clipboardSeconds = clipboardSeconds,
-        lastVaultPath = lastVaultPath?.toString(), lastKeyFilePath = lastKeyFilePath?.toString(),
+        lastVaultPath = lastVaultPath?.toString(),
         backups = backups.mapValues { (_, value) ->
             BackupSettingsDocument(value.folder.toString(), value.policy.latest, value.policy.daily, value.enabled)
         },
@@ -61,7 +60,6 @@ internal data class AppSettings(
                 inactivityMinutes = document.inactivityMinutes?.takeIf { it in LOCK_MINUTE_CHOICES } ?: defaults.inactivityMinutes,
                 clipboardSeconds = document.clipboardSeconds?.takeIf { it in CLIPBOARD_SECOND_CHOICES } ?: defaults.clipboardSeconds,
                 lastVaultPath = storedPath(document.lastVaultPath),
-                lastKeyFilePath = storedPath(document.lastKeyFilePath),
                 backups = backups,
             )
         }
@@ -76,10 +74,9 @@ internal data class AppSettings(
 
 internal fun vaultKey(path: Path): String = path.toAbsolutePath().normalize().toString()
 
-/** Records only where the vault and optional key file live, never what they contain. */
-internal fun rememberUnlockedPaths(settings: SettingsStore, vault: Path, keyFile: Path?): Boolean = settings.update {
-    it.copy(lastVaultPath = vault.toAbsolutePath().normalize(), lastKeyFilePath = keyFile?.toAbsolutePath()?.normalize())
-}
+/** Records only where the vault lives. The key file stays unrecorded so the settings do not reveal the second factor. */
+internal fun rememberUnlockedPath(settings: SettingsStore, vault: Path): Boolean =
+    settings.update { it.copy(lastVaultPath = vault.toAbsolutePath().normalize()) }
 
 /**
  * Plaintext settings file with owner-only permissions, replaced atomically. A null directory keeps

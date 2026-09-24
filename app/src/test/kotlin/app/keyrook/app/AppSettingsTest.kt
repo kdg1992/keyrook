@@ -41,7 +41,7 @@ class AppSettingsTest {
         assertEquals(AppSettings(), store.current())
         assertFalse(Files.exists(config))
         assertTrue(store.update { it.copy(theme = ThemeMode.DARK, inactivityMinutes = 15, clipboardSeconds = 60) })
-        assertTrue(rememberUnlockedPaths(store, vault, root.resolve("key.bin")))
+        assertTrue(rememberUnlockedPath(store, vault))
         assertTrue(store.update { it.withBackup(vault, StoredBackup(folder, BackupPolicy(3, 4), true)) })
         val reloaded = SettingsStore(config).current()
         assertEquals(store.current(), reloaded)
@@ -72,7 +72,7 @@ class AppSettingsTest {
         val folder = json(config)
         val unnormalized = json(config.resolve("x")) + "/../vault.keyrook"
         Files.writeString(file, """{"version":1,"theme":"PURPLE","inactivityMinutes":7,"clipboardSeconds":3,
-            "lastVaultPath":"relative.keyrook","lastKeyFilePath":"","backups":{
+            "lastVaultPath":"relative.keyrook","backups":{
             "relative.keyrook":{"folder":"$folder","latest":5,"daily":5,"enabled":true},
             "$absolute":{"folder":"$folder","latest":0,"daily":5,"enabled":true},
             "$unnormalized":{"folder":"$folder","latest":5,"daily":5,"enabled":true}}}""")
@@ -138,18 +138,18 @@ class AppSettingsTest {
         val root = directory.toRealPath()
         val config = root.resolve("config")
         val vault = root.resolve("vault.keyrook")
-        val key = root.resolve("vault.key")
+        val key = root.resolve("KeyPath-SENTINEL-9973.key")
         val keyText = "KEYFILE-SENTINEL-0123456789ABCDE"
         Files.write(key, keyText.toByteArray(Charsets.US_ASCII))
         val folder = Files.createDirectory(root.resolve("backups"))
         val password = "Password-SENTINEL-4711"
         val sentinels = listOf(password, keyText, Base64.getEncoder().encodeToString(keyText.toByteArray()),
             keyText.toByteArray().joinToString("") { "%02x".format(it) }, "Customer-SENTINEL-3141", "Project-SENTINEL-2718",
-            "Title-SENTINEL-1618", "Secret-SENTINEL-1414", "Notes-SENTINEL-1732", "Tag-SENTINEL-2236")
+            "Title-SENTINEL-1618", "Secret-SENTINEL-1414", "Notes-SENTINEL-1732", "Tag-SENTINEL-2236", "KeyPath-SENTINEL-9973")
         val settings = SettingsStore(config)
         VaultController().use { controller ->
             controller.unlock(vault, password.toCharArray(), key, true, kdf).close()
-            rememberUnlockedPaths(settings, vault, key)
+            rememberUnlockedPath(settings, vault)
             assertTrue(restoreRememberedBackups(controller, settings))
             controller.addCustomer("Customer-SENTINEL-3141").use { snapshot ->
                 controller.addProject("Project-SENTINEL-2718", snapshot.customers.single().id).close()
@@ -170,6 +170,23 @@ class AppSettingsTest {
         val written = Files.readString(config.resolve(SettingsStore.FILE_NAME))
         sentinels.forEach { assertFalse(written.contains(it, ignoreCase = true), it) }
         assertTrue(written.contains(vault.toString().replace("\\", "\\\\")))
-        assertEquals(key, SettingsStore(config).current().lastKeyFilePath)
+        assertEquals(vault, SettingsStore(config).current().lastVaultPath)
+    }
+
+    @Test fun `backup setting write failures are reported while backups stay active`() {
+        val root = directory.toRealPath()
+        val vault = root.resolve("a.keyrook")
+        val folder = Files.createDirectory(root.resolve("backups"))
+        val settings = SettingsStore(Files.writeString(root.resolve("not-a-directory"), "").resolve("keyrook"))
+        var failures = 0
+        VaultController().use { controller ->
+            controller.unlock(vault, "synthetic write failure password".toCharArray(), null, true, kdf).close()
+            assertTrue(applyBackupConfiguration(controller, BackupConfiguration(folder, BackupPolicy(2, 0)), settings) { failures++ })
+            assertEquals(1, failures)
+            assertTrue(controller.session.backupStatus().configured)
+            assertTrue(disableBackups(controller, true, settings) { failures++ })
+            assertEquals(2, failures)
+            assertFalse(controller.session.backupStatus().configured)
+        }
     }
 }
