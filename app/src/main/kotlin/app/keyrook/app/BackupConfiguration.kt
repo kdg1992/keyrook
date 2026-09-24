@@ -100,7 +100,7 @@ internal fun restoreRememberedBackups(controller: VaultController, settings: Set
     val vault = controller.vaultPath ?: return null
     val stored = settings.current().backupFor(vault) ?: return null
     ensureOperationCurrent()
-    val present = try { controller.session.snapshot().use { countManagedBackups(stored.folder, it.id) } }
+    val present = try { countManagedBackups(stored.folder, controller.read { it.id }) }
         catch (_: IOException) { null } catch (_: SecurityException) { null }
     val failed = BackupNotice(UiText.text("settings.backupRestoreFailed"), warning = true)
     fun restore(configuration: BackupConfiguration): BackupNotice =

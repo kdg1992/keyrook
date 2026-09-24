@@ -18,7 +18,7 @@ enum class SessionState { LOCKED, UNLOCKED, SAVING, ERROR }
 /** Session-only status; never exposes credentials or filesystem paths. */
 data class BackupStatus(val configured: Boolean, val lastRevision: Long?)
 
-/** Serializes access. Snapshots are independent and must be closed by their caller. */
+/** Serializes access. Snapshots are independent and must be closed by their caller; [read] closes its own. */
 class VaultSession(private val store: VaultStore = VaultStore(), private val codec: VaultCodec = VaultCodec()) : AutoCloseable {
     private var credentials: Credentials? = null
     private var document: Vault? = null
@@ -99,7 +99,17 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
         } catch (e: Exception) { ownedCredentials.close(); throw e }
     }
 
-    @Synchronized fun snapshot(): Vault = codec.duplicate(requireDocument())
+    /** An independent, caller-owned copy for editing and saving. Secrets are copied as character arrays. */
+    @Synchronized fun snapshot(): Vault = requireDocument().independentCopy()
+
+    /**
+     * Runs a read-only scan such as search or health on the current document and returns only what [block] derives.
+     * [block] receives a copy taken under the session lock without serializing secrets (see [snapshot]); the copy is
+     * erased when [block] returns and must not be retained. [block] itself runs outside the lock, so a long scan
+     * never delays [lock] or a save, and it can never observe or erase the live document. Safe from any thread; it
+     * waits while another session call, such as a running [checkIntegrity], holds the lock.
+     */
+    fun <R> read(block: (Vault) -> R): R = snapshot().use(block)
 
     @Synchronized fun kdfParameters(): KdfParameters { requireDocument(); return parameters }
 
