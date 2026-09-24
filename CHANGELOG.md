@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/kdg1992/keyrook/compare/v0.3.3...v0.4.0) (2026-09-24)
+
+
+### Features
+
+* **backup:** verify vault and backup integrity ([#20](https://github.com/kdg1992/keyrook/issues/20)) ([0e345e1](https://github.com/kdg1992/keyrook/commit/0e345e121e54d2c1bc9edb89a9bcf06a00033e9f))
+* **entries:** confirm trash, purge entries and add list quick actions ([#19](https://github.com/kdg1992/keyrook/issues/19)) ([495bdc4](https://github.com/kdg1992/keyrook/commit/495bdc4b926c64da1a838e013520c46fd98d4793))
+* **format:** add explicit schema migration pipeline ([#17](https://github.com/kdg1992/keyrook/issues/17)) ([183ce6e](https://github.com/kdg1992/keyrook/commit/183ce6e88a12d540c799d4911874d8ca9491842a))
+* **i18n:** add language selection and complete string catalogs ([#23](https://github.com/kdg1992/keyrook/issues/23)) ([e481ac0](https://github.com/kdg1992/keyrook/commit/e481ac01050146fd69653f4d4d9eaefaf1cc1e18))
+* **import:** add KeePass CSV import preset ([#21](https://github.com/kdg1992/keyrook/issues/21)) ([7f8d58c](https://github.com/kdg1992/keyrook/commit/7f8d58c5c948f28a725f6fcd9df5c1d6655591ae))
+* **settings:** persist non-secret preferences across restarts ([#18](https://github.com/kdg1992/keyrook/issues/18)) ([be40170](https://github.com/kdg1992/keyrook/commit/be40170d365a73a9598ced6dd14f3e47d54b27f7))
+
 ## [0.3.3](https://github.com/kdg1992/keyrook/compare/v0.3.2...v0.3.3) (2026-09-24)
 
 
