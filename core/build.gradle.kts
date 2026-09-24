@@ -25,5 +25,6 @@ tasks.test {
 tasks.jar {
     from(rootProject.file("LICENSE")) { into("META-INF") }
     from(rootProject.file("THIRD-PARTY-NOTICES")) { into("META-INF") }
-    from(rootProject.file("licenses")) { into("META-INF/licenses") }
+    // Collected review evidence stays in the repository; the notices themselves are packaged.
+    from(rootProject.file("licenses")) { into("META-INF/licenses"); exclude("native-evidence/**") }
 }

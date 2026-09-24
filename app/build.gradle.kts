@@ -91,7 +91,8 @@ val checkNativeDistributionLicenses = tasks.register<CheckNativeDistributionLice
 val preparePackagingResources = tasks.register<Sync>("preparePackagingResources") {
     into(packagingResources.map { it.dir("common") })
     from(rootProject.file("LICENSE"), rootProject.file("THIRD-PARTY-NOTICES"))
-    from(rootProject.file("licenses")) { into("licenses") }
+    // Collected review evidence stays in the repository; the packaged notices are what users receive.
+    from(rootProject.file("licenses")) { into("licenses"); exclude("native-evidence/**") }
     from(packagingJdkLegal) { into("licenses/bundled-jdk") }
 }
 val requireCiPackaging = tasks.register("requireCiPackaging") {
@@ -158,5 +159,5 @@ compose.desktop {
 tasks.jar {
     from(rootProject.file("LICENSE")) { into("META-INF") }
     from(rootProject.file("THIRD-PARTY-NOTICES")) { into("META-INF") }
-    from(rootProject.file("licenses")) { into("META-INF/licenses") }
+    from(rootProject.file("licenses")) { into("META-INF/licenses"); exclude("native-evidence/**") }
 }

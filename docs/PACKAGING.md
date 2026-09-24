@@ -133,9 +133,17 @@ the packaging job green after an approval failure. Reports generated with a loca
 Oracle JDK still cannot approve the Temurin runtime selected by GitHub Actions.
 
 The JDK runtime retains its own legal files. The installer also receives readable
-copies of `LICENSE`, `THIRD-PARTY-NOTICES`, all repository license texts, and the
+copies of `LICENSE`, `THIRD-PARTY-NOTICES`, the repository license texts under
+`licenses/` (including the GPL additional permission and every reviewed
+`licenses/native/<os>-<arch>/` inventory, `NOTICE.txt` and `SOURCES.md`), and the
 packaging JDK's `legal/` directory through Compose application resources. A
-platform-specific archive of those files accompanies each release.
+platform-specific archive of those files accompanies each release. The collected
+review evidence in `licenses/native-evidence/` stays in the source repository and
+is excluded from installers, notice archives and JAR resources; the component
+notices it contains are already part of each `NOTICE.txt`, and links from the
+packaged `SOURCES.md` files to that evidence refer to the source repository. The
+approval gate does not hash packaged resources, so this does not affect the
+reviewed inventories.
 
 The application icon is original project artwork under GPL-3.0-or-later, not
 third-party material. `scripts/generate-icons.py` (Python 3 standard library
