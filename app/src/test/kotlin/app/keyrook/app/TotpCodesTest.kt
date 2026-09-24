@@ -81,6 +81,7 @@ class TotpCodesTest {
             assertEquals(Instant.ofEpochSecond(90), next.validUntil)
             assertEquals(30, next.remaining)
             assertNotEquals(first.code, next.code)
+            assertFalse(first.toString().contains(first.code), "debug output omits the code")
         } finally { totp.value.close() }
         assertNull(nextTotpDisplay(totp, null, at59), "an erased secret yields no code")
         field("otpauth://hotp/x?secret=$rfcSecret").let { hotp ->
@@ -95,6 +96,7 @@ class TotpCodesTest {
             val initialValues = stored.fields().map { it.value.useChars(::String) }
             val slot = stored.totpSlot(stored, initialValues)!!
             assertEquals(TotpSlot(3, "imported, not base32"), slot)
+            assertFalse(slot.toString().contains("imported"), "debug output omits the stored seed")
             val untouched = validateEditor("Title", "", "", "", initialValues, emptyMap(), slot)
             assertTrue(untouched.valid, "unchanged value keeps the entry editable")
             assertTrue(untouched.values.isEmpty())
