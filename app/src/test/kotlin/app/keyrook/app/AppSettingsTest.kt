@@ -166,18 +166,20 @@ class AppSettingsTest {
         val restarted = SettingsStore(config)
         VaultController().use { controller ->
             controller.unlock(other, "synthetic other password".toCharArray(), null, false).close()
-            assertTrue(restoreRememberedBackups(controller, restarted))
+            assertNull(restoreRememberedBackups(controller, restarted))
             assertFalse(controller.session.backupStatus().configured)
             controller.lock()
             controller.unlock(vault, "synthetic settings password".toCharArray(), null, false).close()
-            assertTrue(restoreRememberedBackups(controller, restarted))
+            assertEquals(BackupNotice(UiText.text("settings.backupRestored", folder.toString(), 2, 0), false),
+                restoreRememberedBackups(controller, restarted))
             assertTrue(controller.session.backupStatus().configured)
             repeat(3) { controller.session.snapshot().use { controller.session.save(it) } }
             assertEquals(2L, Files.list(folder).use { files -> files.filter { it.fileName.toString().endsWith(".keyrook.bak") }.count() })
             assertTrue(disableBackups(controller, true, restarted))
             controller.lock()
             controller.unlock(vault, "synthetic settings password".toCharArray(), null, false).close()
-            assertTrue(restoreRememberedBackups(controller, SettingsStore(config)))
+            assertEquals(BackupNotice(UiText.text("settings.backupDisabledNotice", folder.toString(), 2), false),
+                restoreRememberedBackups(controller, SettingsStore(config)))
             assertFalse(controller.session.backupStatus().configured)
             assertEquals(StoredBackup(folder, BackupPolicy(2, 0), false), SettingsStore(config).current().backupFor(vault))
         }
@@ -190,7 +192,7 @@ class AppSettingsTest {
         settings.update { it.withBackup(vault, StoredBackup(root.resolve("missing"), BackupPolicy(), true)) }
         VaultController().use { controller ->
             controller.unlock(vault, "synthetic missing folder password".toCharArray(), null, true, kdf).close()
-            assertFalse(restoreRememberedBackups(controller, settings))
+            assertEquals(BackupNotice(UiText.text("settings.backupRestoreFailed"), true), restoreRememberedBackups(controller, settings))
             assertFalse(controller.session.backupStatus().configured)
             controller.session.snapshot().use { assertEquals(0, it.entries.size) }
         }
@@ -212,7 +214,7 @@ class AppSettingsTest {
         VaultController().use { controller ->
             controller.unlock(vault, password.toCharArray(), key, true, kdf).close()
             rememberUnlockedPath(settings, vault)
-            assertTrue(restoreRememberedBackups(controller, settings))
+            assertNull(restoreRememberedBackups(controller, settings))
             controller.addCustomer("Customer-SENTINEL-3141").use { snapshot ->
                 controller.addProject("Project-SENTINEL-2718", snapshot.customers.single().id).close()
             }
@@ -225,7 +227,7 @@ class AppSettingsTest {
             settings.update { it.copy(theme = ThemeMode.DARK, inactivityMinutes = 2, clipboardSeconds = 10) }
             controller.lock()
             controller.unlock(vault, password.toCharArray(), key, false).close()
-            assertTrue(restoreRememberedBackups(controller, settings))
+            assertEquals(false, restoreRememberedBackups(controller, settings)?.warning)
             assertTrue(disableBackups(controller, true, settings))
             controller.lock()
         }

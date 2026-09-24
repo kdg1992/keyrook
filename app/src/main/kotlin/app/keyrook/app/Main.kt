@@ -47,6 +47,8 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
     var vault by remember { mutableStateOf<Vault?>(null) }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
+    // Visible information that is not an error, such as a restored backup configuration; cleared on dismiss or lock.
+    var notice by remember { mutableStateOf("") }
     var preferences by remember { mutableStateOf(settings.current().also { UiText.select(it.language) }) }
     val systemDark = isSystemInDarkTheme()
     val dark = when (preferences.theme) { ThemeMode.SYSTEM -> systemDark; ThemeMode.LIGHT -> false; ThemeMode.DARK -> true }
@@ -80,6 +82,7 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
         runCatching { SecretClipboard.clear() }
         busy = true
         message = UiText.text("shell.locked")
+        notice = ""
         worker.execute {
             controller.lock()
             SwingUtilities.invokeLater {
@@ -191,19 +194,32 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
                 }
                 if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                 if (message.isNotEmpty()) Text(message, color = MaterialTheme.colors.error)
+                if (notice.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(notice, Modifier.weight(1f))
+                    TextButton(onClick = { notice = "" }) { Text(UiText.text("shell.close")) }
+                }
                 if (vault == null) {
                     if (unlockDelay > 0) Text(UiText.text("shell.delay", (unlockDelay + 999) / 1000))
                     UnlockForm(busy || unlockDelay > 0, settings.current(), generateKey = { target, done ->
                         operation { generateKeyFile(target); credentialOnEdt(done); null }
                     }) { path, password, key, create, parameters ->
                         operation {
-                            controller.unlock(path, password, key, create, parameters).also {
+                            val unlocked = controller.unlock(path, password, key, create, parameters)
+                            try {
                                 rememberUnlockedPath(settings, path)
                                 val token = controller.sessionEpoch.capture()
-                                if (!restoreRememberedBackups(controller, settings)) SwingUtilities.invokeLater {
-                                    if (live.get() && controller.sessionEpoch.accepts(token)) message = UiText.text("settings.backupRestoreFailed")
+                                // Restored settings are unauthenticated: always show them, confirm destructive retention.
+                                val restored = restoreRememberedBackups(controller, settings) { text -> confirm(text) }
+                                if (restored != null) SwingUtilities.invokeLater {
+                                    if (live.get() && controller.sessionEpoch.accepts(token)) {
+                                        if (restored.warning) message = restored.text else notice = restored.text
+                                    }
                                 }
+                            } catch (failure: Exception) {
+                                unlocked.close()
+                                throw failure
                             }
+                            unlocked
                         }
                     }
                 } else if (creating || editing != null) {

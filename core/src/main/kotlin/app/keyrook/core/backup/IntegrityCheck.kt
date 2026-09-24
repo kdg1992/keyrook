@@ -7,6 +7,7 @@ import app.keyrook.core.crypto.Credentials
 import app.keyrook.core.crypto.InvalidVaultException
 import app.keyrook.core.crypto.ResourceApprovalRequired
 import app.keyrook.core.format.VaultCodec
+import app.keyrook.core.model.Vault
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.LinkOption
@@ -48,31 +49,50 @@ class IntegrityReport internal constructor(val files: List<IntegrityFileResult>,
     val intact: Boolean get() = backupFolder != BackupFolderState.UNREADABLE && files.all { it.state == IntegrityState.OK }
 }
 
+/** The check stopped before its next file because cancellation was requested; no partial report is returned. */
+class IntegrityCheckCancelledException : Exception("Integrity check cancelled")
+
 /**
  * Read-only: files are opened for reading only, never locked, created, renamed, rewritten or deleted.
  * Decrypted models are closed and ciphertext buffers cleared after each file. Failures carry no messages.
  */
-class IntegrityCheck(private val codec: VaultCodec = VaultCodec()) {
+class IntegrityCheck internal constructor(private val decrypt: (ByteArray, Credentials, Boolean) -> Vault) {
+    constructor(codec: VaultCodec = VaultCodec()) :
+        this({ bytes, credentials, allowExpensive -> codec.decrypt(bytes, credentials, allowExpensive) })
 
-    /** Checks [vault] and every managed backup of [vaultId] in [backupDirectory], newest backup first. */
+    /**
+     * Checks [vault] and every managed backup of [vaultId] in [backupDirectory], newest backup first.
+     * Each file needs a full key derivation. [cancelled] is consulted before every file; once it returns true no
+     * further file is read or derived, collected results are discarded and [IntegrityCheckCancelledException] is thrown.
+     */
     fun run(vault: Path, vaultId: String, expectedRevision: Long?, backupDirectory: Path?,
-            credentials: Credentials, allowExpensive: Boolean = false): IntegrityReport {
-        val results = mutableListOf(check(vault, IntegrityFileKind.VAULT, vaultId, expectedRevision, credentials, allowExpensive))
+            credentials: Credentials, allowExpensive: Boolean = false,
+            cancelled: () -> Boolean = { false }): IntegrityReport {
+        val results = mutableListOf<IntegrityFileResult>()
+        fun next(path: Path, kind: IntegrityFileKind, revision: Long?) {
+            if (cancelled()) {
+                results.clear()
+                throw IntegrityCheckCancelledException()
+            }
+            results += check(path, kind, vaultId, revision, credentials, allowExpensive)
+        }
+        next(vault, IntegrityFileKind.VAULT, expectedRevision)
         if (backupDirectory == null) return IntegrityReport(results, BackupFolderState.NOT_CONFIGURED)
         val listed: List<Candidate>? = try { listBackups(backupDirectory, vaultId) }
             catch (_: IOException) { null } catch (_: SecurityException) { null }
         val backups = listed ?: return IntegrityReport(results, BackupFolderState.UNREADABLE)
-        for (backup in backups) {
-            results += check(backup.path, IntegrityFileKind.BACKUP, vaultId, backup.revision, credentials, allowExpensive)
-        }
+        for (backup in backups) next(backup.path, IntegrityFileKind.BACKUP, backup.revision)
         return IntegrityReport(results, BackupFolderState.CHECKED)
     }
 
     private class Candidate(val path: Path, val time: Long, val revision: Long?)
 
-    /** Same name pattern as rotation; entries are never followed, symbolic links are reported as unreadable. */
+    /**
+     * Same folder resolution and name pattern as backup creation and rotation: parent directories are canonical,
+     * a symbolically linked folder is refused, and linked entries are never followed but reported as unreadable.
+     */
     private fun listBackups(directory: Path, vaultId: String): List<Candidate> {
-        val root = rejectSymbolicLinks(directory)
+        val root = resolveWithoutFinalLink(directory)
         if (!Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS)) throw IOException("Backup folder must exist")
         val pattern = backupNamePattern(vaultId)
         return Files.newDirectoryStream(root).use { stream ->
@@ -90,10 +110,12 @@ class IntegrityCheck(private val codec: VaultCodec = VaultCodec()) {
         fun failed(state: IntegrityState) = IntegrityFileResult(kind, name, state)
         var bytes: ByteArray? = null
         return try {
-            val content = readBackupFile(path)
+            // Resolved like VaultStore: canonical parent directories, a linked file itself is refused.
+            val resolved = resolveWithoutFinalLink(path)
+            val content = readBackupFile(resolved)
             bytes = content
-            val modified = Files.getLastModifiedTime(path.toAbsolutePath().normalize(), LinkOption.NOFOLLOW_LINKS).toInstant()
-            codec.decrypt(content, credentials, allowExpensive).use { vault ->
+            val modified = Files.getLastModifiedTime(resolved, LinkOption.NOFOLLOW_LINKS).toInstant()
+            decrypt(content, credentials, allowExpensive).use { vault ->
                 val matches = vault.id == expectedId && (expectedRevision == null || vault.revision == expectedRevision)
                 IntegrityFileResult(kind, name, if (matches) IntegrityState.OK else IntegrityState.MISMATCH,
                     vault.revision, vault.entries.size, modified)

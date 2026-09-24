@@ -305,7 +305,7 @@ private fun askCredentials(title: String, confirm: Boolean = false, replacing: B
     } finally { chars.fill('\u0000'); repeated.fill('\u0000'); keyBytes?.fill(0) }
 }
 
-private fun confirm(message: String): Boolean = onEdt {
+internal fun confirm(message: String): Boolean = onEdt {
     JOptionPane.showConfirmDialog(null, message, "Keyrook", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION
 }
 private fun inform(message: String) = onEdt { JOptionPane.showMessageDialog(null, message, "Keyrook", JOptionPane.INFORMATION_MESSAGE) }

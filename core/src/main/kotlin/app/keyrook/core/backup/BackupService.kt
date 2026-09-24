@@ -26,6 +26,9 @@ import java.util.UUID
 
 data class BackupPolicy(val latest: Int = 30, val daily: Int = 30) {
     init { require(latest in 1..1000 && daily in 0..3660) }
+
+    /** Upper bound of managed backups that survive a rotation: the latest versions plus one per retained day. */
+    val maximumKept: Int get() = latest + daily
 }
 
 /** The date is filesystem metadata, not an authenticated creation time. Counts include trash. */
@@ -129,7 +132,7 @@ class BackupService internal constructor(
 
     private fun read(path: Path): ByteArray = readBackupFile(path)
 
-    private fun safePath(path: Path): Path = rejectSymbolicLinks(path)
+    private fun safePath(path: Path): Path = resolveWithoutFinalLink(path)
 
     /** Bad passwords and damaged ciphertext have the same content-free backup error. */
     private fun authenticate(bytes: ByteArray, credentials: Credentials, allowExpensive: Boolean) =
@@ -143,9 +146,23 @@ class BackupService internal constructor(
 internal fun backupNamePattern(vaultId: String) =
     Regex("${Regex.escape(vaultId)}_([0-9]{1,19})_([0-9]{1,19})_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\.keyrook\\.bak")
 
-/** Reads a bounded regular file without following symbolic links in any path component. */
+/**
+ * Number of regular files in [directory] that match this vault's managed backup naming pattern, i.e. the files
+ * that rotation may delete. Symbolic links and unrelated files are not counted. Throws [IOException] when the
+ * folder is missing, unreadable or itself a symbolic link. Nothing is created, written or decrypted.
+ */
+fun countManagedBackups(directory: Path, vaultId: String): Int {
+    val root = resolveWithoutFinalLink(directory)
+    if (!Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS)) throw IOException("Backup folder must exist")
+    val pattern = backupNamePattern(vaultId)
+    return Files.newDirectoryStream(root).use { stream ->
+        stream.count { pattern.matchEntire(it.fileName.toString()) != null && Files.isRegularFile(it, LinkOption.NOFOLLOW_LINKS) }
+    }
+}
+
+/** Reads a bounded regular file below canonical parent directories; a symbolic link as the file itself is refused. */
 internal fun readBackupFile(path: Path): ByteArray {
-    val resolved = rejectSymbolicLinks(path)
+    val resolved = resolveWithoutFinalLink(path)
     if (!Files.isRegularFile(resolved, LinkOption.NOFOLLOW_LINKS)) throw IOException("Backup input must be a regular file")
     FileChannel.open(resolved, StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS).use { input ->
         val size = input.size()
@@ -158,12 +175,15 @@ internal fun readBackupFile(path: Path): ByteArray {
     }
 }
 
-internal fun rejectSymbolicLinks(path: Path): Path {
+/**
+ * Resolves [path] the way [VaultStore] resolves vault files: parent directories are canonicalized, so a symbolic
+ * link above the final component (for example macOS `/var` to `/private/var`) is accepted, while a final component
+ * that is itself a symbolic link is refused and never followed. Missing parent directories raise [IOException].
+ */
+internal fun resolveWithoutFinalLink(path: Path): Path {
     val absolute = path.toAbsolutePath().normalize()
-    var current = absolute.root
-    for (part in absolute) {
-        current = current.resolve(part)
-        if (Files.isSymbolicLink(current)) throw IOException("Symbolic links are not accepted for backups")
-    }
-    return absolute
+    val name = absolute.fileName ?: return absolute
+    val resolved = absolute.parent.toRealPath().resolve(name)
+    if (Files.isSymbolicLink(resolved)) throw IOException("Symbolic links are not accepted for backups")
+    return resolved
 }
