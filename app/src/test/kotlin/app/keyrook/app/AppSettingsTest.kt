@@ -4,6 +4,7 @@ package app.keyrook.app
 
 import app.keyrook.core.backup.BackupPolicy
 import app.keyrook.core.crypto.KdfParameters
+import app.keyrook.core.generator.PasswordPreset
 import app.keyrook.core.model.Vault
 import app.keyrook.core.settings.WindowGeometry
 import org.junit.jupiter.api.Assertions.*
@@ -121,6 +122,39 @@ class AppSettingsTest {
             assertEquals(WindowLockPolicy.MINIMIZE, loaded.windowLock, value)
             assertEquals(ThemeMode.DARK, loaded.theme, value)
         }
+    }
+
+    @Test fun `interface scale and contrast survive a restart and older or unknown values fall back to defaults`() {
+        val config = directory.toRealPath().resolve("config")
+        val file = config.resolve(SettingsStore.FILE_NAME)
+        val store = SettingsStore(config)
+        assertEquals(DEFAULT_UI_SCALE, store.current().uiScale)
+        assertEquals(ContrastMode.STANDARD, store.current().contrast)
+        UI_SCALE_CHOICES.forEach { scale ->
+            assertTrue(store.update { it.copy(uiScale = scale, contrast = ContrastMode.HIGH) })
+            assertTrue(Files.readString(file).contains("\"uiScale\": $scale"))
+            assertTrue(Files.readString(file).contains("\"contrast\": \"HIGH\""))
+            assertEquals(scale, SettingsStore(config).current().uiScale)
+            assertEquals(ContrastMode.HIGH, SettingsStore(config).current().contrast)
+        }
+        Files.writeString(file, """{"version":1,"theme":"DARK","windowLock":"NEVER"}""")
+        assertEquals(AppSettings(theme = ThemeMode.DARK, windowLock = WindowLockPolicy.NEVER), SettingsStore(config).current())
+        listOf("""{"version":1,"theme":"DARK","uiScale":125,"contrast":"high"}""", """{"version":1,"theme":"DARK","uiScale":0,"contrast":""}""",
+            """{"version":1,"theme":"DARK","uiScale":null,"contrast":null}""").forEach { text ->
+            Files.writeString(file, text)
+            assertEquals(AppSettings(theme = ThemeMode.DARK), SettingsStore(config).current(), text)
+        }
+        // Generator choices written without the display preferences keep loading next to their defaults, and both survive.
+        Files.writeString(file, """{"version":1,"theme":"DARK","generator":{"preset":"MAX_16"}}""")
+        val generatorOnly = SettingsStore(config)
+        assertEquals(PasswordPreset.MAX_16, generatorOnly.current().generator.preset)
+        assertEquals(DEFAULT_UI_SCALE, generatorOnly.current().uiScale)
+        assertEquals(ContrastMode.STANDARD, generatorOnly.current().contrast)
+        assertTrue(generatorOnly.update { it.copy(uiScale = 130, contrast = ContrastMode.HIGH) })
+        val reloaded = SettingsStore(config).current()
+        assertEquals(PasswordPreset.MAX_16, reloaded.generator.preset)
+        assertEquals(130, reloaded.uiScale)
+        assertEquals(ContrastMode.HIGH, reloaded.contrast)
     }
 
     @Test fun `window geometry survives a restart and older or invalid entries fall back to defaults`() {

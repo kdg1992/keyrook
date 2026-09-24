@@ -19,7 +19,6 @@ fun main(args: Array<String>) {
             onCloseRequest = { closeRequested = true },
             state = windowState, title = "Keyrook", icon = icon,
         ) {
-            LaunchedEffect(window) { window.minimumSize = minimumWindowSize() }
             PersistWindowGeometry(windowState, settings)
             KeyrookApp(window, settings, closeRequested) { quit ->
                 closeRequested = false

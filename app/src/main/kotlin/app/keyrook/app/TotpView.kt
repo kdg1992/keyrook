@@ -51,17 +51,20 @@ internal fun TotpFormatHint() {
 @Composable
 internal fun TotpCodeRow(field: Field, shown: Boolean, busy: Boolean, onToggle: () -> Unit, onNotice: (String) -> Unit) {
     val valid = remember(field) { runCatching { Totp.isValid(field.value) }.getOrDefault(false) }
+    val label = UiText.text("totp.code")
     Column {
-        Text(UiText.text("totp.code"), style = MaterialTheme.typography.caption)
+        Text(label, style = MaterialTheme.typography.caption)
         if (!valid) Text(UiText.text("totp.invalid"), color = MaterialTheme.colors.error)
         else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             if (shown) TotpLiveCode(field, Modifier.weight(1f))
-            else Text(CODE_MASK, Modifier.weight(1f), fontFamily = FontFamily.Monospace)
-            TextButton(onClick = onToggle) { Text(UiText.text(if (shown) "detail.hide" else "detail.show")) }
+            else Text(CODE_MASK, Modifier.weight(1f).maskedValueSemantics(label), fontFamily = FontFamily.Monospace)
+            TextButton(onClick = onToggle, modifier = Modifier.revealSemantics(label, shown)) {
+                Text(UiText.text(if (shown) "detail.hide" else "detail.show"))
+            }
             TextButton(enabled = !busy, onClick = {
                 onNotice(runCatching { EntryQuickActions.copyTotp(field) }
                     .fold({ UiText.text("list.totpCopied", it) }, { UiText.text("list.copyFailed") }))
-            }) { Text(UiText.text("common.copy")) }
+            }, modifier = Modifier.describedAs(UiText.text("a11y.copyValue", label))) { Text(UiText.text("common.copy")) }
         }
     }
 }

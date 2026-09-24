@@ -3,8 +3,10 @@
 package app.keyrook.app
 
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import app.keyrook.core.generator.PasswordGenerator
 import app.keyrook.core.generator.PasswordOptions
 import app.keyrook.core.generator.PasswordPreset
@@ -90,27 +92,24 @@ internal fun GeneratorTools(busy: Boolean, onBusy: (Boolean) -> Unit, settings: 
     }
     TextButton(enabled = !busy, onClick = { expanded = !expanded }) { Text(UiText.text("generator.title")) }
     if (expanded) {
-        Row {
+        Row(Modifier.selectableGroup()) {
             PasswordPreset.entries.forEach { choice ->
-                RadioButton(preset == choice, enabled = !busy, onClick = {
+                LabeledRadioButton(preset == choice, UiText.text("generator.preset.${choice.name}"), enabled = !busy) {
                     preset = choice
                     length = GeneratorPreferences.lengthFor(choice, length.toIntOrNull()).toString()
-                })
-                Text(UiText.text("generator.preset.${choice.name}"))
+                }
             }
         }
         Text(UiText.text("generator.presetHelp.${preset.name}"))
         OutlinedTextField(length, { length = it }, enabled = !busy,
             label = { Text(UiText.text("generator.length", PasswordGenerator.MIN_LENGTH, preset.maxLength)) })
         Row {
-            Checkbox(lower, enabled = !busy, onCheckedChange = { lower = it }); Text(UiText.text("generator.lower"))
-            Checkbox(upper, enabled = !busy, onCheckedChange = { upper = it }); Text(UiText.text("generator.upper"))
-            Checkbox(digits, enabled = !busy, onCheckedChange = { digits = it }); Text(UiText.text("generator.digits"))
-            Checkbox(symbols, enabled = !busy, onCheckedChange = { symbols = it }); Text(UiText.text("generator.symbols"))
+            LabeledCheckbox(lower, UiText.text("generator.lower"), enabled = !busy) { lower = it }
+            LabeledCheckbox(upper, UiText.text("generator.upper"), enabled = !busy) { upper = it }
+            LabeledCheckbox(digits, UiText.text("generator.digits"), enabled = !busy) { digits = it }
+            LabeledCheckbox(symbols, UiText.text("generator.symbols"), enabled = !busy) { symbols = it }
         }
-        Row {
-            Checkbox(noAmbiguous, enabled = !busy, onCheckedChange = { noAmbiguous = it }); Text(UiText.text("generator.noAmbiguous"))
-        }
+        LabeledCheckbox(noAmbiguous, UiText.text("generator.noAmbiguous"), enabled = !busy) { noAmbiguous = it }
         Button(enabled = !busy, onClick = {
             passwordError = runCatching {
                 val options = PasswordOptions(length.toInt(), lower, upper, digits, symbols, preset, noAmbiguous)
@@ -122,11 +121,9 @@ internal fun GeneratorTools(busy: Boolean, onBusy: (Boolean) -> Unit, settings: 
         Text(UiText.text("generator.wordListHelp"))
         Text(UiText.text("generator.entropyHelp"))
         OutlinedTextField(wordCount, { wordCount = it }, enabled = !busy && !loading, label = { Text(UiText.text("generator.words")) })
-        Row {
-            RadioButton(separator == '-', onClick = { separator = '-' }, enabled = !busy && !loading)
-            Text(UiText.text("generator.hyphen"))
-            RadioButton(separator == ' ', onClick = { separator = ' ' }, enabled = !busy && !loading)
-            Text(UiText.text("generator.space"))
+        Row(Modifier.selectableGroup()) {
+            LabeledRadioButton(separator == '-', UiText.text("generator.hyphen"), enabled = !busy && !loading) { separator = '-' }
+            LabeledRadioButton(separator == ' ', UiText.text("generator.space"), enabled = !busy && !loading) { separator = ' ' }
         }
         phraseMessage?.let { Text(it, color = if (phraseError) MaterialTheme.colors.error else MaterialTheme.colors.onSurface) }
         // The full path is shown so a list redirected by someone who can write the settings file stays visible.

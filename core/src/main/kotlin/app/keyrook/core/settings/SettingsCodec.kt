@@ -13,7 +13,8 @@ import java.nio.charset.CharacterCodingException
  *
  * Compatibility: a new preference is added as an optional field with a default, so files written before it existed still decode
  * within the same [SettingsCodec.VERSION]. Unknown keys stay rejected. A change that alters or removes an existing field needs a
- * version bump instead. [language], [windowLock], [updateCheck], [window] and [generator] were added this way.
+ * version bump instead. [language], [windowLock], [updateCheck], [window], [generator], [uiScale] and [contrast] were
+ * added this way.
  */
 @Serializable
 data class SettingsDocument(
@@ -31,6 +32,10 @@ data class SettingsDocument(
     val window: WindowSettingsDocument? = null,
     /** Last password generator choices and passphrase word-list path; validated field by field, falling back to defaults. */
     val generator: GeneratorSettingsDocument? = null,
+    /** Interface scale in percent chosen in the UI; absent or unknown values mean 100 %. */
+    val uiScale: Int? = null,
+    /** Colour contrast chosen in the UI; absent or unknown values mean the standard colours. */
+    val contrast: String? = null,
 )
 
 /**

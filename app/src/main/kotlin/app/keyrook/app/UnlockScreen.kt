@@ -4,9 +4,12 @@ package app.keyrook.app
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import app.keyrook.core.model.*
@@ -68,12 +71,11 @@ private fun UnlockForm(busy: Boolean, remembered: AppSettings, generateKey: ((Pa
     var lanes by remember { mutableStateOf("4") }
     val parameters = if (create) parseKdfParameters(memory, rounds, lanes) else KdfParameters()
     Column(Modifier.widthIn(max = 640.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(UiText.text(if (create) "credentials.createTitle" else "credentials.openTitle"), style = MaterialTheme.typography.h5)
-        Row {
-            RadioButton(!create, onClick = { create = false }, enabled = !busy)
-            Text(UiText.text("credentials.open"), Modifier.padding(top = 12.dp))
-            RadioButton(create, onClick = { create = true }, enabled = !busy)
-            Text(UiText.text("credentials.create"), Modifier.padding(top = 12.dp))
+        Text(UiText.text(if (create) "credentials.createTitle" else "credentials.openTitle"), Modifier.semantics { heading() },
+            style = MaterialTheme.typography.h5)
+        Row(Modifier.selectableGroup()) {
+            LabeledRadioButton(!create, UiText.text("credentials.open"), enabled = !busy) { create = false }
+            LabeledRadioButton(create, UiText.text("credentials.create"), enabled = !busy) { create = true }
         }
         OutlinedTextField(path, { path = it }, label = { Text(UiText.text("credentials.vaultFile")) }, enabled = !busy, modifier = Modifier.fillMaxWidth())
         TextButton(enabled = !busy, onClick = { chooseFile(create)?.let { path = it.toString() } }) { Text(UiText.text("credentials.selectFile")) }

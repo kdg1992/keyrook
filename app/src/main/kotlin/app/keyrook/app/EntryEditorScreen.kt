@@ -6,9 +6,13 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -100,11 +104,14 @@ internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcu
     val alive = remember { java.util.concurrent.atomic.AtomicBoolean(true) }
     DisposableEffect(Unit) { onDispose { alive.set(false); ownedFields.forEach { it.close() } } }
     Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(if (source == null) UiText.text("editor.new") else UiText.text("editor.edit"), style = MaterialTheme.typography.h5)
+        Text(if (source == null) UiText.text("editor.new") else UiText.text("editor.edit"), Modifier.semantics { heading() },
+            style = MaterialTheme.typography.h5)
         if (source == null) {
             Row(Modifier.horizontalScroll(rememberScrollState())) {
                 EntryType.entries.forEach { candidate ->
-                    TextButton(enabled = !busy, onClick = { type = candidate }) { Text(if (type == candidate) "• ${candidate.label}" else candidate.label) }
+                    TextButton(enabled = !busy, onClick = { type = candidate }, modifier = Modifier.semantics { selected = type == candidate }) {
+                        Text(if (type == candidate) "• ${candidate.label}" else candidate.label)
+                    }
                 }
             }
         }
@@ -147,11 +154,10 @@ internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcu
                     })
                     val slot = PortSlot.valueOf(name)
                     Row {
-                        Checkbox(endpoint != null, enabled = !busy, onCheckedChange = { enabled ->
+                        LabeledCheckbox(endpoint != null, name, enabled = !busy) { enabled ->
                             portDrafts = portDrafts - slot
                             update(if (enabled) MailEndpoint(newField(), if (name == "IMAP") 993 else if (name == "POP3") 995 else 465, MailEncryption.TLS) else null)
-                        })
-                        Text(name)
+                        }
                         if (endpoint != null) {
                             PortField(shownPorts[slot].orEmpty(), !busy, { value -> editPort(slot, value) { update(endpoint.copy(port = it)) } },
                                 Modifier.width(160.dp))
@@ -178,7 +184,8 @@ internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcu
                 }
             }
             is EntryData.Ssh -> {
-                Row { SshKeyType.entries.forEach { keyType -> TextButton(enabled = !busy && !generating, onClick = { data = current.copy(keyType = keyType) }) { Text(if (keyType == current.keyType) "• $keyType" else "$keyType") } } }
+                Row { SshKeyType.entries.forEach { keyType -> TextButton(enabled = !busy && !generating, onClick = { data = current.copy(keyType = keyType) },
+                    modifier = Modifier.semantics { selected = keyType == current.keyType }) { Text(if (keyType == current.keyType) "• $keyType" else "$keyType") } } }
                 Text(UiText.text("editor.sshHint"))
                 Button(enabled = !busy && !generating && values[2].length >= 12, onClick = {
                     generating = true
@@ -208,10 +215,8 @@ internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcu
                     hidden = listOf(true, false, true, false)
                 }
                 vault.entries.filter { it.data is EntryData.Server && it.deletedAt == null }.forEach { server ->
-                    Row {
-                        Checkbox(server.id in current.serverIds, enabled = !busy, onCheckedChange = { selected ->
-                            data = current.copy(serverIds = if (selected) current.serverIds + server.id else current.serverIds - server.id)
-                        }); Text(server.title)
+                    LabeledCheckbox(server.id in current.serverIds, server.title, enabled = !busy) { selected ->
+                        data = current.copy(serverIds = if (selected) current.serverIds + server.id else current.serverIds - server.id)
                     }
                 }
             }
@@ -222,29 +227,32 @@ internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcu
                 OutlinedTextField(values[index], { value -> values = values.toMutableList().also { it[index] = value } },
                     label = { Text(label) }, enabled = !busy, isError = index in validation.values, modifier = Modifier.weight(1f),
                     visualTransformation = if (hidden[index]) PasswordVisualTransformation() else VisualTransformation.None)
-                Column {
-                    Checkbox(hidden[index], enabled = !busy, onCheckedChange = { value -> hidden = hidden.toMutableList().also { it[index] = value } })
-                    Text(UiText.text("common.hidden"))
-                }
+                val hiddenText = UiText.text("common.hidden")
+                LabeledCheckbox(hidden[index], hiddenText, enabled = !busy, description = UiText.text("a11y.fieldOption", label, hiddenText),
+                    stacked = true) { value -> hidden = hidden.toMutableList().also { it[index] = value } }
                 TextButton(enabled = !busy, onClick = {
                     error = runCatching { SecretClipboard.copy(values[index]) }.isFailure
-                }) { Text(UiText.text("common.copy")) }
+                }, modifier = Modifier.describedAs(UiText.text("a11y.copyValue", label))) { Text(UiText.text("common.copy")) }
                 if (data.fields()[index].kind == FieldKind.URL) TextButton(enabled = !busy, onClick = {
                     error = runCatching {
                         val uri = BrowserLinks.parse(values[index])
                         Desktop.getDesktop().browse(uri)
                     }.isFailure
-                }) { Text(UiText.text("common.open")) }
+                }, modifier = Modifier.describedAs(UiText.text("a11y.openValue", label))) { Text(UiText.text("common.open")) }
             }
             FieldError(validation.valueMessage(index))
             if (index == data.totpIndex()) TotpFormatHint()
             if (data is EntryData.Custom) {
                 val current = data as EntryData.Custom
-                Row {
-                    TextButton(enabled = !busy, onClick = { replaceData(current.copy(values = current.values - label)) }) { Text(UiText.text("editor.removeField")) }
-                    Checkbox(current.values.getValue(label).kind == FieldKind.URL, enabled = !busy, onCheckedChange = { url ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val removeText = UiText.text("editor.removeField")
+                    TextButton(enabled = !busy, onClick = { replaceData(current.copy(values = current.values - label)) },
+                        modifier = Modifier.describedAs(UiText.text("a11y.fieldOption", label, removeText))) { Text(removeText) }
+                    val urlText = UiText.text("editor.urlField")
+                    LabeledCheckbox(current.values.getValue(label).kind == FieldKind.URL, urlText, enabled = !busy,
+                        description = UiText.text("a11y.fieldOption", label, urlText)) { url ->
                         data = current.copy(values = current.values + (label to current.values.getValue(label).copy(kind = if (url) FieldKind.URL else FieldKind.TEXT)))
-                    }); Text(UiText.text("editor.urlField"))
+                    }
                 }
             }
             if (data.canGenerateSecret(index)) GeneratorTools(busy, onBusy = { generating = it }, settings = settings) { generated ->

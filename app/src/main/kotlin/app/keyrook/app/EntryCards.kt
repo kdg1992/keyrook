@@ -17,6 +17,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.keyrook.core.model.Entry
@@ -120,10 +121,11 @@ internal fun EntryCardView(entry: Entry, info: EntryCardInfo, isSelected: Boolea
         elevation = if (isSelected) 4.dp else 2.dp,
     ) {
         Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (onMark != null) Checkbox(marked, onCheckedChange = { onMark() })
+            if (onMark != null) Checkbox(marked, onCheckedChange = { onMark() },
+                modifier = Modifier.describedAs(UiText.text("a11y.markEntry", entry.title)))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    if (onFavorite != null) FavoriteToggle(entry.favorite, busy, onFavorite)
+                    if (onFavorite != null) FavoriteToggle(entry.title, entry.favorite, busy, onFavorite)
                     Text(entry.title, style = MaterialTheme.typography.h6)
                 }
                 Text(listOfNotNull(entry.data.type().label,
@@ -164,11 +166,15 @@ internal fun EntryCardView(entry: Entry, info: EntryCardInfo, isSelected: Boolea
     }
 }
 
-/** A star that shows whether the entry is a favorite and toggles it; its accessible name states the action. */
+/**
+ * A star that shows whether the entry is a favorite and toggles it; its accessible name states the action for the entry
+ * [title], and its state says whether the entry currently is a favorite.
+ */
 @Composable
-internal fun FavoriteToggle(favorite: Boolean, busy: Boolean, onToggle: () -> Unit) {
-    val label = UiText.text(if (favorite) "favorite.remove" else "favorite.add")
-    TextButton(enabled = !busy, onClick = onToggle, modifier = Modifier.semantics { contentDescription = label }) {
+internal fun FavoriteToggle(title: String, favorite: Boolean, busy: Boolean, onToggle: () -> Unit) {
+    val label = UiText.text("a11y.fieldOption", title, UiText.text(if (favorite) "favorite.remove" else "favorite.add"))
+    val state = UiText.text(if (favorite) "a11y.favorite" else "a11y.notFavorite")
+    TextButton(enabled = !busy, onClick = onToggle, modifier = Modifier.semantics { contentDescription = label; stateDescription = state }) {
         Text(if (favorite) "★" else "☆", style = MaterialTheme.typography.h6)
     }
 }

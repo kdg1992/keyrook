@@ -7,6 +7,9 @@ data class ScreenArea(val x: Int, val y: Int, val width: Int, val height: Int) {
     init { require(width > 0 && height > 0) { "Screen area must not be empty" } }
 }
 
+/** A window size in window-system units. */
+data class WindowSize(val width: Int, val height: Int)
+
 /**
  * Size, position and maximized state of the main window. [x] and [y] are both null when no position is known;
  * [fitTo] then centers the window. Sizes always lie within [MIN_WIDTH]..[MAX_SIZE] and [MIN_HEIGHT]..[MAX_SIZE].
@@ -58,7 +61,32 @@ data class WindowGeometry(val x: Int?, val y: Int?, val width: Int, val height: 
         const val MIN_VISIBLE_WIDTH = 120
         private val COORDINATES = -MAX_COORDINATE..MAX_COORDINATE
 
+        /** Interface scales outside this range are clamped by [minimumSize] and [defaultFor]. */
+        const val MIN_SCALE_PERCENT = 50
+        const val MAX_SCALE_PERCENT = 400
+
         val DEFAULT = WindowGeometry(null, null, DEFAULT_WIDTH, DEFAULT_HEIGHT, false)
+
+        /**
+         * The smallest window for an interface scale of [scalePercent]: [MIN_WIDTH] x [MIN_HEIGHT] grown by the scale, so
+         * a larger scale keeps the same content visible. It never exceeds the primary screen of [screens] (the first
+         * entry) so the window still fits there, and never falls below the unscaled minimum that stored geometry uses.
+         */
+        fun minimumSize(scalePercent: Int, screens: List<ScreenArea>): WindowSize {
+            val primary = screens.firstOrNull()
+            return WindowSize(
+                scaled(MIN_WIDTH, scalePercent).coerceAtMost(primary?.width ?: MAX_SIZE).coerceAtLeast(MIN_WIDTH),
+                scaled(MIN_HEIGHT, scalePercent).coerceAtMost(primary?.height ?: MAX_SIZE).coerceAtLeast(MIN_HEIGHT),
+            )
+        }
+
+        /** The centered default window for an interface scale of [scalePercent]; [fitTo] reduces it to the screen. */
+        fun defaultFor(scalePercent: Int): WindowGeometry = WindowGeometry(null, null,
+            scaled(DEFAULT_WIDTH, scalePercent).coerceIn(MIN_WIDTH, MAX_SIZE),
+            scaled(DEFAULT_HEIGHT, scalePercent).coerceIn(MIN_HEIGHT, MAX_SIZE), false)
+
+        private fun scaled(size: Int, scalePercent: Int): Int =
+            (size.toLong() * scalePercent.coerceIn(MIN_SCALE_PERCENT, MAX_SCALE_PERCENT) / 100).toInt()
 
         /**
          * Validates a stored entry. Missing or non-positive sizes use the default size, other sizes are clamped to the

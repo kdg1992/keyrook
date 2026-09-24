@@ -14,6 +14,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.*
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.keyrook.core.model.*
 import app.keyrook.core.security.HealthIssue
@@ -185,12 +188,9 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         listButtons()
     }
     Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-        Checkbox(includeHidden, onCheckedChange = { onView(view.copy(includeHidden = it)) })
-        Text(UiText.text("shell.hiddenSearch"))
-        Checkbox(activeFilters.favorites, onCheckedChange = { applyFilters(activeFilters.copy(favorites = it)) })
-        Text(UiText.text("filters.favorites"))
-        Checkbox(activeFilters.recent, onCheckedChange = { applyFilters(activeFilters.copy(recent = it)) })
-        Text(UiText.text("filters.recent"))
+        LabeledCheckbox(includeHidden, UiText.text("shell.hiddenSearch")) { onView(view.copy(includeHidden = it)) }
+        LabeledCheckbox(activeFilters.favorites, UiText.text("filters.favorites")) { applyFilters(activeFilters.copy(favorites = it)) }
+        LabeledCheckbox(activeFilters.recent, UiText.text("filters.recent")) { applyFilters(activeFilters.copy(recent = it)) }
     }
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Choice(UiText.text("shell.type"), activeFilters.type?.name, EntryType.entries.map { it.name to it.label }) {
@@ -293,7 +293,7 @@ private fun BulkBar(selection: EntrySelection, entries: List<Entry>, trash: Bool
             Text(UiText.text(if (count == entries.size) "bulk.clear" else "bulk.selectAll"))
         }
         if (count > 0) {
-            Text(UiText.text("bulk.count", count))
+            Text(UiText.text("bulk.count", count), Modifier.semantics { liveRegion = LiveRegionMode.Polite })
             if (trash) TextButton(enabled = !busy, onClick = onRestore) { Text(UiText.text("bulk.restore")) }
             else TextButton(enabled = !busy, onClick = onTrash) { Text(UiText.text("bulk.trash")) }
             TextButton(enabled = !busy, onClick = { onTag(true) }) { Text(UiText.text("bulk.addTag")) }

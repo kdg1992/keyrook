@@ -14,6 +14,9 @@ import java.util.UUID
 
 internal enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
+/** [HIGH] replaces the light or dark colours with the high-contrast palette of [HighContrastPalette]. */
+internal enum class ContrastMode { STANDARD, HIGH }
+
 /**
  * Which window events lock the vault: [FOCUS_LOSS] locks on focus loss and minimizing, [MINIMIZE] on minimizing only,
  * [NEVER] on neither. Operating-system session/sleep notifications and the inactivity deadline lock under every policy.
@@ -22,6 +25,10 @@ internal enum class WindowLockPolicy { FOCUS_LOSS, MINIMIZE, NEVER }
 
 internal val LOCK_MINUTE_CHOICES = listOf(1, 2, 5, 10, 15, 30)
 internal val CLIPBOARD_SECOND_CHOICES = listOf(5L, 10L, 20L, 30L, 60L, 120L)
+
+/** Interface scale in percent, applied to all sizes and text on top of the operating system's own scaling. */
+internal val UI_SCALE_CHOICES = listOf(90, 100, 115, 130, 150)
+internal const val DEFAULT_UI_SCALE = 100
 
 internal data class StoredBackup(val folder: Path, val policy: BackupPolicy, val enabled: Boolean)
 
@@ -40,6 +47,9 @@ internal data class AppSettings(
     val window: WindowGeometry? = null,
     /** Last generator preset, options and passphrase word-list path; never generated values or word-list content. */
     val generator: GeneratorPreferences = GeneratorPreferences(),
+    /** One of [UI_SCALE_CHOICES]; applied immediately to the whole window and its dialogs. */
+    val uiScale: Int = DEFAULT_UI_SCALE,
+    val contrast: ContrastMode = ContrastMode.STANDARD,
 ) {
     fun backupFor(vault: Path): StoredBackup? = backups[vaultKey(vault)]
 
@@ -58,6 +68,7 @@ internal data class AppSettings(
         updateCheck = if (checkUpdatesOnStart) UPDATE_CHECK_ON_START else UPDATE_CHECK_MANUAL,
         window = window?.toDocument(),
         generator = generator.toDocument(),
+        uiScale = uiScale, contrast = contrast.name,
     )
 
     companion object {
@@ -87,6 +98,8 @@ internal data class AppSettings(
                 checkUpdatesOnStart = document.updateCheck == UPDATE_CHECK_ON_START,
                 window = WindowGeometry.fromDocument(document.window),
                 generator = GeneratorPreferences.fromDocument(document.generator, storedPath(document.generator?.wordListPath)),
+                uiScale = document.uiScale?.takeIf { it in UI_SCALE_CHOICES } ?: defaults.uiScale,
+                contrast = ContrastMode.entries.find { it.name == document.contrast } ?: defaults.contrast,
             )
         }
 

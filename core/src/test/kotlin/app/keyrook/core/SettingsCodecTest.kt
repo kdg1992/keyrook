@@ -17,7 +17,8 @@ class SettingsCodecTest {
             backups = mapOf("/vaults/a.keyrook" to BackupSettingsDocument("/backups", 5, 7, true)), updateCheck = "ON_START",
             window = WindowSettingsDocument(x = -40, y = 25, width = 1200, height = 800, maximized = true),
             generator = GeneratorSettingsDocument(preset = "SHELL_SAFE", length = 20, lowercase = true, uppercase = false, digits = true,
-                symbols = true, excludeAmbiguous = true, wordListPath = "/lists/words.txt", wordCount = 7, separator = " "))
+                symbols = true, excludeAmbiguous = true, wordListPath = "/lists/words.txt", wordCount = 7, separator = " "),
+            uiScale = 150, contrast = "HIGH")
         val bytes = SettingsCodec.encode(document)
         assertTrue(String(bytes, Charsets.UTF_8).contains("\"version\": ${SettingsCodec.VERSION}"))
         assertEquals(document, SettingsCodec.decode(bytes))
@@ -50,7 +51,32 @@ class SettingsCodecTest {
         assertNull(decoded.updateCheck)
         assertNull(decoded.window)
         assertNull(decoded.generator)
+        assertNull(decoded.uiScale)
+        assertNull(decoded.contrast)
         assertEquals(expected, SettingsCodec.decode(SettingsCodec.encode(expected)))
+    }
+
+    @Test fun `settings written before the scale and contrast preferences still decode and round trip`() {
+        val written = """{
+            "version": 1,
+            "theme": "SYSTEM",
+            "language": "GERMAN",
+            "windowLock": "MINIMIZE",
+            "updateCheck": "MANUAL",
+            "window": { "x": 10, "y": 20, "width": 1100, "height": 760, "maximized": false },
+            "generator": { "preset": "MAX_16", "excludeAmbiguous": true }
+        }"""
+        val decoded = SettingsCodec.decode(written.toByteArray())!!
+        assertNull(decoded.uiScale)
+        assertNull(decoded.contrast)
+        assertEquals(GeneratorSettingsDocument(preset = "MAX_16", excludeAmbiguous = true), decoded.generator)
+        val updated = decoded.copy(uiScale = 130, contrast = "HIGH")
+        val text = String(SettingsCodec.encode(updated), Charsets.UTF_8)
+        assertTrue(text.contains("\"uiScale\": 130") && text.contains("\"contrast\": \"HIGH\""), text)
+        assertTrue(text.contains("\"preset\": \"MAX_16\""), text)
+        assertEquals(updated, SettingsCodec.decode(SettingsCodec.encode(updated)))
+        assertEquals(SettingsDocument(uiScale = 90), SettingsCodec.decode("{\"uiScale\":90}".toByteArray()))
+        assertEquals(SettingsDocument(), SettingsCodec.decode("{\"uiScale\":null,\"contrast\":null}".toByteArray()))
     }
 
     @Test fun `partial window entries decode with missing fields left empty`() {
@@ -70,7 +96,8 @@ class SettingsCodecTest {
     @Test fun `corrupt unknown and oversized input is rejected without exceptions`() {
         listOf("", "{", "null", "[]", "{\"version\":2}", "{\"version\":0}", "{\"theme\":1}", "{\"language\":1}", "{\"windowLock\":1}", "{\"updateCheck\":true}",
             "{\"window\":1}", "{\"generator\":1}", "{\"generator\":{\"length\":\"long\"}}", "{\"generator\":{\"words\":[]}}",
-"{\"window\":{\"width\":\"wide\"}}", "{\"window\":{\"depth\":3}}",
+            "{\"window\":{\"width\":\"wide\"}}", "{\"window\":{\"depth\":3}}",
+            "{\"uiScale\":\"large\"}", "{\"uiScale\":1.5}", "{\"contrast\":true}",
             "{\"unexpected\":true}", "{\"lastKeyFilePath\":\"/keys/a.key\"}", "{\"backups\":{\"/a\":{\"folder\":\"/b\"}}}").forEach {
             assertNull(SettingsCodec.decode(it.toByteArray()), it)
         }
