@@ -112,6 +112,14 @@ internal fun windowEventLocks(policy: WindowLockPolicy, id: Int, oldState: Int, 
     }
 }
 
+/**
+ * Whether a window event masks values shown in the entry details: whenever the strictest choice,
+ * [WindowLockPolicy.FOCUS_LOSS], would lock, independent of the selected policy. Any deactivation counts, including
+ * a switch to one of Keyrook's own dialogs.
+ */
+internal fun windowEventMasksValues(id: Int, oldState: Int, newState: Int): Boolean =
+    windowEventLocks(WindowLockPolicy.FOCUS_LOSS, id, oldState, newState) { true }
+
 /** A delayed event loop must not let the first key or mouse event revive an expired session. */
 internal fun handleDesktopActivity(active: Boolean, timeoutMinutes: Int, deadline: InactivityDeadline, lock: () -> Unit) {
     if (active) {
