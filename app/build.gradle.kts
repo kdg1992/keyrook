@@ -16,7 +16,8 @@ plugins {
     alias(libs.plugins.compose.compiler)
     id("keyrook.runtime-dependency-check")
 }
-kotlin { jvmToolchain(25) }
+// Compiler warnings fail the build so that new ones are fixed instead of accumulating.
+kotlin { jvmToolchain(25); compilerOptions { allWarningsAsErrors = true } }
 val hostOs = System.getProperty("os.name").lowercase().let {
     when { it.startsWith("windows") -> "windows"; it.startsWith("mac") -> "macos"; else -> "linux" }
 }
@@ -146,8 +147,9 @@ compose.desktop {
             macOS {
                 iconFile.set(project.file("icons/keyrook.icns"))
                 bundleID = "app.keyrook.desktop"; dockName = "Keyrook"; appCategory = "public.app-category.utilities"
-                // jpackage rejects macOS bundle versions starting with 0. Until 1.0.0 the bundle carries
-                // 1.0.0; the application, release and installer file names keep the real version.
+                // jpackage rejects macOS bundle versions starting with 0, so every 0.x package carries bundle and
+                // DMG version 1.0.0 while the application, release and installer file names keep the real version.
+                // From 1.0.0 on, the bundle version equals the application version (see docs/PACKAGING.md).
                 val macBundleVersion = project.version.toString().takeUnless { it.startsWith("0.") } ?: "1.0.0"
                 packageVersion = macBundleVersion
                 dmgPackageVersion = macBundleVersion

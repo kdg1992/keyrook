@@ -428,8 +428,9 @@ Without a configured backup folder only the vault file is checked. The report sh
 
 ### Vaults of earlier releases
 
-Vaults saved by a release before document schema 2 (without favorites as a
-field, customer details or templates) open normally; their favorite tags become
+Keyrook up to 0.7.x writes document schema 1; 0.8.0 and later write schema 2
+(with favorites as a field, customer details and templates). Vaults saved by
+0.7.x or earlier open normally; their favorite tags become
 favorites in memory, and a notice above the list says that the next save
 converts the vault. Opening changes nothing on disk. The first save afterwards
 keeps the unchanged old file next to the vault as

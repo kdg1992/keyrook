@@ -25,6 +25,87 @@ class CodecTest {
         } }
     }
 
+    @Test fun `frozen schema 2 fixture with key file decodes to its complete content without migration`() {
+        val bytes = frozenV2Fixture()
+        val header = VaultHeader.parse(bytes, false)
+        header.kdf shouldBe KdfParameters(iterations = 1)
+        header.keyFile shouldBe true
+        credentials("fixture-password-v2", FROZEN_V2_KEY_FILE).use { c ->
+            val document = codec.decryptDocument(bytes, c)
+            document.vault.use { document.storedSchemaVersion shouldBe 2 }
+            codec.decrypt(bytes, c).use { vault ->
+                vault.schemaVersion shouldBe 2
+                vault.id shouldBe "22222222-3333-4444-8555-666666666666"
+                vault.revision shouldBe 3L
+                val (customer, minimal) = vault.customers
+                customer.id shouldBe "aaaaaaaa-0000-4000-8000-000000000001"
+                customer.name shouldBe "Fixture Customer"
+                customer.contactName shouldBe "Fixture Contact"
+                customer.contactEmail shouldBe "contact@example.invalid"
+                customer.phone shouldBe "+49 30 1234567"
+                customer.website shouldBe "https://customer.example.invalid"
+                customer.notesText() shouldBe "Customer-Notes-FIXTURE"
+                minimal.name shouldBe "Minimal Customer"
+                listOf(minimal.contactName, minimal.contactEmail, minimal.phone, minimal.website) shouldBe listOf(null, null, null, null)
+                minimal.notesText() shouldBe ""
+                val project = vault.projects.single()
+                project.name shouldBe "Fixture Project"
+                project.customerId shouldBe customer.id
+                project.description shouldBe "Description line one\nline two"
+                project.notesText() shouldBe "Project-Notes-FIXTURE"
+
+                val (web, server, custom) = vault.entries
+                vault.entries.map { it.title } shouldBe listOf("Fixture web", "Fixture server", "Fixture custom")
+                vault.entries.map { it.pinned } shouldBe listOf(true, false, true)
+                vault.entries.map { it.deletedAt } shouldBe listOf(null, null, "2026-03-04T05:06:07Z")
+                web.customerId shouldBe customer.id
+                web.projectId shouldBe project.id
+                web.tags shouldBe listOf("fixture", "web")
+                web.expiresOn shouldBe "2027-01-31"
+                web.createdAt shouldBe "2026-01-02T03:04:05Z"
+                web.modifiedAt shouldBe "2026-09-01T10:00:00Z"
+                web.notes.useChars { String(it) shouldBe "Entry-Notes-FIXTURE" }
+                val webData = web.data as EntryData.Web
+                webData.fields().map { it.value.useChars(::String) } shouldBe
+                    listOf("https://example.invalid/login", "fixture-user", "Password-FIXTURE", "JBSWY3DPEHPK3PXP")
+                webData.fields().map { it.hidden } shouldBe listOf(false, false, true, true)
+                webData.url.kind shouldBe FieldKind.URL
+                val history = web.history.single()
+                history.changedAt shouldBe "2026-06-01T08:00:00Z"
+                (history.data as EntryData.Custom).values.getValue("password").value.useChars { String(it) shouldBe "Old-Password-FIXTURE" }
+                val serverData = server.data as EntryData.Server
+                serverData.port shouldBe 2222
+                serverData.host.value.useChars { String(it) shouldBe "server.example.invalid" }
+                serverData.password.value.useChars { String(it) shouldBe "Server-Password-FIXTURE" }
+                server.projectId shouldBe project.id
+                custom.customerId shouldBe minimal.id
+                custom.projectId shouldBe null
+                val customData = custom.data as EntryData.Custom
+                customData.values.keys shouldBe setOf("token", "portal")
+                customData.values.getValue("token").value.useChars { String(it) shouldBe "Token-FIXTURE" }
+                customData.values.getValue("portal").kind shouldBe FieldKind.URL
+
+                val (webTemplate, customTemplate) = vault.templates
+                webTemplate.name shouldBe "Fixture web template"
+                webTemplate.type shouldBe TemplateType.WEB
+                webTemplate.fields shouldBe listOf(TemplateField("url", false, FieldKind.URL), TemplateField("username", false),
+                    TemplateField("password"), TemplateField("totp"))
+                webTemplate.tags shouldBe listOf("fixture", "web")
+                webTemplate.customerId shouldBe customer.id
+                webTemplate.projectId shouldBe project.id
+                customTemplate.name shouldBe "Fixture custom template"
+                customTemplate.type shouldBe TemplateType.CUSTOM
+                customTemplate.fields shouldBe listOf(TemplateField("token"), TemplateField("portal", false, FieldKind.URL))
+                customTemplate.customerId shouldBe minimal.id
+                customTemplate.projectId shouldBe null
+            }
+        }
+        // The key file is part of the key: without it the fixture does not authenticate.
+        credentials("fixture-password-v2").use { c ->
+            assertThrows(AuthenticationException::class.java) { codec.decrypt(bytes, c) }
+        }
+    }
+
     @Test fun `JSON guard bounds collections and handles escapes and canonical duplicate keys`() {
         VaultCodec.checkJsonLimits("{\"x\":\"[\\\"{value}\\\"]\"}".toByteArray())
         assertThrows(InvalidVaultException::class.java) {

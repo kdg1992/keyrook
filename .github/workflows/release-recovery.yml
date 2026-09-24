@@ -56,7 +56,9 @@ jobs:
             const main = await get('git/ref/heads/main');
             if (main.object.sha !== process.env.GITHUB_SHA) throw Error('Main advanced; start a fresh recovery run');
             const version = (await file('version.txt')).trim();
-            if (!/^0\.[0-9]+\.[0-9]+$/.test(version)) throw Error('Recovery requires an existing pre-1.0 version');
+            if (!/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(version)) {
+              throw Error('Recovery requires an existing MAJOR.MINOR.PATCH version');
+            }
             const manifest = JSON.parse(await file('.release-please-manifest.json'));
             const config = JSON.parse(await file('release-please-config.json'));
             if (Object.keys(manifest).length !== 1 || manifest['.'] !== version ||

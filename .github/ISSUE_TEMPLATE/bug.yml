@@ -15,7 +15,7 @@ body:
     attributes:
       label: Keyrook version
       description: Shown in the Info dialog, or the release you installed.
-      placeholder: "0.6.0"
+      placeholder: "e.g. 1.2.3"
     validations:
       required: true
   - type: input

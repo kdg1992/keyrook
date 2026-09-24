@@ -5,12 +5,27 @@ They are built only in the `Release` GitHub Actions workflow on the three standa
 hosted runners. A package is built for that runner's actual CPU architecture;
 this is not a universal macOS binary or cross-compilation. The filenames include
 the target architecture. The application and package version both come from
-`version.txt`, including development versions such as `0.1.0`. On macOS,
-jpackage rejects bundle versions whose first number is 0, so while Keyrook is
-at `0.x.y` the macOS app bundle and DMG metadata carry `1.0.0`. The
+`version.txt` (plain `MAJOR.MINOR.PATCH`, for example `0.8.0`). On macOS,
+jpackage rejects bundle versions whose first number is 0, so packages of
+`0.x.y` releases carry the macOS app bundle and DMG version `1.0.0`, while the
 application itself, the release and the installer file names keep the real
-version; from `1.0.0` on, the bundle uses the real version as well.
+version. From `1.0.0` on, the bundle version equals the application version.
+Finder therefore shows `1.0.0` for every 0.x release; **About** always shows the
+real version.
 See the [Compose native distribution documentation](https://kotlinlang.org/docs/multiplatform/compose-native-distribution.html).
+
+## Release candidates
+
+Keyrook versions carry no pre-release suffix such as `-rc.1`, and no prerelease
+is published on the release page. A release candidate is the set of artifacts of
+a manual `Release` workflow dispatch (see [workflow behavior](#workflow-behavior))
+on the release pull request's branch: it builds, tests and packages exactly
+that head commit with the version the release will have, without creating a tag
+or release. Record the commit SHA and the run URL with the test results, and
+merge nothing into `main` while the candidate is being tested, because every
+merge updates the release pull request and invalidates the candidate. The
+[manual acceptance protocol](ACCEPTANCE.md#version-under-test) runs against
+such a candidate.
 
 ## Recovering an unpublished release
 
@@ -22,7 +37,8 @@ when the job has `contents: write`. The normal Actions token cannot receive
 the additional workflow permission described in the
 [GitHub release API documentation](https://docs.github.com/en/rest/releases/releases#create-a-release).
 
-For an unpublished `0.x.y` version, run **Recover release pull request** on
+For an unpublished `MAJOR.MINOR.PATCH` version, before or after 1.0.0, run
+**Recover release pull request** on
 `main`, supplying the old release PR number. It checks the version and manifest,
 refuses an existing tag, release or replacement PR, removes the old PR's pending
 label, and invokes release-please to generate a replacement at the same version.
@@ -157,6 +173,41 @@ installer icons `app/icons/keyrook.png` (Linux), `keyrook.ico` (Windows) and
 that the committed files match. These are project files packaged with the
 application, not resolved runtime artifacts, so they do not change the native
 inventory above.
+
+## Bundled JDK security updates
+
+Every installer contains its own Java runtime, so a Java security release is a
+Keyrook release. The Temurin build is pinned by hash in the retained evidence
+and read by [`scripts/collect-jdk-archive.mjs`](../scripts/collect-jdk-archive.mjs)
+(the evidence directory, the runtime-evidence file and the expected
+`jdkVersion` near the top of the script). Dependabot does not update this pin,
+because it is neither a Gradle nor a GitHub Actions dependency; the Temurin
+action's `java-version` in `release.yml` is only a cache label. Check for a new
+Temurin 25 update after each quarterly OpenJDK security release (January, April,
+July and October), and immediately for an out-of-band fix. To move to it:
+
+1. Record the new version's official archives from the Adoptium release page:
+   the source archive and the Windows x64, Linux x64 and macOS ARM64 JDK
+   archives with their published SHA-256 values, the platform SBOMs and the
+   legal texts, in a new `licenses/native-evidence/temurin-<version>/`
+   directory with its `provenance.json`, following the existing one.
+2. Point the pin in `scripts/collect-jdk-archive.mjs` at the new evidence and
+   version, and add the per-platform runtime archive records it reads.
+3. Dispatch `Release` manually. Packaging then stops at the approval gate
+   because the reviewed inventories still name the old JDK, but the
+   `native-inventory-<platform>` evidence is uploaded. Retain it as a new
+   `licenses/native-evidence/ci-<date>/` directory, as described in
+   [collecting reproducible evidence](#collecting-reproducible-evidence).
+4. Review the JDK `legal/` changes against the previous evidence, then update
+   `jdk.version`, `jdk.legal.sha256`, `SOURCES.md` and the notice hashes of each
+   `licenses/native/<os>-<arch>/` inventory. The external runtime artifacts do
+   not change, so their records stay as they are.
+5. Dispatch `Release` again. Expected: the approval gate, the packaged
+   self-tests and the installer tests pass on all three platforms, and the
+   packaged `legal/` directory matches the new evidence.
+6. Merge the change as `fix(deps): update the bundled JDK to Temurin <version>`
+   so that Release Please proposes a patch release, and release it promptly
+   through the normal release pull request.
 
 ## Workflow behavior
 

@@ -5,7 +5,9 @@ the unsigned installers interactively as a user would (CI only runs them
 silently, see [installer tests](PACKAGING.md#installer-tests)), and the
 behavior of locking, clipboard handling, the update check and accessibility
 (screen readers, interface scaling, high contrast) on real desktops with real
-operating-system events. The
+operating-system events, the conversion of real vaults written by an earlier
+release, and the files Keyrook hands to other programs (browsers, calendars,
+spreadsheets, authenticator apps). The
 maintainer runs it on physical or fully virtualized machines before release
 1.0 is approved. The coverage split between CI and this protocol is listed in
 [READINESS.md](READINESS.md#verification-coverage).
@@ -31,12 +33,26 @@ reviewed and published; other architectures are out of scope.
 
 ### Version under test
 
+The candidate is always a build of one recorded commit: the head SHA of the
+approved release pull request that sets `version.txt` to `1.0.0`, packaged by a
+manual `Release` workflow dispatch on that branch. These dispatch artifacts are
+the release candidate; Keyrook versions carry no `-rc` or other suffix, so the
+candidate already reports `1.0.0` (see
+[PACKAGING.md](PACKAGING.md#release-candidates)).
+
+**`main` is frozen for the whole run**: from the dispatch until the release is
+published, nothing is merged into `main`. Any merge makes Release Please update
+the release pull request, which changes its head SHA and invalidates the
+candidate; if that happens, record the new SHA, dispatch a new build and repeat
+at least the sections the change can affect.
+
 1. Record the commit SHA of the approved release pull request that sets
    `version.txt` to `1.0.0`.
 2. Before merging, run the `Release` workflow manually on that commit
    (see [PACKAGING.md](PACKAGING.md#workflow-behavior)) and download the
-   installers from the run's artifacts. After publication, repeat sections 1
-   and 7 with the assets of the published `v1.0.0` release.
+   installers from the run's artifacts. Record the run URL next to the SHA.
+   After publication, repeat sections 1 and 7 with the assets of the published
+   `v1.0.0` release.
 3. Compare each installer's SHA-256 with the checksum file that accompanies it
    (`SHA256SUMS.txt` for a published release):
    - Windows: `Get-FileHash .\<installer>.msi -Algorithm SHA256`
@@ -45,6 +61,9 @@ reviewed and published; other architectures are out of scope.
 4. For the upgrade test, also download the installer of the most recent
    release before 1.0 from the [release page](https://github.com/kdg1992/keyrook/releases)
    and verify it the same way.
+5. For the [migration test](#9-migration-of-a-vault-from-070), also download
+   and verify the installers of the published release `v0.7.0`, the last
+   release that writes document schema 1.
 
 ### Synthetic test vault
 
@@ -446,6 +465,203 @@ On each platform, in both light and dark appearance:
 3. Switch **Appearance** between light and dark. Expected: high contrast is
    kept in both. Restart. Expected: both choices are kept.
 4. Set **Contrast** to **Standard**. Expected: the previous colours return.
+
+## 9. Migration of a vault from 0.7.0
+
+Keyrook up to 0.7.x writes document schema 1; 0.8.0 and later read it and
+convert it to schema 2 on the first save (see
+[FORMAT.md](FORMAT.md#compatibility-and-migrations) and
+[DESKTOP.md](DESKTOP.md#vaults-of-earlier-releases)). CI covers this with a
+frozen fixture only; this section checks it with vaults written by the real
+0.7.0 installer. Run it on WIN, MAC and LNX-G.
+
+Steps 11 and 12 need 0.7.0 after the upgrade: use a second machine or a
+virtual-machine snapshot taken before step 6 and copy the files there. Do not
+try to downgrade the system under test.
+
+1. Install `v0.7.0` as in 1.1 and confirm that **About** shows `0.7.0`.
+2. Create `keyrook-acceptance/migration.keyrook` with master password
+   `Acceptance-Test-Only-2026` and no key file. Configure
+   `keyrook-acceptance/backups` as the backup folder.
+3. Create a customer `Example Customer` with a project `Example Project`, then
+   add:
+   - Web login `Migration web`: URL `https://example.org/`, username
+     `mig-user`, password `KR-CANARY-mig-0004`, customer `Example Customer`,
+     tag `acceptance`. Mark it as a favorite with the star.
+   - Server `Migration server`: host `mig.example.net`, port `22`, username
+     `deploy`, password `KR-CANARY-mig-0005`, project `Example Project`.
+4. Create a second vault `keyrook-acceptance/migration-key.keyrook` with the
+   same password and a key file generated with **Generate key file** as
+   `keyrook-acceptance/migration.key`. Add a custom entry `Key-file entry`
+   with a hidden field `token` set to `KR-CANARY-mig-0006` and mark it as a
+   favorite.
+5. Quit 0.7.0. Record the SHA-256 of both vault files and keep a copy of both
+   in a separate folder `keyrook-acceptance/original-0.7.0`.
+6. Install the version under test over 0.7.0 as in 1.1 and open
+   `migration.keyrook`. Expected: all entries, the customer and project
+   assignments and the tag `acceptance` are present; a notice above the list
+   says that the vault still uses document format 1 and that the next save
+   converts it; `Migration web` shows a filled star and **Favorites only**
+   lists it; no tag `keyrook:favorite` is shown anywhere.
+7. Lock and quit without changing anything. Expected: the SHA-256 of
+   `migration.keyrook` equals the value from step 5, and no file named
+   `migration.keyrook.schema-v1-r….keyrook.bak` exists yet.
+8. Open the vault again, change the notes of `Migration server` and save.
+   Expected: the save succeeds, the notice disappears, a new backup appears in
+   `backups`, and next to the vault a file
+   `migration.keyrook.schema-v1-r<revision>.keyrook.bak` exists whose SHA-256
+   equals the value from step 5.
+9. Check that copy's permissions as for `settings.json` in 1.2 step 6:
+   `icacls` lists only the current user; `-rw-------` on macOS; `600` on
+   Linux.
+10. Lock, quit and open `migration.keyrook` again. Expected: no migration
+    notice; `Migration web` is still a favorite (now stored as the `pinned`
+    field, see 10.3) and the changed notes are kept.
+11. With 0.7.0, open a copy of
+    `migration.keyrook.schema-v1-r<revision>.keyrook.bak` renamed to
+    `migration-old.keyrook`. Expected: it opens with the original password and
+    shows both entries in their state from step 3, with `Migration web` as a
+    favorite.
+12. With 0.7.0, try to open a copy of the converted `migration.keyrook`.
+    Expected: 0.7.0 refuses it with its invalid-vault message and shows no
+    entry; the SHA-256 of the copy is unchanged afterwards (a `.lock` sidecar
+    may appear next to it) and no other file was created.
+13. Repeat steps 6–10 for `migration-key.keyrook`, unlocking with the password
+    and `migration.key`. Expected: the same notice, conversion copy and
+    favorite behavior; the converted vault and its conversion copy open only
+    with the key file.
+
+## 10. Further real-system checks
+
+Use the synthetic test vault unless stated otherwise.
+
+### 10.1 Key-file unlock
+
+1. Create `keyrook-acceptance/keyfile.keyrook` with the master password and a
+   new key file `keyrook-acceptance/acceptance.key` from **Generate key file**.
+   Add one entry. Expected: the key file is exactly 32 bytes and has
+   owner-only permissions (checked as in 1.2 step 6).
+2. Lock and unlock with password and key file. Expected: the vault opens.
+3. Unlock with the password only, then with another 32-byte file. Expected:
+   both fail with the same generic message that does not say which factor was
+   wrong, and the vault file's SHA-256 is unchanged.
+4. Quit and restart. Expected: the key-file field is empty (key-file paths are
+   never saved) and `settings.json` does not contain `acceptance.key`.
+
+### 10.2 Backup restore to a new file
+
+1. With backups configured, change an entry of the synthetic vault and save,
+   so that at least one backup exists.
+2. **Data → Restore backup**, select the newest backup in `backups` and enter
+   the vault's credentials. Expected: the preview shows the entry count and a
+   revision lower than the open vault's.
+3. Confirm and choose the new file `keyrook-acceptance/restored.keyrook`.
+   Expected: an existing file cannot be chosen; the open vault is unchanged;
+   `restored.keyrook` has owner-only permissions.
+4. Lock and open `restored.keyrook`. Expected: it shows the state of that
+   backup, and **Data → Check integrity** reports the vault file as OK.
+
+### 10.3 Plaintext export permissions
+
+1. **Data → Export plaintext**, confirm both questions, choose JSON and the new
+   file `keyrook-acceptance/plain.json`.
+2. Check permissions:
+   - Windows: `icacls .\plain.json` lists only the current user with `(F)` and
+     no entries for `Users`, `Authenticated Users` or `Everyone`.
+   - macOS: `ls -l plain.json` shows `-rw-------`.
+   - Linux: `stat -c '%a' plain.json` prints `600`.
+3. Export `migration.keyrook` from section 9 the same way after its
+   conversion. Expected: `Migration web` has `"pinned": true` and no
+   `keyrook:favorite` tag.
+4. Delete every plaintext export right after the check.
+
+### 10.4 Handover sheet and expiry export
+
+1. In the synthetic vault, create a customer `Example Customer` with contact
+   person `Test Contact`, e-mail `contact@example.com`, phone
+   `+49 30 1234567`, website `https://example.com` and the notes
+   `KR-CANARY-customer-0007`. Assign `Acceptance web` and `Acceptance server`
+   to it and give `Acceptance server` an expiry date within the next 30 days.
+2. **Data → Customer overview**. Expected: the contact details and both
+   entries appear; no `KR-CANARY` value and no customer notes.
+3. **Data → Export handover sheet …** for `Example Customer` to a new `.html`
+   file. Expected: owner-only permissions as in 10.3, and a text search of the
+   file finds no `KR-CANARY`.
+4. Disconnect the network (airplane mode or unplugged cable) and open the file
+   in the default browser and in one other installed browser. Expected: it
+   renders completely and readably, the print preview is usable, and the
+   browser's developer tools show no request besides the file itself.
+5. **Data → Export expiry dates …** as *Calendar (ICS)* with the default
+   reminder of 30 days, then as *CSV*. Expected: both files have owner-only
+   permissions and contain no `KR-CANARY` value.
+6. Import the ICS file into a calendar application (Outlook, Apple Calendar,
+   Thunderbird or GNOME Calendar; record which). Expected: one all-day event
+   per dated entry on the right date, with a reminder 30 days before. Export
+   and import again into the same calendar. Expected: events are updated
+   rather than duplicated where the application supports this; record the
+   behavior.
+7. Rename an entry with an expiry date to `=1+1`, export the CSV again and open
+   it in a spreadsheet application (Excel, Numbers or LibreOffice Calc).
+   Expected: umlauts and other non-ASCII characters are correct, every column
+   is separated correctly and the title is shown as text, not calculated.
+   Rename the entry back.
+
+### 10.5 Open URL
+
+1. Select `Acceptance web`, press **Open URL** in the detail view, then press
+   Ctrl+U in the list. Expected: each time the system's default browser opens
+   `https://example.com/login`, and nothing is copied.
+2. Change the URL to `https://user:secret@example.com/` and try to open it.
+   Expected: no browser starts. Restore the original URL.
+
+### 10.6 TOTP against a phone authenticator
+
+Use only the publicly documented example secret `JBSWY3DPEHPK3PXP`, never the
+secret of a real account.
+
+1. Check that the computer and the phone both use automatic network time.
+2. Add the secret to `Acceptance web` as its TOTP secret and save. Enter the
+   same secret manually (time-based, SHA-1, 6 digits, 30 seconds) in a phone
+   authenticator app; record which.
+3. Show the TOTP code in the detail view and compare it with the phone over
+   three consecutive 30-second periods. Expected: the codes match each time
+   and change at the same moment.
+4. Copy the code with Ctrl+T and paste it into the text editor. Expected: the
+   pasted code matches the phone, and the clipboard is cleared after the
+   configured period.
+5. Remove the TOTP secret again.
+
+## 11. Smoke pass over further features
+
+A short pass, once per platform, to confirm that features covered in detail by
+automated tests also work in the installed application.
+
+1. Templates: **Save as template** on `Acceptance server`, then **From
+   template …** with it. Expected: the editor has the server type, its fields,
+   tags, customer and project, and every value is empty. Cancel, then delete
+   the template; the entry is unchanged.
+2. Customer details: enter `contact@` as a customer's e-mail address.
+   Expected: the field is marked and saving is disabled. Give a project a
+   description of several lines and confidential notes. Expected: the
+   description appears in the customer overview, the notes do not.
+3. Bulk actions: mark two entries with Space, **Add tag** `bulk`, **Remove
+   tag** `bulk`, then **Move selected to trash** and, in the trash, **Restore
+   selected**. Expected: each action changes both entries at once.
+4. Generator presets: generate several passwords with **Shell/FTP-safe**.
+   Expected: the only symbols are `-`, `_` and `.`. With **Max 16
+   characters**, no length above 16 is accepted. With **No ambiguous
+   characters**, none of `0 O o 1 l I | 5 S 2 Z 8 B` occurs. Restart.
+   Expected: the last used preset and choices are kept.
+5. Favorites and recently used: star an entry and filter with **Favorites
+   only**; copy a value of another entry and filter with **Recently used (this
+   session)**. Expected: the filters show exactly these entries. After locking
+   and unlocking, the recently used list is empty and the favorite is kept.
+6. Reports and health warnings: give two entries the password `password`, give
+   one entry an expiry date in the past, and create a second web login with the
+   URL and username of `Acceptance web`. Expected: **Warnings** counts expired,
+   short or repetitive, reused and possibly duplicated entries; clicking a
+   title in the list selects that entry; the customer overview and handover
+   sheet still contain no password. Revert the changes.
 
 ## Known limits
 
