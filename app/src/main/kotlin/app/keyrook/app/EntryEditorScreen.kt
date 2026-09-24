@@ -19,7 +19,7 @@ import java.awt.Desktop
 import javax.swing.SwingUtilities
 
 @Composable
-internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcuts: ShortcutActions,
+internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcuts: ShortcutActions, settings: SettingsStore? = null,
                    onCancel: () -> Unit, onSave: (Entry) -> Unit) {
     var type by remember { mutableStateOf(source?.data?.type() ?: EntryType.WEB) }
     val initialData = remember(type) { source?.data ?: blankData(type) }
@@ -247,7 +247,7 @@ internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcu
                     }); Text(UiText.text("editor.urlField"))
                 }
             }
-            if (data.canGenerateSecret(index)) GeneratorTools(busy, onBusy = { generating = it }) { generated ->
+            if (data.canGenerateSecret(index)) GeneratorTools(busy, onBusy = { generating = it }, settings = settings) { generated ->
                 values = values.toMutableList().also { it[index] = generated }
             }
         }

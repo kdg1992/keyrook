@@ -8,11 +8,12 @@ import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
 
 /**
- * Plaintext application preferences. Holds vault and backup paths and choices only, never credentials, key-file paths or vault content.
+ * Plaintext application preferences. Holds vault, backup and word-list paths and choices only, never credentials, key-file paths,
+ * generated secrets, word-list content or vault content.
  *
  * Compatibility: a new preference is added as an optional field with a default, so files written before it existed still decode
  * within the same [SettingsCodec.VERSION]. Unknown keys stay rejected. A change that alters or removes an existing field needs a
- * version bump instead. [language], [windowLock], [updateCheck] and [window] were added this way.
+ * version bump instead. [language], [windowLock], [updateCheck], [window] and [generator] were added this way.
  */
 @Serializable
 data class SettingsDocument(
@@ -28,6 +29,26 @@ data class SettingsDocument(
     val updateCheck: String? = null,
     /** Last main-window size, position and maximized state; validated by [WindowGeometry.fromDocument] and again against the screens. */
     val window: WindowSettingsDocument? = null,
+    /** Last password generator choices and passphrase word-list path; validated field by field, falling back to defaults. */
+    val generator: GeneratorSettingsDocument? = null,
+)
+
+/**
+ * Password generator choices. Only names, numbers and the path of a user-chosen word list are kept; the list itself is read again
+ * from that path when used. Every field is optional so partial or older entries decode and fall back to defaults.
+ */
+@Serializable
+data class GeneratorSettingsDocument(
+    val preset: String? = null,
+    val length: Int? = null,
+    val lowercase: Boolean? = null,
+    val uppercase: Boolean? = null,
+    val digits: Boolean? = null,
+    val symbols: Boolean? = null,
+    val excludeAmbiguous: Boolean? = null,
+    val wordListPath: String? = null,
+    val wordCount: Int? = null,
+    val separator: String? = null,
 )
 
 /** Window geometry in window-system units. Every field is optional so partial or older entries decode and fall back to defaults. */

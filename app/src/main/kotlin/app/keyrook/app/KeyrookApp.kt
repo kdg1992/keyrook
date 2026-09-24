@@ -149,7 +149,7 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
                 if (vault == null) {
                     UnlockScreen(state, settings, unlockDelay)
                 } else if (creating || editing != null) {
-                    Editor(vault!!, editing, busy, shortcuts, onCancel = { editing = null; creating = false }) { entry ->
+                    Editor(vault!!, editing, busy, shortcuts, settings, onCancel = { editing = null; creating = false }) { entry ->
                         // The editor's busy flag lags one composition behind; a second Save in that window is refused here.
                         submitEditedEntry(busy, entry) { candidate ->
                             state.operation { Vault(entries = listOf(candidate)).use { controller.save(candidate) } }

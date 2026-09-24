@@ -25,7 +25,7 @@ internal val CLIPBOARD_SECOND_CHOICES = listOf(5L, 10L, 20L, 30L, 60L, 120L)
 
 internal data class StoredBackup(val folder: Path, val policy: BackupPolicy, val enabled: Boolean)
 
-/** Non-secret preferences only. Vault and backup paths are metadata; key-file paths, passwords and vault content never enter here. */
+/** Non-secret preferences only. Vault, backup and word-list paths are metadata;key-file paths, passwords and vault content never enter here. */
 internal data class AppSettings(
     val theme: ThemeMode = ThemeMode.SYSTEM,
     val inactivityMinutes: Int = 5,
@@ -38,6 +38,8 @@ internal data class AppSettings(
     val checkUpdatesOnStart: Boolean = false,
     /** Last main-window geometry; null until the window was first saved. Checked against the connected screens at start. */
     val window: WindowGeometry? = null,
+    /** Last generator preset, options and passphrase word-list path; never generated values or word-list content. */
+    val generator: GeneratorPreferences = GeneratorPreferences(),
 ) {
     fun backupFor(vault: Path): StoredBackup? = backups[vaultKey(vault)]
 
@@ -55,6 +57,7 @@ internal data class AppSettings(
         },
         updateCheck = if (checkUpdatesOnStart) UPDATE_CHECK_ON_START else UPDATE_CHECK_MANUAL,
         window = window?.toDocument(),
+        generator = generator.toDocument(),
     )
 
     companion object {
@@ -83,6 +86,7 @@ internal data class AppSettings(
                 // Only the exact enabling value turns automatic checks on; missing and unknown values keep them off.
                 checkUpdatesOnStart = document.updateCheck == UPDATE_CHECK_ON_START,
                 window = WindowGeometry.fromDocument(document.window),
+                generator = GeneratorPreferences.fromDocument(document.generator, storedPath(document.generator?.wordListPath)),
             )
         }
 
