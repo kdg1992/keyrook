@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package app.keyrook.app
 
+import app.keyrook.core.backup.MigrationBackupException
 import app.keyrook.core.format.VaultTooLargeException
 import java.nio.file.Path
 
@@ -23,13 +24,15 @@ internal fun requireUserFacing(condition: Boolean, messageKey: String, vararg ar
 }
 
 /**
- * The message shown for a failed operation: the specific reason of a [UserFacingException], a fixed text for a vault
- * that would exceed the file format's size limit, otherwise the generic text. Other exceptions can contain paths or
+ * The message shown for a failed operation: the specific reason of a [UserFacingException], fixed texts for a vault
+ * that would exceed the file format's size limit and for a migration copy that could not be written, otherwise the
+ * generic text. Other exceptions can contain paths or
  * decrypted input, so their messages are never displayed.
  */
 internal fun failureMessage(failure: Throwable?): String = when (failure) {
     is UserFacingException -> failure.text()
     is VaultTooLargeException -> UiText.text("shell.tooLarge")
+    is MigrationBackupException -> UiText.text("migration.copyFailed")
     else -> UiText.text("shell.failed")
 }
 

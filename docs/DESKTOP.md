@@ -445,9 +445,11 @@ Keyrook up to 0.7.x writes document schema 1; 0.8.0 and later write schema 2
 favorites in memory, and a notice above the list says that the next save
 converts the vault. Opening changes nothing on disk. The first save afterwards
 keeps the unchanged old file next to the vault as
-`<vault file>.schema-v1-r<revision>.keyrook.bak`, whether or not a backup folder
-is configured, and then writes the new format; if that copy cannot be written,
-nothing is saved. The copy is encrypted with the same password and key file, is
+`<vault file>.schema-v1-r<revision>.keyrook.bak` (shortened for very long file
+names, see [FORMAT.md](FORMAT.md#compatibility-and-migrations)), whether or not a
+backup folder is configured, and then writes the new format. If that copy
+cannot be written, nothing is saved and a message says so. The copy is
+encrypted with the same password and key file, is
 never rotated or deleted by Keyrook, and can be opened by the earlier release
 (rename it to `.keyrook` first) or restored with **Backup wiederherstellen**.
 Delete it once the converted vault works as expected. Earlier releases cannot
