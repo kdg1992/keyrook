@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.6.0](https://github.com/kdg1992/keyrook/compare/v0.5.0...v0.6.0) (2026-09-24)
+
+
+### Features
+
+* **desktop:** remember window placement and add application icon ([#33](https://github.com/kdg1992/keyrook/issues/33)) ([d5745b5](https://github.com/kdg1992/keyrook/commit/d5745b5221d971b134c32efc9b8bd8ecd9460cba))
+* **desktop:** replace Swing message dialogs with themed Compose dialogs ([#36](https://github.com/kdg1992/keyrook/issues/36)) ([11813a9](https://github.com/kdg1992/keyrook/commit/11813a9cf56593733a939640f1b4daebaaf2599a))
+* **totp:** generate one-time codes from stored secrets ([#35](https://github.com/kdg1992/keyrook/issues/35)) ([f1f56e7](https://github.com/kdg1992/keyrook/commit/f1f56e7ff586408f955719f3780f0655986aa0fd))
+
+
+### Bug Fixes
+
+* **packaging:** test native installers and keep DEB installable without a menu directory ([#32](https://github.com/kdg1992/keyrook/issues/32)) ([f10100a](https://github.com/kdg1992/keyrook/commit/f10100a427f593578a6e2e0409bedc250f18df68))
+* **security:** lock after system suspend even when the monotonic clock paused ([#34](https://github.com/kdg1992/keyrook/issues/34)) ([1b9f7bf](https://github.com/kdg1992/keyrook/commit/1b9f7bf72af52d37aeeb7761548fbcea207856e2))
+
 ## [0.5.0](https://github.com/kdg1992/keyrook/compare/v0.4.0...v0.5.0) (2026-09-24)
 
 
