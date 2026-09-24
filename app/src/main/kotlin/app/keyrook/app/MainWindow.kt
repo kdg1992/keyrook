@@ -7,6 +7,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isSpecified
@@ -22,7 +25,11 @@ import kotlinx.coroutines.flow.collectLatest
 import java.awt.Dimension
 import java.awt.GraphicsEnvironment
 import java.awt.Toolkit
+import javax.imageio.ImageIO
 import kotlin.math.roundToInt
+
+/** Classpath location of the window icon; the installers use the files under `app/icons`, from the same generator. */
+internal const val WINDOW_ICON_RESOURCE = "app/keyrook/app/keyrook-icon.png"
 
 /** Window changes are written once the geometry has been unchanged this long, so dragging does not write repeatedly. */
 internal const val WINDOW_SAVE_DELAY_MILLIS = 750L
@@ -107,3 +114,10 @@ internal fun PersistWindowGeometry(state: WindowState, settings: SettingsStore) 
         }
     }
 }
+
+/** The window icon from the application resources, or null when it cannot be read. */
+internal fun loadWindowIcon(): Painter? = try {
+    SettingsStore::class.java.classLoader.getResourceAsStream(WINDOW_ICON_RESOURCE)
+        ?.use { ImageIO.read(it) }
+        ?.let { BitmapPainter(it.toComposeImageBitmap()) }
+} catch (_: Exception) { null }
