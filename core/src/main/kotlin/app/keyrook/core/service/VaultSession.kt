@@ -49,11 +49,15 @@ class VaultSession(private val store: VaultStore = VaultStore(), private val cod
     /**
      * Read-only authentication of the persisted vault and every managed backup of this vault in the configured
      * folder, using the session credentials without exporting them. The live file must match the opened revision.
+     * Every file costs a full key derivation while this session is held, so callers pass [cancelled] (for example
+     * "a lock was requested"): it is consulted before each file and ends the check with
+     * [app.keyrook.core.backup.IntegrityCheckCancelledException], releasing the session for [lock] after at most the
+     * file already in progress.
      */
-    @Synchronized fun checkIntegrity(allowExpensive: Boolean = false): IntegrityReport {
+    @Synchronized fun checkIntegrity(allowExpensive: Boolean = false, cancelled: () -> Boolean = { false }): IntegrityReport {
         val current = requireDocument()
         return IntegrityCheck(codec).run(path!!, current.id, stamp!!.revision, backups?.directory,
-            credentials!!, allowExpensive)
+            credentials!!, allowExpensive, cancelled)
     }
 
     private fun createBackup(service: BackupService, allowExpensive: Boolean): BackupResult =

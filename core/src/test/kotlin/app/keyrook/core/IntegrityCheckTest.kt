@@ -5,11 +5,14 @@ package app.keyrook.core
 import app.keyrook.core.backup.BackupFolderState
 import app.keyrook.core.backup.BackupService
 import app.keyrook.core.backup.IntegrityCheck
+import app.keyrook.core.backup.IntegrityCheckCancelledException
 import app.keyrook.core.backup.IntegrityFileKind
 import app.keyrook.core.backup.IntegrityReport
 import app.keyrook.core.backup.IntegrityState
 import app.keyrook.core.crypto.Credentials
+import app.keyrook.core.format.VaultCodec
 import app.keyrook.core.model.Vault
+import app.keyrook.core.service.SessionState
 import app.keyrook.core.service.VaultSession
 import app.keyrook.core.storage.VaultStore
 import org.junit.jupiter.api.Assertions.*
@@ -23,6 +26,12 @@ import java.nio.file.attribute.FileTime
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
+import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 class IntegrityCheckTest {
     @TempDir lateinit var directory: Path
@@ -231,6 +240,84 @@ class IntegrityCheckTest {
             val folderLink = root.resolve("backups-link")
             Files.createSymbolicLink(folderLink, folder)
             assertEquals(BackupFolderState.UNREADABLE, IntegrityCheck().run(linkedSource, id, 0, folderLink, c).backupFolder)
+        } }
+    }
+
+    @Test fun `cancellation stops before the next file and derives no further keys`() {
+        val folder = folder()
+        credentials().use { c ->
+            val (id, backups) = prepare(folder, c)
+            repeat(8) { index ->
+                Files.copy(backups[0], folder.resolve("${id}_${1_000 + index}_0_${UUID.randomUUID()}.keyrook.bak"))
+            }
+            val past = FileTime.from(Instant.parse("2025-05-05T05:05:05Z"))
+            fun files() = (Files.list(folder).use { it.toList() } + listOf(source)).sorted()
+            files().forEach { Files.setLastModifiedTime(it, past) }
+            fun snapshot() = files().associate { path ->
+                path.fileName.toString() to (Files.readAllBytes(path).toList() to
+                    Files.getLastModifiedTime(path, LinkOption.NOFOLLOW_LINKS))
+            }
+            val before = snapshot()
+            var derivations = 0
+            var consulted = 0
+            val counting = IntegrityCheck { bytes, credentials, allowExpensive ->
+                derivations++
+                VaultCodec().decrypt(bytes, credentials, allowExpensive)
+            }
+            assertEquals(11, counting.run(source, id, 0, folder, c).files.size)
+            assertEquals(11, derivations)
+            derivations = 0
+            assertThrows(IntegrityCheckCancelledException::class.java) {
+                counting.run(source, id, 0, folder, c) { consulted++; derivations >= 3 }
+            }
+            assertEquals(3, derivations)
+            assertEquals(4, consulted)
+            assertEquals(before, snapshot())
+        }
+    }
+
+    @Test fun `lock requested during a session check waits only for the file in progress`() {
+        val folder = folder()
+        credentials().use { c -> VaultSession().use { session ->
+            session.create(source, Vault(), c, testKdf)
+            session.configureBackups(BackupService(folder))
+            repeat(6) { session.backupNow() }
+            val lockRequested = AtomicBoolean(false)
+            val vaultChecked = CountDownLatch(1)
+            val requested = CountDownLatch(1)
+            val consulted = AtomicInteger()
+            val outcome = AtomicReference<Throwable?>()
+            val checker = Thread {
+                outcome.set(runCatching {
+                    session.checkIntegrity {
+                        // The first backup is about to start: request the lock exactly now.
+                        if (consulted.incrementAndGet() == 2) { vaultChecked.countDown(); requested.await(30, TimeUnit.SECONDS) }
+                        lockRequested.get()
+                    }
+                }.exceptionOrNull())
+            }
+            checker.start()
+            assertTrue(vaultChecked.await(30, TimeUnit.SECONDS))
+            lockRequested.set(true)
+            requested.countDown()
+            session.lock()
+            checker.join(30_000)
+            assertFalse(checker.isAlive)
+            assertTrue(outcome.get() is IntegrityCheckCancelledException)
+            // Six backups were pending; none of them was read after the lock request.
+            assertEquals(2, consulted.get())
+            assertEquals(SessionState.LOCKED, session.state)
+            assertThrows(IllegalStateException::class.java) { session.checkIntegrity() }
+        } }
+    }
+
+    @Test fun `session check that is cancelled immediately reads no file`() {
+        credentials().use { c -> VaultSession().use { session ->
+            session.create(source, Vault(), c, testKdf)
+            Files.delete(source)
+            assertThrows(IntegrityCheckCancelledException::class.java) { session.checkIntegrity { true } }
+            assertEquals(SessionState.UNLOCKED, session.state)
+            assertEquals(IntegrityState.UNREADABLE, session.checkIntegrity().files.single().state)
         } }
     }
 

@@ -7,6 +7,7 @@ import app.keyrook.core.crypto.Credentials
 import app.keyrook.core.crypto.InvalidVaultException
 import app.keyrook.core.crypto.ResourceApprovalRequired
 import app.keyrook.core.format.VaultCodec
+import app.keyrook.core.model.Vault
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.LinkOption
@@ -48,23 +49,39 @@ class IntegrityReport internal constructor(val files: List<IntegrityFileResult>,
     val intact: Boolean get() = backupFolder != BackupFolderState.UNREADABLE && files.all { it.state == IntegrityState.OK }
 }
 
+/** The check stopped before its next file because cancellation was requested; no partial report is returned. */
+class IntegrityCheckCancelledException : Exception("Integrity check cancelled")
+
 /**
  * Read-only: files are opened for reading only, never locked, created, renamed, rewritten or deleted.
  * Decrypted models are closed and ciphertext buffers cleared after each file. Failures carry no messages.
  */
-class IntegrityCheck(private val codec: VaultCodec = VaultCodec()) {
+class IntegrityCheck internal constructor(private val decrypt: (ByteArray, Credentials, Boolean) -> Vault) {
+    constructor(codec: VaultCodec = VaultCodec()) :
+        this({ bytes, credentials, allowExpensive -> codec.decrypt(bytes, credentials, allowExpensive) })
 
-    /** Checks [vault] and every managed backup of [vaultId] in [backupDirectory], newest backup first. */
+    /**
+     * Checks [vault] and every managed backup of [vaultId] in [backupDirectory], newest backup first.
+     * Each file needs a full key derivation. [cancelled] is consulted before every file; once it returns true no
+     * further file is read or derived, collected results are discarded and [IntegrityCheckCancelledException] is thrown.
+     */
     fun run(vault: Path, vaultId: String, expectedRevision: Long?, backupDirectory: Path?,
-            credentials: Credentials, allowExpensive: Boolean = false): IntegrityReport {
-        val results = mutableListOf(check(vault, IntegrityFileKind.VAULT, vaultId, expectedRevision, credentials, allowExpensive))
+            credentials: Credentials, allowExpensive: Boolean = false,
+            cancelled: () -> Boolean = { false }): IntegrityReport {
+        val results = mutableListOf<IntegrityFileResult>()
+        fun next(path: Path, kind: IntegrityFileKind, revision: Long?) {
+            if (cancelled()) {
+                results.clear()
+                throw IntegrityCheckCancelledException()
+            }
+            results += check(path, kind, vaultId, revision, credentials, allowExpensive)
+        }
+        next(vault, IntegrityFileKind.VAULT, expectedRevision)
         if (backupDirectory == null) return IntegrityReport(results, BackupFolderState.NOT_CONFIGURED)
         val listed: List<Candidate>? = try { listBackups(backupDirectory, vaultId) }
             catch (_: IOException) { null } catch (_: SecurityException) { null }
         val backups = listed ?: return IntegrityReport(results, BackupFolderState.UNREADABLE)
-        for (backup in backups) {
-            results += check(backup.path, IntegrityFileKind.BACKUP, vaultId, backup.revision, credentials, allowExpensive)
-        }
+        for (backup in backups) next(backup.path, IntegrityFileKind.BACKUP, backup.revision)
         return IntegrityReport(results, BackupFolderState.CHECKED)
     }
 
@@ -98,7 +115,7 @@ class IntegrityCheck(private val codec: VaultCodec = VaultCodec()) {
             val content = readBackupFile(resolved)
             bytes = content
             val modified = Files.getLastModifiedTime(resolved, LinkOption.NOFOLLOW_LINKS).toInstant()
-            codec.decrypt(content, credentials, allowExpensive).use { vault ->
+            decrypt(content, credentials, allowExpensive).use { vault ->
                 val matches = vault.id == expectedId && (expectedRevision == null || vault.revision == expectedRevision)
                 IntegrityFileResult(kind, name, if (matches) IntegrityState.OK else IntegrityState.MISMATCH,
                     vault.revision, vault.entries.size, modified)

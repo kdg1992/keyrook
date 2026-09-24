@@ -5,6 +5,7 @@ package app.keyrook.app
 import app.keyrook.core.backup.BackupPolicy
 import app.keyrook.core.backup.BackupFolderState
 import app.keyrook.core.backup.BackupService
+import app.keyrook.core.backup.IntegrityCheckCancelledException
 import app.keyrook.core.backup.IntegrityFileKind
 import app.keyrook.core.backup.IntegrityReport
 import app.keyrook.core.backup.IntegrityState
@@ -80,10 +81,20 @@ internal fun backupStatusText(controller: VaultController): String {
     return UiText.text("backup.active", saved)
 }
 
-/** Runs on the vault worker; the check is read-only and the text never contains folder paths or exception messages. */
+/**
+ * Runs on the vault worker; the check is read-only and the text never contains folder paths or exception messages.
+ * Locking invalidates the captured operation, which stops the check before its next file so the queued lock can
+ * erase the session promptly. An expired operation then fails like any other; other cancellations get a neutral text.
+ */
 internal fun integrityReportText(controller: VaultController): String {
     ensureOperationCurrent()
-    val report = controller.session.checkIntegrity()
+    val guard = capturedOperationGuard()
+    val report = try {
+        controller.session.checkIntegrity(cancelled = { runCatching(guard).isFailure })
+    } catch (_: IntegrityCheckCancelledException) {
+        ensureOperationCurrent()
+        return UiText.text("integrity.cancelled")
+    }
     ensureOperationCurrent()
     return formatIntegrityReport(report)
 }
