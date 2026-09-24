@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.3](https://github.com/kdg1992/keyrook/compare/v0.3.2...v0.3.3) (2026-09-24)
+
+
+### Bug Fixes
+
+* **release:** keep release notices byte-identical across platforms ([#14](https://github.com/kdg1992/keyrook/issues/14)) ([02ebdd8](https://github.com/kdg1992/keyrook/commit/02ebdd8c47623dc13b389f24ee6d85f520177bdc))
+
 ## [0.3.2](https://github.com/kdg1992/keyrook/compare/v0.3.1...v0.3.2) (2026-09-24)
 
 
