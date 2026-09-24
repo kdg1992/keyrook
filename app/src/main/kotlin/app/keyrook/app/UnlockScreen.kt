@@ -73,6 +73,18 @@ private fun UnlockForm(busy: Boolean, remembered: AppSettings, generateKey: ((Pa
     var rounds by remember { mutableStateOf("3") }
     var lanes by remember { mutableStateOf("4") }
     val parameters = if (create) parseKdfParameters(memory, rounds, lanes) else KdfParameters()
+    val ready = !busy && parameters != null && path.isNotBlank() && password.length in 1..1024 && (!create || password == confirmation)
+    // The button and Enter in the form's text fields submit through the same checks.
+    fun submit() {
+        if (!ready) return
+        val target = runCatching { Path.of(path) }.getOrNull()
+        val keyPath = if (key.isBlank()) null else runCatching { Path.of(key) }.getOrNull()
+        if (target != null && (key.isBlank() || keyPath != null)) {
+            val chars = password.toCharArray(); password = ""; confirmation = ""
+            onOpen(target, chars, keyPath, create, requireNotNull(parameters))
+        }
+    }
+    val submitting = Modifier.fillMaxWidth().submitOnEnter { submit() }
     Column(Modifier.widthIn(max = 640.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(UiText.text(if (create) "credentials.createTitle" else "credentials.openTitle"), Modifier.semantics { heading() },
             style = MaterialTheme.typography.h5)
@@ -80,9 +92,11 @@ private fun UnlockForm(busy: Boolean, remembered: AppSettings, generateKey: ((Pa
             LabeledRadioButton(!create, UiText.text("credentials.open"), enabled = !busy) { create = false }
             LabeledRadioButton(create, UiText.text("credentials.create"), enabled = !busy) { create = true }
         }
-        OutlinedTextField(path, { path = it }, label = { Text(UiText.text("credentials.vaultFile")) }, enabled = !busy, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(path, { path = it }, label = { Text(UiText.text("credentials.vaultFile")) }, singleLine = true,
+            enabled = !busy, modifier = submitting)
         TextButton(enabled = !busy, onClick = { chooseFile(create)?.let { path = it.toString() } }) { Text(UiText.text("credentials.selectFile")) }
-        OutlinedTextField(key, { key = it }, label = { Text(UiText.text("credentials.optionalKey")) }, enabled = !busy, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(key, { key = it }, label = { Text(UiText.text("credentials.optionalKey")) }, singleLine = true,
+            enabled = !busy, modifier = submitting)
         Row {
             TextButton(enabled = !busy, onClick = { chooseKeyFile()?.let { key = it.toString() } }) { Text(UiText.text("credentials.selectKey")) }
             TextButton(enabled = !busy, onClick = {
@@ -91,9 +105,9 @@ private fun UnlockForm(busy: Boolean, remembered: AppSettings, generateKey: ((Pa
             TextButton(enabled = !busy && key.isNotEmpty(), onClick = { key = "" }) { Text(UiText.text("credentials.noKey")) }
         }
         OutlinedTextField(password, { if (it.length <= 1024) password = it }, label = { Text(UiText.text("credentials.password")) }, singleLine = true,
-            enabled = !busy, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+            enabled = !busy, visualTransformation = PasswordVisualTransformation(), modifier = submitting)
         if (create) OutlinedTextField(confirmation, { if (it.length <= 1024) confirmation = it }, label = { Text(UiText.text("credentials.repeatPassword")) },
-            singleLine = true, enabled = !busy, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+            singleLine = true, enabled = !busy, visualTransformation = PasswordVisualTransformation(), modifier = submitting)
         if (create) {
             Text(UiText.text("credentials.kdfTitle"))
             OutlinedTextField(memory, { if (it.length <= 10) memory = it }, label = { Text(UiText.text("credentials.memory")) }, singleLine = true, enabled = !busy)
@@ -103,13 +117,6 @@ private fun UnlockForm(busy: Boolean, remembered: AppSettings, generateKey: ((Pa
             if (parameters == null) Text(UiText.text("credentials.kdfInvalid"), color = MaterialTheme.colors.error)
         }
         Text(UiText.text("credentials.recoveryWarning"))
-        Button(enabled = !busy && parameters != null && path.isNotBlank() && password.length in 1..1024 && (!create || password == confirmation), onClick = {
-            val target = runCatching { Path.of(path) }.getOrNull()
-            val keyPath = if (key.isBlank()) null else runCatching { Path.of(key) }.getOrNull()
-            if (target != null && (key.isBlank() || keyPath != null)) {
-                val chars = password.toCharArray(); password = ""; confirmation = ""
-                onOpen(target, chars, keyPath, create, requireNotNull(parameters))
-            }
-        }) { Text(UiText.text(if (create) "credentials.create" else "credentials.unlock")) }
+        Button(enabled = ready, onClick = { submit() }) { Text(UiText.text(if (create) "credentials.create" else "credentials.unlock")) }
     }
 }

@@ -6,9 +6,29 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.unit.dp
+
+/**
+ * Enter in a text field submits the form, like the default button of a system dialog. [submit] applies the same
+ * checks as the form's button, so Enter never submits what the button would refuse.
+ */
+internal fun Modifier.submitOnEnter(submit: () -> Unit): Modifier = onPreviewKeyEvent { event ->
+    if (event.type == KeyEventType.KeyDown && (event.key == Key.Enter || event.key == Key.NumPadEnter)) { submit(); true }
+    else false
+}
+
+/** A focus requester that takes the focus once when the calling composable is first shown, for a dialog's first field. */
+@Composable
+internal fun rememberInitialFocus(): FocusRequester {
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(focus) { runCatching { focus.requestFocus() } }
+    return focus
+}
 
 internal enum class ShortcutKey { L, N, F, S, C, B, U, E, T, A, SPACE, ESCAPE, UP, DOWN, HOME, END, ENTER, DELETE, BACKSPACE, OTHER }
 internal enum class ShortcutAction {

@@ -62,12 +62,6 @@ private fun DialogBody(modifier: Modifier = Modifier, content: @Composable Colum
         verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
 }
 
-/** Enter in a text field submits the form, like the default button of a system dialog. */
-private fun Modifier.submitOnEnter(submit: () -> Unit): Modifier = onPreviewKeyEvent { event ->
-    if (event.type == KeyEventType.KeyDown && (event.key == Key.Enter || event.key == Key.NumPadEnter)) { submit(); true }
-    else false
-}
-
 @Composable
 private fun FocusedButton(label: String, onClick: () -> Unit) {
     val focus = remember { FocusRequester() }
