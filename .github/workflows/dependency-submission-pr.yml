@@ -3,7 +3,13 @@
 name: Dependency graph PR
 
 on:
+  # Not a required check, so a path filter may skip it. Markdown-only changes other than
+  # CHANGELOG.md need no graph; Dependency review skips them itself and fails closed otherwise.
   pull_request:
+    paths:
+      - '**'
+      - '!**.md'
+      - '**CHANGELOG.md'
 
 permissions:
   contents: read

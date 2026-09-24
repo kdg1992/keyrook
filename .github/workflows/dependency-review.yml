@@ -4,12 +4,23 @@ name: Dependency review
 
 on:
   pull_request:
+  # Reviews pull requests whose events cannot start workflows, such as Release Please updates.
+  workflow_dispatch:
+    inputs:
+      base-ref:
+        description: Base commit SHA; defaults to the merge base with main
+        required: false
+        type: string
+      head-ref:
+        description: Head commit SHA; must equal the dispatched branch head, which receives the check
+        required: false
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: dependency-review-${{ github.event.pull_request.number }}
+  group: dependency-review-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -17,9 +28,41 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Resolve compared commits
+        shell: bash
+        env:
+          BASE_INPUT: ${{ github.event.pull_request.base.sha || inputs.base-ref }}
+          HEAD_INPUT: ${{ github.event.pull_request.head.sha || inputs.head-ref || github.sha }}
+        run: |
+          set -euo pipefail
+          base="$BASE_INPUT"
+          if [ -z "$base" ]; then base="$(git merge-base origin/main "$GITHUB_SHA")"; fi
+          [[ "$base" =~ ^[0-9a-f]{40}$ && "$HEAD_INPUT" =~ ^[0-9a-f]{40}$ ]] || { echo 'Base and head must be full commit SHAs'; exit 1; }
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] && [ "$HEAD_INPUT" != "$GITHUB_SHA" ]; then
+            echo 'The reviewed head must be the commit this check is reported on'; exit 1
+          fi
+          echo "Comparing $base...$HEAD_INPUT"
+          { echo "BASE_SHA=$base"; echo "HEAD_SHA=$HEAD_INPUT"; } >> "$GITHUB_ENV"
+      # Only pull requests may skip the review; dispatched reviews always run in full.
+      - name: Classify changed paths
+        id: paths
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: node scripts/classify-changes.mjs
+      - name: Complete documentation-only check
+        if: steps.paths.outputs.docs-only == 'true'
+        shell: bash
+        run: echo 'Documentation-only change; dependency manifests are unchanged.'
       - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         id: review
+        if: steps.paths.outputs.docs-only != 'true'
         with:
+          base-ref: ${{ env.BASE_SHA }}
+          head-ref: ${{ env.HEAD_SHA }}
           fail-on-severity: high
           license-check: true
           vulnerability-check: true
@@ -65,12 +108,11 @@ jobs:
           retry-on-snapshot-warnings-timeout: 900
           comment-summary-in-pr: never
       - name: Reject missing licenses and incomplete snapshots
+        if: steps.paths.outputs.docs-only != 'true'
         shell: bash
         env:
           INVALID_LICENSES: ${{ steps.review.outputs.invalid-license-changes }}
           GH_TOKEN: ${{ github.token }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           node <<'NODE'
           async function verify() {

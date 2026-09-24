@@ -11,12 +11,15 @@ permissions:
   contents: read
 
 concurrency:
-  group: dependency-submission-main
+  group: dependency-submission-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   submit:
-    if: github.ref == 'refs/heads/main'
+    # The Release Please branch is dispatched by the Release workflow so its PR can be reviewed.
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/release-please--branches--main')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

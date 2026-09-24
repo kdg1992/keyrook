@@ -25,12 +25,26 @@ jobs:
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
+      prs_created: ${{ steps.release.outputs.prs_created }}
+      pr: ${{ steps.release.outputs.pr }}
     steps:
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+  # Release Please creates and updates its PR with GITHUB_TOKEN, which starts no pull_request workflows.
+  release-pr-checks:
+    needs: release-please
+    if: needs.release-please.outputs.prs_created == 'true'
+    permissions:
+      contents: read
+      actions: write
+    uses: ./.github/workflows/release-pr-checks.yml
+    with:
+      title: ${{ fromJSON(needs.release-please.outputs.pr).title }}
+      branch: ${{ fromJSON(needs.release-please.outputs.pr).headBranchName }}
 
   packages:
     needs: release-please
@@ -41,11 +55,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          # Explicit images keep installers reproducible; each must stay on the architecture
+          # of its reviewed licenses/native/<os>-<arch> inventory (x64, x64, arm64).
+          - os: ubuntu-24.04
             platform: linux
-          - os: windows-latest
+          - os: windows-2025
             platform: windows
-          - os: macos-latest
+          - os: macos-15
             platform: macos
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
@@ -81,17 +97,17 @@ jobs:
           path: app/build/reports/native-inventory/
           if-no-files-found: error
           retention-days: 7
-      - name: Verify native redistribution inventory
-        shell: bash
-        run: bash ./gradlew :app:checkNativeDistributionLicenses --no-daemon --console=plain
       - name: Install Linux packaging prerequisite
         if: runner.os == 'Linux'
         shell: bash
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y rpm
-      - name: Test and build unsigned native installers
+      - name: Verify inventory, test and build unsigned native installers
         shell: bash
+        # The inventory check runs first so an unreviewed runtime fails before tests and packaging.
         # Native installer tasks do not build the app image checked below; request it explicitly.
-        run: bash ./gradlew check :app:createDistributable :app:packageDistributionForCurrentOS --no-daemon --console=plain
+        run: >-
+          bash ./gradlew :app:checkNativeDistributionLicenses check :app:createDistributable
+          :app:packageDistributionForCurrentOS --no-daemon --console=plain
       - name: Show packaging tool output
         if: failure()
         shell: bash
@@ -175,11 +191,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          # Explicit images keep installers reproducible; each must stay on the architecture
+          # of its reviewed licenses/native/<os>-<arch> inventory (x64, x64, arm64).
+          - os: ubuntu-24.04
             platform: linux
-          - os: windows-latest
+          - os: windows-2025
             platform: windows
-          - os: macos-latest
+          - os: macos-15
             platform: macos
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
