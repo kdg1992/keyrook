@@ -6,6 +6,7 @@ import app.keyrook.core.crypto.Secret
 import app.keyrook.core.crypto.SecretSerializer
 import app.keyrook.core.format.SchemaMigrations
 import app.keyrook.core.format.VaultCodec
+import app.keyrook.core.format.VaultTooLargeException
 import app.keyrook.core.model.*
 import kotlinx.serialization.json.*
 import java.io.ByteArrayInputStream
@@ -53,6 +54,7 @@ enum class KeePassCsvLayout(val mapping: CsvMapping, internal val backslashEscap
 /** All returned models/buffers are caller-owned. Input bytes are never retained or logged. */
 class VaultTransfer {
     private val json = Json { encodeDefaults = true; classDiscriminator = "type" }
+    private val codec = VaultCodec()
 
     @Suppress("UNUSED_PARAMETER")
     fun exportJson(vault: Vault, consent: PlaintextConsent): ByteArray {
@@ -74,7 +76,7 @@ class VaultTransfer {
         SecretSerializer.trackDecoding { json.decodeFromJsonElement(Vault.serializer(), document) }.let { decoded ->
             val vault = decoded.copy(entries = decoded.entries.map(Entry::withLegacyFavorite),
                 templates = decoded.templates.map { it.copy(tags = ReservedTags.visible(it.tags)) })
-            try { vault.also { it.validate() } } catch (e: Exception) { vault.close(); throw e }
+            try { vault.also { it.validate(); codec.requireStorable(it) } } catch (e: Exception) { vault.close(); throw e }
         }
     }
 
@@ -389,7 +391,8 @@ class VaultTransfer {
         val entries = mutableListOf<Entry>()
         try {
             populate(entries)
-            return Vault(projects = projects, entries = entries.map(Entry::withLegacyFavorite)).also { it.validate() }
+            return Vault(projects = projects, entries = entries.map(Entry::withLegacyFavorite))
+                .also { it.validate(); codec.requireStorable(it) }
         }
         catch (e: Exception) { Vault(entries = entries).close(); throw e }
     }
@@ -421,7 +424,10 @@ class VaultTransfer {
         } finally { characters.fill('\u0000') }
         return bytes
     }
-    private inline fun <T> guarded(block: () -> T): T = try { block() } catch (_: Exception) { throw InvalidImportException() }
+    /** Content-free errors; an import that would parse but could never be saved reports [VaultTooLargeException]. */
+    private inline fun <T> guarded(block: () -> T): T = try { block() }
+        catch (e: VaultTooLargeException) { throw e }
+        catch (_: Exception) { throw InvalidImportException() }
 
     private fun csv(text: String, headerOnly: Boolean = false): List<List<String>> {
         val rows = mutableListOf<List<String>>()

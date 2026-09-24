@@ -22,7 +22,8 @@ dependencies {
 dependencyLocking { lockAllConfigurations() }
 tasks.test {
     useJUnitPlatform()
-    maxHeapSize = "1g"
+    // VaultSizeLimitTest migrates a schema 1 document of the maximum file size, which needs about 1.2 GiB.
+    maxHeapSize = "2g"
     maxParallelForks = 1
 }
 tasks.jar {
