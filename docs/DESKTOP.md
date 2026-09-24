@@ -357,6 +357,21 @@ browser. Like other exports, the file is created new (never replacing an existin
 file) and readable only by your user account. Check it before handing it over:
 titles, tags and visible fields appear as entered.
 
+**Ablaufdaten exportieren** writes the expiry dates of all active entries to a
+new file. Keyrook has one expiry date per entry (the editor's expiry field), so
+domain, certificate, contract and other dates are all exported the same way.
+Each row or event holds the date, title, type, customer, project and, for domain
+entries, the domain name when that field is not hidden.
+
+- *Kalender (ICS)*: an RFC 5545 calendar with one all-day event per entry. Keyrook
+  asks for a reminder in days before the date (0–365, 0 for none; the default is
+  30). Each event's UID is derived from the entry ID, so importing a newer export
+  into the same calendar updates the events instead of duplicating them where the
+  calendar application supports this.
+- *CSV*: UTF-8, comma-separated, every field quoted as in RFC 4180, with a header
+  row. Cells starting with `=`, `+`, `-`, `@`, a tab or a carriage return get a
+  leading `'` so spreadsheet applications do not run them as formulas.
+
 ## Warning list
 
 The vault health check looks at active entries for expiry within 30 days, expired
