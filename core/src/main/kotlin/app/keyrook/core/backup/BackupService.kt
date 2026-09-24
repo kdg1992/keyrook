@@ -97,14 +97,17 @@ class BackupService internal constructor(
         }
     }
 
-    /** Restores only to an absent file; the source and any existing target remain untouched. */
+    /**
+     * Restores only to an absent file; the source and any existing target remain untouched. The restored file is an
+     * independent vault with a new ID at revision zero, so its backups never mix with those of the original.
+     */
     fun restoreToNew(backup: Path, target: Path, credentials: Credentials, preview: BackupPreview,
                      allowExpensive: Boolean = false): SaveResult {
         val bytes = read(backup)
         if (!MessageDigest.isEqual(hash(bytes), preview.digest)) throw VaultConflictException()
         val destination = safePath(target)
         return authenticate(bytes, credentials, allowExpensive).use { vault ->
-            VaultStore().save(destination, vault.copy(revision = 0), credentials,
+            VaultStore().save(destination, vault.independentCopy(), credentials,
                 parameters = VaultHeader.parse(bytes, allowExpensive).kdf, allowExpensive = allowExpensive)
         }
     }

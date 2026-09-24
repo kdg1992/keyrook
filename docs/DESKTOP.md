@@ -282,7 +282,7 @@ Select an existing **Backup-Ordner** after unlocking, then confirm how many rece
 
 **Sicherung jetzt** authenticates and copies the currently saved vault to the configured backup folder, applying the same retention rules without changing the vault revision. **Backupstatus** shows whether backups are enabled and the last successfully backed-up revision for the current configuration. **Backups deaktivieren** requires confirmation and clears the session configuration without deleting existing backup files. Canceling preserves the configuration; locking clears it and its status.
 
-**Backup wiederherstellen** requests the backup's own credentials and previews its authenticated entry count and revision. After confirmation, choose a new destination. The open vault is not overwritten; lock and open the restored file separately. Older backups retain older credentials after password changes.
+**Backup wiederherstellen** requests the backup's own credentials and previews its authenticated entry count and revision. After confirmation, choose a new destination. The open vault is not overwritten; lock and open the restored file separately. The restored file is a separate vault with its own new vault ID and revision zero, so its backups have their own names even in the same backup folder: retention for the copy never removes the original's backups, and **Integrität prüfen** lists only the open vault's own backups. Older backups retain older credentials after password changes.
 
 **Integrität prüfen** authenticates the saved vault file and every managed backup of the open vault in the configured folder (the same `<vault-id>_<time>_<revision>_<uuid>.keyrook.bak` names that rotation manages) with the current session credentials, newest backup first. It is strictly read-only: no file is created, locked, rewritten, renamed or deleted. Paths are resolved like the vault file: linked parent directories are accepted, but a vault file, backup folder or backup file that is itself a symbolic link is never followed. File sizes use the same bounds as backups, and each decrypted model is wiped after its file. Each file needs a full key derivation, so the check can take a while; locking cancels it before the next file and no partial report is shown. Other files in the folder, including backups of other vaults, are ignored. Each file is reported as:
 
@@ -294,7 +294,7 @@ Select an existing **Backup-Ordner** after unlocking, then confirm how many rece
 
 Without a configured backup folder only the vault file is checked. The report shows file names only, never folder paths or error details.
 
-**Verschlüsselt exportieren** creates a new `.keyrook` file with explicitly chosen credentials, preserving the records and resetting its revision to zero. It is the preferred transfer format.
+**Verschlüsselt exportieren** creates a new `.keyrook` file with explicitly chosen credentials, preserving the records and resetting its revision to zero. Like a restored backup it is a separate vault with a new vault ID, so its backups never mix with the original's. It is the preferred transfer format.
 
 ## Import and plaintext export
 

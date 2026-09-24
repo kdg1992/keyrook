@@ -4,6 +4,7 @@ package app.keyrook.core
 
 import app.keyrook.core.backup.BackupPolicy
 import app.keyrook.core.backup.BackupService
+import app.keyrook.core.backup.IntegrityFileKind
 import app.keyrook.core.backup.countManagedBackups
 import app.keyrook.core.format.VaultCodec
 import app.keyrook.core.model.Vault
@@ -107,5 +108,60 @@ class BackupRobustnessTest {
             assertEquals(0, result.notRemoved)
             assertTrue(result.rotationComplete)
         }
+    }
+
+    @Test fun `restored copy has its own vault id and its backups never rotate the original's`() {
+        val folder = Files.createDirectory(root.resolve("backups"))
+        val source = root.resolve("vault.keyrook")
+        val restored = root.resolve("restored.keyrook")
+        credentials().use { c -> sampleVault().use { vault ->
+            store.save(source, vault, c, parameters = testKdf)
+            val backups = BackupService(folder, BackupPolicy(1, 0))
+            val backup = backups.create(source, c).path
+            backups.restoreToNew(backup, restored, c, backups.preview(backup, c))
+            VaultSession().use { session ->
+                session.open(restored, c)
+                val copyId = session.snapshot().use { it.id }
+                assertNotEquals(vault.id, copyId)
+                session.configureBackups(BackupService(folder, BackupPolicy(1, 0)))
+                repeat(3) { session.snapshot().use { session.save(it) } }
+                assertEquals(1, countManagedBackups(folder, copyId))
+                val listed = session.checkIntegrity().files.filter { it.kind == IntegrityFileKind.BACKUP }.map { it.fileName }
+                assertEquals(1, listed.size)
+                assertFalse(backup.fileName.toString() in listed)
+            }
+            assertTrue(Files.exists(backup))
+            assertEquals(1, countManagedBackups(folder, vault.id))
+        } }
+    }
+
+    @Test fun `independent copy keeps the records with a new id at revision zero`() {
+        sampleVault().use { vault ->
+            val advanced = vault.copy(revision = 7)
+            val copy = advanced.independentCopy()
+            assertNotEquals(vault.id, copy.id)
+            assertEquals(0L, copy.revision)
+            assertEquals(vault.entries, copy.entries)
+            copy.validate()
+            assertNotEquals(copy.id, advanced.independentCopy().id)
+        }
+    }
+
+    @Test fun `encrypted export as an independent copy keeps its backups apart from the original's`() {
+        val folder = Files.createDirectory(root.resolve("backups"))
+        val source = root.resolve("vault.keyrook")
+        val export = root.resolve("export.keyrook")
+        credentials().use { c -> sampleVault().use { vault ->
+            store.save(source, vault, c, parameters = testKdf)
+            val original = service(folder, BackupPolicy(1, 0), "2026-01-01T12:00:00Z").create(source, c).path
+            credentials("export password").use { e ->
+                store.save(export, vault.independentCopy(), e, parameters = testKdf)
+                val exported = service(folder, BackupPolicy(1, 0), "2026-01-02T12:00:00Z").create(export, e)
+                assertEquals(0, exported.removed)
+                store.load(export, e).use { assertNotEquals(vault.id, it.vault.id) }
+            }
+            assertTrue(Files.exists(original))
+            assertEquals(1, countManagedBackups(folder, vault.id))
+        } }
     }
 }

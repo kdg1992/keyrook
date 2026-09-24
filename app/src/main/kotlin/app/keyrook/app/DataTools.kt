@@ -70,7 +70,7 @@ internal fun dataActions(controller: VaultController, settings: SettingsStore, d
                 askCredentials(dialogs, UiText.text("transfer.exportPassword"), confirm = true)?.use { credentials ->
                     controller.session.snapshot().use {
                         ensureOperationCurrent()
-                        VaultStore().save(target, it.copy(revision = 0), credentials)
+                        VaultStore().save(target, it.independentCopy(), credentials)
                     }
                     dialogs.inform(UiText.text("transfer.exported"))
                 }

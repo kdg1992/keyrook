@@ -125,6 +125,13 @@ data class Vault(
     }
 
     /**
+     * Returns the same records as a separate vault: a new random ID, like a newly created vault, and revision zero.
+     * Restored and exported copies use it so their backups are never managed, rotated or checked as the original's.
+     * The result shares all objects with this vault, so the caller keeps ownership.
+     */
+    fun independentCopy(): Vault = copy(id = UUID.randomUUID().toString(), revision = 0)
+
+    /**
      * Returns a copy without the given trashed entries and their history. Remaining SSH server and
      * registrar-login references to them are cleared. Secrets owned only by removed entries are erased
      * immediately; the result shares all remaining objects with this vault, so the caller keeps ownership.
