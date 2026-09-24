@@ -26,5 +26,8 @@ internal data class RevealState(val key: RevealKey? = null, val revealed: Set<In
     companion object {
         /** Position of the entry notes; fields use their index in [app.keyrook.core.model.EntryData.fields]. */
         const val NOTES = -1
+
+        /** Position of the current TOTP code computed from a web login's secret. */
+        const val TOTP_CODE = -2
     }
 }

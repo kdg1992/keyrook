@@ -4,6 +4,7 @@ package app.keyrook.app
 
 import app.keyrook.core.model.EntryData
 import app.keyrook.core.model.Vault
+import app.keyrook.core.otp.Totp
 import java.time.DateTimeException
 import java.time.LocalDate
 import java.util.Locale
@@ -18,6 +19,7 @@ internal enum class InputProblem(val key: String) {
     TAG_TOO_LONG("validation.tagTooLong"),
     TOO_MANY_TAGS("validation.tagCount"),
     FIELD_EXISTS("validation.fieldExists"),
+    INVALID_TOTP("validation.totp"),
 }
 
 /** A field-level problem; [limit] is the maximum that was exceeded, where the message names one. */
@@ -133,6 +135,33 @@ internal fun customFieldNameError(name: String, existing: Collection<String>): I
     else -> null
 }
 
+/** Position of the web login's TOTP secret among the editor values, or null without such a field. */
+internal fun EntryData.totpIndex(): Int? =
+    if (this is EntryData.Web && totp != null) fields().indexOfFirst { it === totp } else null
+
+/**
+ * An empty TOTP field stays allowed; anything else must be accepted by the core parser. The temporary array is
+ * erased; the editor text itself is an immutable UI string (see SECURITY.md).
+ */
+internal fun totpError(text: String): InputError? {
+    if (text.isBlank()) return null
+    val chars = text.toCharArray()
+    return try {
+        if (Totp.isValid(chars)) null else InputError(InputProblem.INVALID_TOTP)
+    } finally { chars.fill('\u0000') }
+}
+
+/**
+ * The editor's TOTP field: its position and the value stored before this edit (null when the field is new). An
+ * invalid value the user has not changed in this edit is only a warning, so entries imported with such a value stay
+ * editable; a changed value must be empty or valid.
+ */
+internal data class TotpSlot(val index: Int, val stored: String?)
+
+/** The TOTP slot of the edited [EntryData] given the entry's data and values when the editor opened. */
+internal fun EntryData.totpSlot(initial: EntryData, initialValues: List<String>): TotpSlot? =
+    totpIndex()?.let { index -> TotpSlot(index, initial.totpIndex()?.let(initialValues::getOrNull)) }
+
 internal data class EditorValidation(
     val title: InputError? = null,
     val tags: InputError? = null,
@@ -140,19 +169,31 @@ internal data class EditorValidation(
     val expiry: InputError? = null,
     val values: Map<Int, InputError> = emptyMap(),
     val ports: Map<PortSlot, InputError> = emptyMap(),
+    /** Shown below their field like errors, but do not prevent saving. */
+    val warnings: Map<Int, InputError> = emptyMap(),
 ) {
     val valid: Boolean get() = title == null && tags == null && notes == null && expiry == null && values.isEmpty() && ports.isEmpty()
+
+    /** The message below value [index]: a blocking error first, otherwise a warning. */
+    fun valueMessage(index: Int): InputError? = values[index] ?: warnings[index]
 }
 
 internal fun validateEditor(title: String, tags: String, notes: String, expires: String, values: List<String>,
-                            ports: Map<PortSlot, String>): EditorValidation = EditorValidation(
-    title = titleError(title),
-    tags = tagsError(tags),
-    notes = lengthError(notes),
-    expiry = expiryError(expires),
-    values = values.withIndex().mapNotNull { (index, value) -> lengthError(value)?.let { index to it } }.toMap(),
-    ports = ports.mapNotNull { (slot, text) -> portError(text)?.let { slot to it } }.toMap(),
-)
+                            ports: Map<PortSlot, String>, totp: TotpSlot? = null): EditorValidation {
+    val totpProblem = totp?.let { slot -> values.getOrNull(slot.index)?.let(::totpError) }
+    val untouched = totp != null && values.getOrNull(totp.index) == totp.stored
+    return EditorValidation(
+        title = titleError(title),
+        tags = tagsError(tags),
+        notes = lengthError(notes),
+        expiry = expiryError(expires),
+        values = values.withIndex().mapNotNull { (index, value) ->
+            (lengthError(value) ?: if (index == totp?.index && !untouched) totpProblem else null)?.let { index to it }
+        }.toMap(),
+        ports = ports.mapNotNull { (slot, text) -> portError(text)?.let { slot to it } }.toMap(),
+        warnings = if (totp != null && untouched && totpProblem != null) mapOf(totp.index to totpProblem) else emptyMap(),
+    )
+}
 
 internal const val MAX_TITLE_CHARS = 4096
 internal const val MAX_TAGS = 100
