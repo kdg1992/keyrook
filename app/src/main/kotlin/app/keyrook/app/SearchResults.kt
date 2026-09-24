@@ -20,12 +20,20 @@ internal const val SEARCH_DEBOUNCE_MILLIS = 200L
 internal fun searchDelayMillis(previousQuery: String?, query: String): Long =
     if (previousQuery == null || previousQuery == query || query.isBlank()) 0 else SEARCH_DEBOUNCE_MILLIS
 
+/** Runs a task after a delay; returns a handle that cancels it while it has not started. */
+internal fun interface DelayScheduler {
+    fun schedule(delayMillis: Long, task: Runnable): Future<*>
+}
+
 /** Runs only the latest submission; submitting again or [cancel] drops a task that has not started yet. */
-internal class Debouncer(private val scheduler: ScheduledExecutorService) {
+internal class Debouncer(private val scheduler: DelayScheduler) {
+    constructor(executor: ScheduledExecutorService) :
+        this(DelayScheduler { delayMillis, task -> executor.schedule(task, delayMillis, TimeUnit.MILLISECONDS) })
+
     private var pending: Future<*>? = null
     @Synchronized fun submit(delayMillis: Long, task: () -> Unit) {
         pending?.cancel(false)
-        pending = scheduler.schedule(Runnable(task), delayMillis, TimeUnit.MILLISECONDS)
+        pending = scheduler.schedule(delayMillis, Runnable(task))
     }
     @Synchronized fun cancel() { pending?.cancel(false); pending = null }
 }

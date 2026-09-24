@@ -11,6 +11,8 @@ import java.util.Collections
 import java.util.Locale
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.Future
+import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
 
 class SearchDebounceTest {
@@ -25,35 +27,74 @@ class SearchDebounceTest {
         assertTrue(SEARCH_DEBOUNCE_MILLIS in 150L..250L)
     }
 
+    /** Runs due tasks only when the test advances its clock, so no test depends on real time. */
+    private class ManualScheduler : DelayScheduler {
+        private class Scheduled(val at: Long, val task: FutureTask<Unit>)
+        private val queue = mutableListOf<Scheduled>()
+        var now = 0L
+            private set
+
+        override fun schedule(delayMillis: Long, task: Runnable): Future<*> =
+            FutureTask(task, Unit).also { queue += Scheduled(now + delayMillis, it) }
+
+        fun advance(millis: Long) {
+            now += millis
+            queue.filter { it.at <= now }.sortedBy { it.at }.forEach { queue.remove(it); it.task.run() }
+        }
+    }
+
     @Test fun `a burst of keystrokes runs one scan for the last query`() {
-        val scheduler = Executors.newSingleThreadScheduledExecutor()
-        try {
-            val debouncer = Debouncer(scheduler)
-            val scanned = Collections.synchronizedList(mutableListOf<String>())
-            val done = CountDownLatch(1)
-            val query = "synthetic-query-20c"
-            var previous: String? = ""
-            for (length in 1..query.length) {
-                val typed = query.take(length)
-                debouncer.submit(searchDelayMillis(previous, typed)) { scanned.add(typed); done.countDown() }
-                previous = typed
-            }
-            assertTrue(done.await(5, TimeUnit.SECONDS))
-            scheduler.schedule({}, SEARCH_DEBOUNCE_MILLIS * 2, TimeUnit.MILLISECONDS).get()
-            assertEquals(listOf(query), scanned.toList())
-        } finally { scheduler.shutdownNow() }
+        val scheduler = ManualScheduler()
+        val debouncer = Debouncer(scheduler)
+        val scanned = mutableListOf<String>()
+        val query = "synthetic-query-20c"
+        var previous: String? = ""
+        for (length in 1..query.length) {
+            val typed = query.take(length)
+            debouncer.submit(searchDelayMillis(previous, typed)) { scanned.add(typed) }
+            previous = typed
+            scheduler.advance(SEARCH_DEBOUNCE_MILLIS - 1)
+        }
+        assertTrue(scanned.isEmpty())
+        scheduler.advance(1)
+        assertEquals(listOf(query), scanned)
+        scheduler.advance(SEARCH_DEBOUNCE_MILLIS * 10)
+        assertEquals(listOf(query), scanned)
+    }
+
+    @Test fun `an unchanged query scans at once and replaces a waiting scan`() {
+        val scheduler = ManualScheduler()
+        val debouncer = Debouncer(scheduler)
+        val scanned = mutableListOf<String>()
+        debouncer.submit(searchDelayMillis("a", "ab")) { scanned.add("typed") }
+        debouncer.submit(searchDelayMillis("ab", "ab")) { scanned.add("revision") }
+        scheduler.advance(0)
+        assertEquals(listOf("revision"), scanned)
+        scheduler.advance(SEARCH_DEBOUNCE_MILLIS)
+        assertEquals(listOf("revision"), scanned)
     }
 
     @Test fun `cancel drops a pending scan`() {
-        val scheduler = Executors.newSingleThreadScheduledExecutor()
+        val scheduler = ManualScheduler()
+        val debouncer = Debouncer(scheduler)
+        val scanned = mutableListOf<String>()
+        debouncer.submit(SEARCH_DEBOUNCE_MILLIS) { scanned.add("late") }
+        debouncer.cancel()
+        scheduler.advance(SEARCH_DEBOUNCE_MILLIS * 2)
+        assertTrue(scanned.isEmpty())
+    }
+
+    @Test fun `the executor scheduler runs the latest submission`() {
+        val executor = Executors.newSingleThreadScheduledExecutor()
         try {
-            val debouncer = Debouncer(scheduler)
+            val debouncer = Debouncer(executor)
+            val done = CountDownLatch(1)
             val scanned = Collections.synchronizedList(mutableListOf<String>())
-            debouncer.submit(SEARCH_DEBOUNCE_MILLIS) { scanned.add("late") }
-            debouncer.cancel()
-            scheduler.schedule({}, SEARCH_DEBOUNCE_MILLIS * 2, TimeUnit.MILLISECONDS).get()
-            assertTrue(scanned.isEmpty())
-        } finally { scheduler.shutdownNow() }
+            debouncer.submit(TimeUnit.HOURS.toMillis(1)) { scanned.add("replaced") }
+            debouncer.submit(0) { scanned.add("latest"); done.countDown() }
+            assertTrue(done.await(5, TimeUnit.SECONDS))
+            assertEquals(listOf("latest"), scanned.toList())
+        } finally { executor.shutdownNow() }
     }
 
     @Test fun `search through a session read matches search of a snapshot`() {
