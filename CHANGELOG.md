@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.0](https://github.com/kdg1992/keyrook/compare/v0.7.0...v0.8.0) (2026-09-24)
+
+
+### Features
+
+* **format:** add vault document schema 2 with customer details, pinning and templates ([#57](https://github.com/kdg1992/keyrook/issues/57)) ([0165d6c](https://github.com/kdg1992/keyrook/commit/0165d6cf8e81d275557e308552a11509b2bebca6))
+* **health:** add consent-gated breach check against Pwned Passwords ([#55](https://github.com/kdg1992/keyrook/issues/55)) ([64a576f](https://github.com/kdg1992/keyrook/commit/64a576f3a3c2df6b7bbe4c7b8559ccbaf2ffe88a))
+
 ## [0.7.0](https://github.com/kdg1992/keyrook/compare/v0.6.1...v0.7.0) (2026-09-24)
 
 
