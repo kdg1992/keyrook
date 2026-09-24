@@ -41,6 +41,27 @@ class VaultControllerTest {
         }
     }
 
+    @Test fun `trash and restore never move the change time backwards`() {
+        VaultController().use { controller ->
+            controller.unlock(directory.resolve("skew.keyrook"), "synthetic-master-passphrase".toCharArray(), null, true,
+                app.keyrook.core.crypto.KdfParameters(iterations = 1)).close()
+            val data = blankData(EntryType.CUSTOM)
+            val future = "2999-01-01T00:00:00Z"
+            val entry = editedEntry(null, data, "Future", "", "", "", listOf("synthetic"), listOf(true))
+                .copy(modifiedAt = future)
+            data.fields().forEach { it.value.close() }
+            Vault(entries = listOf(entry)).use { controller.save(entry).close() }
+            controller.trash(entry.id, false).use { trashed ->
+                assertEquals(future, trashed.entries.single().modifiedAt)
+                assertEquals(future, trashed.entries.single().deletedAt)
+            }
+            controller.trash(entry.id, true).use { restored ->
+                assertEquals(future, restored.entries.single().modifiedAt)
+                assertNull(restored.entries.single().deletedAt)
+            }
+        }
+    }
+
     @Test fun `permanent deletion removes trashed entry with history and leaves others untouched`() {
         val file = directory.resolve("purge.keyrook")
         VaultController().use { controller ->

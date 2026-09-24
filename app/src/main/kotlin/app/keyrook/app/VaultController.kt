@@ -70,9 +70,13 @@ class VaultController(internal val session: VaultSession = VaultSession(),
     fun trash(id: String, restore: Boolean): Vault {
         ensureOperationCurrent()
         session.snapshot().use { current ->
-            val now = java.time.Instant.now().toString()
+            val now = java.time.Instant.now()
             session.save(current.copy(entries = current.entries.map {
-                if (it.id == id) it.copy(deletedAt = if (restore) null else now, modifiedAt = now) else it
+                if (it.id != id) it else {
+                    // A clock set back never moves the entry's change time before its last change or its history.
+                    val stamp = maxOf(now, java.time.Instant.parse(it.modifiedAt)).toString()
+                    it.copy(deletedAt = if (restore) null else stamp, modifiedAt = stamp)
+                }
             }))
         }
         return session.snapshot()

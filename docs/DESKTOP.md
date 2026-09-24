@@ -238,7 +238,9 @@ resolve or fetch the address while validating it.
 
 **In Papierkorb** asks for confirmation first. In that dialog, Enter confirms
 and Escape cancels; with the focus on **Abbrechen**, Enter cancels. Trashed
-entries can be restored at any time.
+entries can be restored at any time. Moving to the trash and restoring record the
+current time as the entry's change time, but never an earlier time than its last
+change, so a computer clock that was set back cannot make a change appear older.
 
 In the trash, **Endgültig löschen** removes a single entry and **Papierkorb
 leeren** removes every trashed entry, including those hidden by the current
