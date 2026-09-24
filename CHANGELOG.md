@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.1](https://github.com/kdg1992/keyrook/compare/v0.6.0...v0.6.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* **backup:** harden backup rotation, permissions and copy identity ([#40](https://github.com/kdg1992/keyrook/issues/40)) ([bb6659d](https://github.com/kdg1992/keyrook/commit/bb6659d7eae65e5a2f7ff845382c77e0366428ab))
+* **security:** avoid string copies of secrets during search and health scans ([#41](https://github.com/kdg1992/keyrook/issues/41)) ([b53bb63](https://github.com/kdg1992/keyrook/commit/b53bb6380d35c15627978b9f7361dd55f9f6def9))
+
 ## [0.6.0](https://github.com/kdg1992/keyrook/compare/v0.5.0...v0.6.0) (2026-09-24)
 
 
