@@ -9,21 +9,63 @@
 
 Keyrook – Offline, encrypted credential vault for hosting providers and sysadmins. Manage website, FTP, mail, hosting panel and server logins plus SSH keys with passphrases in one file. Cross-platform (Windows, macOS, Linux), with automatic encrypted backups.
 
-## Current implementation
+## Features
 
-The desktop application creates and opens encrypted vaults, edits all eight
-entry types, searches and filters entries, manages customers/projects and
-supports trash, history and automatic locking. It includes password/passphrase
-generation, Ed25519/RSA-4096 keys, encrypted backups and import/export.
-Argon2id/AES-256-GCM, optional key files and authenticated format v1 remain
-the storage foundation.
+- Encrypted vault file: Argon2id key derivation, AES-256-GCM, authenticated
+  [format v1](docs/FORMAT.md), optional 32-byte key file, atomic writes with
+  conflict detection.
+- Eight entry types (web, transfer, email, hosting panel, server, SSH key,
+  domain, custom) with customers/projects, tags, full-text search, filters,
+  sorting, trash and field history.
+- List/detail layout with per-field reveal and copy; masked values are hidden
+  again on selection change, focus loss, minimizing and lock.
+- TOTP codes (RFC 6238) from Base32 secrets or `otpauth://` URIs.
+- Password and passphrase generators; Ed25519/RSA-4096 SSH key generation,
+  OpenSSH/PEM and authenticated PuTTY PPK 2/3 import, SSH/SFTP command copying.
+- Clipboard ownership with expiry, inactivity and OS-session locking,
+  configurable window lock policy, failed-attempt delays and a local
+  expiry/weak/reused-password warning list.
+- Automatic encrypted backups with retention, restore preview and a read-only
+  integrity check of the vault and its backups.
+- Encrypted export; import from Keyrook JSON/CSV, mapped CSV, KeePass CSV,
+  KeePass XML and Bitwarden unencrypted JSON; confirmed plaintext export.
+- Keyboard navigation and shortcuts, themed in-window dialogs, light/dark
+  appearance, German and English interface, remembered window placement.
+- Update check on request or, opt-in, at start; it only reports new releases.
+  Keyrook never downloads or installs updates, and without a click or that
+  option it makes no network request.
 
-This is a development build; use test data. Inactivity locking, supported desktop
-session events, lock-on-focus-loss, failed-attempt delays and a local password/expiry
-warning list and authenticated PuTTY PPK 2/3 import are implemented. Unsigned native
-installers for Windows x64, macOS ARM64 and Linux x64 are published with each
-release; platform installation tests are still pending. See [desktop usage](docs/DESKTOP.md) and [packaging status](docs/PACKAGING.md).
-Release acceptance on real systems follows the [manual acceptance protocol](docs/ACCEPTANCE.md).
+Details are in [desktop usage](docs/DESKTOP.md). Keyrook is not independently
+audited; see [security properties and limitations](docs/SECURITY.md) and the
+[readiness overview](docs/READINESS.md). Until release 1.0 passes the
+[manual acceptance protocol](docs/ACCEPTANCE.md), use it with test data.
+
+## Install
+
+Download the installer for your platform from the
+[Releases page](https://github.com/kdg1992/keyrook/releases/latest): MSI for
+Windows x64, DMG for macOS ARM64 (Apple silicon), DEB or RPM for Linux x64.
+The installers are unsigned and the macOS application is not notarized; follow
+the [unsigned installation steps](docs/PACKAGING.md#unsigned-installers) instead
+of disabling SmartScreen or Gatekeeper. Each release's installers are
+installed, upgraded and removed in the release workflow before publication
+(see [installer tests](docs/PACKAGING.md#installer-tests)). To upgrade, back up
+your vault and install the new version over the old one; vaults and settings
+remain in place.
+
+### Verify downloads
+
+Every release includes `SHA256SUMS.txt`. Compare the installer's SHA-256 with
+its line in that file before installing:
+
+```sh
+sha256sum --ignore-missing -c SHA256SUMS.txt   # Linux
+shasum -a 256 Keyrook-*.dmg                    # macOS, compare manually
+```
+
+```powershell
+Get-FileHash .\Keyrook-*.msi -Algorithm SHA256  # Windows, compare manually
+```
 
 ## Build and test
 
@@ -58,9 +100,10 @@ Operations are synchronous; desktop callers should use a background thread.
 See [the architecture](docs/ARCHITECTURE.md), [the file format](docs/FORMAT.md), [security and memory ownership](docs/SECURITY.md)
 and [third-party notices](THIRD-PARTY-NOTICES).
 
-Build checks, dependency review and release activation are described in
-[CI and releases](docs/CI.md). Repository settings and successful GitHub runs
-must be verified when the workflows are published.
+Build checks, dependency review and releases are described in
+[CI and releases](docs/CI.md). Contributions follow
+[CONTRIBUTING.md](CONTRIBUTING.md); report vulnerabilities privately as
+described in the [security policy](.github/SECURITY.md).
 
 ## License
 

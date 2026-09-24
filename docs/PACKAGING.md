@@ -152,8 +152,9 @@ A manual `workflow_dispatch` tests and packages all three platforms without
 creating a tag or release. Successful verification outputs are retained for seven
 days. The separate evidence artifacts remain downloadable for a renewed license
 review even when a packaging attempt fails at the approval gate.
-The first complete manual run and installation smoke tests on all supported
-platforms must succeed before a release pull request is merged.
+Use it to confirm packaging and the [installer tests](#installer-tests) before
+merging a release pull request that follows packaging changes; in a release run,
+a failure in either blocks publication.
 
 After packaging, the workflow launches the generated application image with its
 bundled runtime and `--self-test <new-report-path>`. This explicit diagnostic
@@ -161,8 +162,9 @@ performs an in-memory vault encryption/decryption roundtrip, an encrypted
 Ed25519 export/import roundtrip and offscreen desktop rendering. It uses only
 synthetic data, accesses no user vault and writes a fixed success marker to a
 new file. A failure, missing marker or two-minute timeout blocks publication.
-This verifies the application image; it does not replace installation, upgrade,
-uninstall or operating-system session-lock tests. The diagnostic is covered by
+This verifies the application image; installation, upgrade and removal are
+covered by the [installer tests](#installer-tests), and operating-system
+session-lock behavior by the [manual acceptance protocol](ACCEPTANCE.md). The diagnostic is covered by
 ordinary source tests and runs from each packaged launcher before publication.
 
 ### Linux desktop menu registration
@@ -263,7 +265,8 @@ If a build fails after release-please creates a tag/release, the release may exi
 without installer assets. It must not be advertised as a complete download.
 Correct the cause and rerun the failed jobs for that workflow. No secondary tag
 workflow is required. The configured modules include desktop, XML and cryptography
-support; packaged installation tests still need to verify the actual runtime.
+support; the installer tests verify them through the installed launcher's
+self-test.
 
 Code signing/notarization is deliberately unconfigured. A future signing change
 must add protected credentials and a reviewed signing step before checksums and
