@@ -329,6 +329,21 @@ check the mapping before confirming the import.
 
 **Klartext exportieren** warns twice before writing, in two separate questions: before the format is chosen and again after the new target file is selected. Questions start with the focus on **Nein**, so Enter alone never confirms; Escape cancels. JSON is the full Keyrook model. Keyrook CSV uses a `keyrook-json` header and one quoted JSON record so every type, reference and history roundtrips without flattening losses. It is not intended for spreadsheet editing. Both include secrets and deleted/history records. Keep them private and use encrypted export when possible.
 
+## Customer reports
+
+The reports in the **Daten** menu group entries by the customer assignment that
+**Kunden und Projekte** already manages: an entry belongs to its own customer or,
+without one, to the customer of its project (the same rule as the customer filter
+of the entry list). Tags play no role. Trashed entries are never included. Reports
+never show passwords, private keys, passphrases, TOTP secrets, notes, history or
+custom field values, and they never show a field whose hidden option is set.
+
+**Kundenübersicht** lists every customer sorted by name, followed by *Ohne Kunde*
+for entries without a customer: the number of active entries per type, the
+domain entries with their domain and expiry date, and the server and file-transfer
+entries with host and port. A hidden domain or host field appears as *Verborgen*.
+The overview is shown as read-only plain text and is not saved.
+
 ## Warning list
 
 The vault health check looks at active entries for expiry within 30 days, expired
