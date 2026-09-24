@@ -35,7 +35,8 @@ private fun formatInstant(value: String): String = runCatching {
 /**
  * Read-only details of the selected entry. Masked fields and the notes stay masked until "show" is toggled for that
  * value; the shown positions live in [reveal] and are masked again when another entry or saved version is shown and
- * when this view leaves the screen (editor, narrow window, lock). Copy and open use the list's clipboard and browser
+ * when this view leaves the screen (editor, narrow window, lock). Web logins with a TOTP secret also show the current
+ * one-time code under the same rules ([RevealState.TOTP_CODE]). Copy and open use the list's clipboard and browser
  * paths. Trashed entries show their metadata only.
  */
 @Composable
@@ -93,6 +94,9 @@ internal fun EntryDetailPane(vault: Vault, entry: Entry?, issues: Set<HealthIssu
                 actions = actions, busy = busy, onToggle = { onReveal(current.toggle(key, index)) },
                 onCopy = { copy(label, field.value) }, onOpen = open)
         }
+        val totp = (entry.data as? EntryData.Web)?.totp
+        if (actions && totp != null && totp.value.present()) TotpCodeRow(totp, shown = current.shows(key, RevealState.TOTP_CODE),
+            busy = busy, onToggle = { onReveal(current.toggle(key, RevealState.TOTP_CODE)) }, onNotice = { notice = it })
         val notesLabel = UiText.text("editor.notes")
         DetailValue(label = notesLabel, value = entry.notes, hidden = true, shown = current.shows(key, RevealState.NOTES),
             actions = actions, busy = busy, onToggle = { onReveal(current.toggle(key, RevealState.NOTES)) },

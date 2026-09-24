@@ -410,6 +410,7 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
     SideEffect { if (selectionState != selection) onSelection(selection) }
     val selectedEntry = entries.firstOrNull { it.id == selection.selectedId }
     fun quickAction(entry: Entry, kind: QuickField) {
+        if (kind == QuickField.TOTP) { notice = EntryQuickActions.copyTotpNotice(entry.data); return }
         val field = entry.data.quickField(kind)?.takeIf { EntryQuickActions.available(it) }
         notice = when {
             field == null -> UiText.text("list.noQuickField")
@@ -433,6 +434,7 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
                 when (action) {
                     ShortcutAction.COPY_PASSWORD -> quickAction(entry, QuickField.SECRET)
                     ShortcutAction.COPY_USERNAME -> quickAction(entry, QuickField.USERNAME)
+                    ShortcutAction.COPY_TOTP -> quickAction(entry, QuickField.TOTP)
                     ShortcutAction.OPEN_URL -> quickAction(entry, QuickField.URL)
                     ShortcutAction.EDIT_ENTRY -> onEdit(entry)
                     ShortcutAction.TRASH_ENTRY -> confirmation = ListConfirmation.Trash(entry.id, entry.title)
@@ -583,7 +585,7 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
     val titleFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { titleFocus.requestFocus() }
     val shownPorts = editorPorts(data, portDrafts)
-    val validation = validateEditor(title, tags, notes, expires, values, shownPorts)
+    val validation = validateEditor(title, tags, notes, expires, values, shownPorts, data.totpIndex())
     val dirty = title != source?.title.orEmpty() || tags != source?.tags?.joinToString(", ").orEmpty() ||
         notes != originalNotes || expires != source?.expiresOn.orEmpty() || customerId != source?.customerId ||
         projectId != source?.projectId || values != originalValues || hidden != originalHidden ||
@@ -593,7 +595,7 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
         if (busy || confirmDiscard || confirmRemoveTotp) return
         attempted = true
         rejected = false
-        if (!validateEditor(title, tags, notes, expires, values, editorPorts(data, portDrafts)).valid) return
+        if (!validateEditor(title, tags, notes, expires, values, editorPorts(data, portDrafts), data.totpIndex()).valid) return
         var candidate: Entry? = null
         try {
             candidate = editedEntry(source, data, title, tags, notes, expires, values, hidden).copy(customerId = customerId, projectId = projectId)
@@ -758,6 +760,7 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
                 }) { Text(UiText.text("common.open")) }
             }
             FieldError(validation.values[index])
+            if (index == data.totpIndex()) TotpFormatHint()
             if (data is EntryData.Custom) {
                 val current = data as EntryData.Custom
                 Row {

@@ -4,6 +4,7 @@ package app.keyrook.app
 
 import app.keyrook.core.model.EntryData
 import app.keyrook.core.model.Vault
+import app.keyrook.core.otp.Totp
 import java.time.DateTimeException
 import java.time.LocalDate
 import java.util.Locale
@@ -18,6 +19,7 @@ internal enum class InputProblem(val key: String) {
     TAG_TOO_LONG("validation.tagTooLong"),
     TOO_MANY_TAGS("validation.tagCount"),
     FIELD_EXISTS("validation.fieldExists"),
+    INVALID_TOTP("validation.totp"),
 }
 
 /** A field-level problem; [limit] is the maximum that was exceeded, where the message names one. */
@@ -133,6 +135,22 @@ internal fun customFieldNameError(name: String, existing: Collection<String>): I
     else -> null
 }
 
+/** Position of the web login's TOTP secret among the editor values, or null without such a field. */
+internal fun EntryData.totpIndex(): Int? =
+    if (this is EntryData.Web && totp != null) fields().indexOfFirst { it === totp } else null
+
+/**
+ * An empty TOTP field stays allowed; anything else must be accepted by the core parser. The temporary array is
+ * erased; the editor text itself is an immutable UI string (see SECURITY.md).
+ */
+internal fun totpError(text: String): InputError? {
+    if (text.isBlank()) return null
+    val chars = text.toCharArray()
+    return try {
+        if (Totp.isValid(chars)) null else InputError(InputProblem.INVALID_TOTP)
+    } finally { chars.fill('\u0000') }
+}
+
 internal data class EditorValidation(
     val title: InputError? = null,
     val tags: InputError? = null,
@@ -145,12 +163,14 @@ internal data class EditorValidation(
 }
 
 internal fun validateEditor(title: String, tags: String, notes: String, expires: String, values: List<String>,
-                            ports: Map<PortSlot, String>): EditorValidation = EditorValidation(
+                            ports: Map<PortSlot, String>, totpIndex: Int? = null): EditorValidation = EditorValidation(
     title = titleError(title),
     tags = tagsError(tags),
     notes = lengthError(notes),
     expiry = expiryError(expires),
-    values = values.withIndex().mapNotNull { (index, value) -> lengthError(value)?.let { index to it } }.toMap(),
+    values = values.withIndex().mapNotNull { (index, value) ->
+        (lengthError(value) ?: if (index == totpIndex) totpError(value) else null)?.let { index to it }
+    }.toMap(),
     ports = ports.mapNotNull { (slot, text) -> portError(text)?.let { slot to it } }.toMap(),
 )
 

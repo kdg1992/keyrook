@@ -132,11 +132,15 @@ internal fun EntryCardView(entry: Entry, info: EntryCardInfo, isSelected: Boolea
                 if (!trash) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     QuickField.entries.forEach { kind ->
                         val field = entry.data.quickField(kind)
-                        val present = remember(field) { field != null && EntryQuickActions.available(field) }
+                        val present = remember(field) { field != null && EntryQuickActions.available(field, kind) }
                         if (field != null && present) {
                             val label = entry.data.quickLabel(field)
                             TextButton(enabled = !busy, onClick = { onQuick(kind) }) {
-                                Text(UiText.text(if (kind == QuickField.URL) "list.openField" else "list.copyField", label))
+                                Text(when (kind) {
+                                    QuickField.URL -> UiText.text("list.openField", label)
+                                    QuickField.TOTP -> UiText.text("list.copyTotp")
+                                    else -> UiText.text("list.copyField", label)
+                                })
                             }
                         }
                     }

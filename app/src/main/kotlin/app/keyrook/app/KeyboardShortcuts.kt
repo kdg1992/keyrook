@@ -10,10 +10,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.unit.dp
 
-internal enum class ShortcutKey { L, N, F, S, C, B, U, E, ESCAPE, UP, DOWN, HOME, END, ENTER, DELETE, BACKSPACE, OTHER }
+internal enum class ShortcutKey { L, N, F, S, C, B, U, E, T, ESCAPE, UP, DOWN, HOME, END, ENTER, DELETE, BACKSPACE, OTHER }
 internal enum class ShortcutAction {
     LOCK, NEW_ENTRY, SEARCH, SAVE, CANCEL, FOCUS_LIST, SELECT_PREVIOUS, SELECT_NEXT, SELECT_FIRST, SELECT_LAST,
-    COPY_PASSWORD, COPY_USERNAME, OPEN_URL, EDIT_ENTRY, TRASH_ENTRY,
+    COPY_PASSWORD, COPY_USERNAME, COPY_TOTP, OPEN_URL, EDIT_ENTRY, TRASH_ENTRY,
 }
 
 /**
@@ -38,6 +38,7 @@ internal fun shortcutKey(key: Key): ShortcutKey = when (key) {
     Key.B -> ShortcutKey.B
     Key.U -> ShortcutKey.U
     Key.E -> ShortcutKey.E
+    Key.T -> ShortcutKey.T
     Key.Escape -> ShortcutKey.ESCAPE
     Key.DirectionUp -> ShortcutKey.UP
     Key.DirectionDown -> ShortcutKey.DOWN
@@ -68,6 +69,7 @@ internal fun keyboardShortcut(key: ShortcutKey, keyDown: Boolean, control: Boole
         ShortcutKey.S -> if (context.editing) ShortcutAction.SAVE else null
         ShortcutKey.C -> context.onSelectedEntry(ShortcutAction.COPY_PASSWORD)
         ShortcutKey.B -> context.onSelectedEntry(ShortcutAction.COPY_USERNAME)
+        ShortcutKey.T -> context.onSelectedEntry(ShortcutAction.COPY_TOTP)
         ShortcutKey.U -> context.onSelectedEntry(ShortcutAction.OPEN_URL)
         ShortcutKey.E -> context.onSelectedEntry(ShortcutAction.EDIT_ENTRY)
         else -> null
@@ -111,6 +113,7 @@ internal enum class ShortcutHelp(val actions: Set<ShortcutAction>, private val l
     EDIT(setOf(ShortcutAction.EDIT_ENTRY), "E", null, "shortcuts.edit"),
     COPY_PASSWORD(setOf(ShortcutAction.COPY_PASSWORD), "C", null, "shortcuts.copyPassword"),
     COPY_USERNAME(setOf(ShortcutAction.COPY_USERNAME), "B", null, "shortcuts.copyUsername"),
+    COPY_TOTP(setOf(ShortcutAction.COPY_TOTP), "T", null, "shortcuts.copyTotp"),
     OPEN_URL(setOf(ShortcutAction.OPEN_URL), "U", null, "shortcuts.openUrl"),
     TRASH(setOf(ShortcutAction.TRASH_ENTRY), null, "shortcuts.key.delete", "shortcuts.trash"),
     SAVE(setOf(ShortcutAction.SAVE), "S", null, "shortcuts.save"),

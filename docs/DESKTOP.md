@@ -20,6 +20,7 @@ in the **Info** dialog.
 | Ctrl/⌘ + E | Edit the selected entry. |
 | Ctrl/⌘ + C | Copy the selected entry's password. |
 | Ctrl/⌘ + B | Copy the selected entry's username. |
+| Ctrl/⌘ + T | Copy the current TOTP code of the selected web login (see [TOTP codes](#totp-codes)). |
 | Ctrl/⌘ + U | Open the selected entry's URL. |
 | Delete (Entf); on macOS also ⌫ | Move the selected entry to the trash after the usual **In den Papierkorb verschieben?** confirmation. |
 | Ctrl/⌘ + S | Validate and save the current editor through the same action as **Speichern**. |
@@ -45,7 +46,7 @@ the selection visible. A typical flow: Ctrl/⌘ + F, type part of the title,
 ↓, then Ctrl/⌘ + C.
 
 **Text-field rule:** entry shortcuts (arrows, Home/End, Enter, Delete/⌫ and
-Ctrl/⌘ + C/B/U/E) act only while the keyboard focus is in the entry list, that
+Ctrl/⌘ + C/B/T/U/E) act only while the keyboard focus is in the entry list, that
 is on the list itself or on a button of one of its cards. While any text field
 has the focus, including the search field, every key keeps its normal editing
 meaning; Ctrl/⌘ + C copies selected text as usual. The only exception is ↓ in
@@ -106,6 +107,32 @@ and every field with its label, followed by the notes:
 Trashed entries show their metadata and unmasked fields only; restore them to
 show or copy masked values.
 
+### TOTP codes
+
+Web logins with a TOTP secret produce time-based one-time codes (RFC 6238).
+The secret field accepts either a Base32 secret, as shown by most services
+under "enter the key manually" (upper or lower case, spaces and hyphens are
+ignored, `=` padding optional; SHA-1, 6 digits, 30 seconds), or an
+`otpauth://totp/…` URI from a QR code with `secret` and optionally `issuer`,
+`algorithm` (SHA1, SHA256, SHA512), `digits` (6–8) and `period` (15–120
+seconds). Other URI types, unknown or repeated parameters and anything else are
+refused; the editor shows **Ungültiges TOTP-Secret** below the field together
+with a hint on these formats, and the entry cannot be saved until the value is
+corrected, emptied or the field is removed. Label and issuer are not used.
+
+- The detail view shows **TOTP-Code** masked. **Anzeigen** shows the current
+  code with the remaining seconds and a bar; it is refreshed every second and
+  replaced at the end of each period while shown. It is masked again under the
+  same rules as other values (selection, saved version, editor, narrow window,
+  window deactivation or minimization, lock), which also stops the refresh.
+- **Kopieren** next to it, the list's **TOTP-Code kopieren** quick action and
+  Ctrl/⌘ + T copy a freshly computed code, never the secret, through the
+  owned, expiring clipboard; the notice names how many seconds the copied code
+  stays valid. The quick action appears only for a valid secret; Ctrl/⌘ + T on
+  an entry with an invalid one names the problem instead.
+- Codes depend on the computer's clock. If a service rejects them, check the
+  system time and time zone synchronization.
+
 ## Vaults and entries
 
 Choose an existing `.keyrook` file to open, or a new file to create. Creation requires the master password twice. The optional key file must contain exactly 32 bytes and must be available again when unlocking. Existing files are never replaced during creation.
@@ -144,8 +171,9 @@ remain masked. Clipboard expiry applies to those copies too.
 The editor checks inputs while typing and marks each affected field with its
 own message: a missing or too long title (at most 4096 characters), more than
 100 tags or a tag longer than 256 characters, field values or notes above the
-field limit, an invalid expiry date, an empty or invalid port, and a duplicate
-or too long custom field name. **Speichern** with open problems saves nothing
+field limit, an invalid expiry date, an empty or invalid port, a TOTP secret
+the code generator does not accept (see [TOTP codes](#totp-codes)), and a
+duplicate or too long custom field name. **Speichern** with open problems saves nothing
 and shows one summary line above the buttons.
 
 The expiry date accepts `2026-12-31`, `31.12.2026`, `1.2.2026` and `31.12.26`.

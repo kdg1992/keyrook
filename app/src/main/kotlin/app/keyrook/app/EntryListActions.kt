@@ -12,10 +12,12 @@ import androidx.compose.ui.input.key.*
 import app.keyrook.core.model.EntryData
 import app.keyrook.core.model.Field
 import app.keyrook.core.model.FieldKind
+import app.keyrook.core.otp.Totp
 import java.awt.Desktop
 import java.net.URI
+import java.time.Instant
 
-internal enum class QuickField { USERNAME, SECRET, URL }
+internal enum class QuickField { USERNAME, SECRET, TOTP, URL }
 
 /** Selection follows field semantics, never translated or custom labels. */
 internal fun EntryData.quickField(kind: QuickField): Field? = when (kind) {
@@ -38,6 +40,8 @@ internal fun EntryData.quickField(kind: QuickField): Field? = when (kind) {
         is EntryData.Domain -> null
         is EntryData.Custom -> values.values.firstOrNull { it.hidden }
     }
+    // Copies the current one-time code computed from the stored secret, never the secret itself.
+    QuickField.TOTP -> (this as? EntryData.Web)?.totp
     QuickField.URL -> when (this) {
         is EntryData.Web -> url
         is EntryData.Panel -> url
@@ -52,9 +56,34 @@ internal fun EntryData.quickLabel(field: Field): String = labels()[fields().inde
 internal object EntryQuickActions {
     fun available(field: Field): Boolean = runCatching { field.value.useChars { it.isNotEmpty() } }.getOrDefault(false)
 
+    /** A TOTP action is offered only for a stored value the core parser accepts. */
+    fun available(field: Field, kind: QuickField): Boolean =
+        if (kind == QuickField.TOTP) runCatching { Totp.isValid(field.value) }.getOrDefault(false) else available(field)
+
     /** Uses the owned, expiring clipboard; the parameter only exists to substitute a guarded test clipboard. */
     fun copy(field: Field, clipboard: (String) -> Unit = SecretClipboard::copy) {
         field.value.useChars { chars -> clipboard(String(chars)) }
+    }
+
+    /**
+     * Computes the code for [now] from the stored secret and copies only the code; the decoded key is erased inside
+     * the core and the code container is closed here. Returns the whole seconds the copied code remains valid.
+     */
+    fun copyTotp(field: Field, now: Instant = Instant.now(), clipboard: (String) -> Unit = SecretClipboard::copy): Long =
+        Totp.code(field.value, now).use { code ->
+            code.code.useChars { chars -> clipboard(String(chars)) }
+            code.remainingSeconds(now)
+        }
+
+    /** The list's TOTP quick action: copies the current code and names its remaining validity, or why it cannot. */
+    fun copyTotpNotice(data: EntryData, now: Instant = Instant.now(), clipboard: (String) -> Unit = SecretClipboard::copy): String {
+        val field = data.quickField(QuickField.TOTP)
+        return when {
+            field == null || !available(field) -> UiText.text("list.noQuickField")
+            !available(field, QuickField.TOTP) -> UiText.text("totp.invalid")
+            else -> runCatching { copyTotp(field, now, clipboard) }
+                .fold({ UiText.text("list.totpCopied", it) }, { UiText.text("list.copyFailed") })
+        }
     }
 
     fun open(field: Field, browse: (URI) -> Unit = { Desktop.getDesktop().browse(it) }) {

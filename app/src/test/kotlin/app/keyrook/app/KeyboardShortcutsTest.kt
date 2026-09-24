@@ -69,6 +69,7 @@ class KeyboardShortcutsTest {
         listOf(false, true).forEach { mac ->
             assertEquals(ShortcutAction.COPY_PASSWORD, resolve(ShortcutKey.C, list, mac))
             assertEquals(ShortcutAction.COPY_USERNAME, resolve(ShortcutKey.B, list, mac))
+            assertEquals(ShortcutAction.COPY_TOTP, resolve(ShortcutKey.T, list, mac))
             assertEquals(ShortcutAction.OPEN_URL, resolve(ShortcutKey.U, list, mac))
             assertEquals(ShortcutAction.EDIT_ENTRY, resolve(ShortcutKey.E, list, mac))
             assertEquals(ShortcutAction.EDIT_ENTRY, resolve(ShortcutKey.ENTER, list, mac, control = false, meta = false))
@@ -92,7 +93,7 @@ class KeyboardShortcutsTest {
     @Test fun `text fields keep copy delete arrows home end and enter for editing`() {
         listOf(ShortcutFocus.TEXT, ShortcutFocus.SEARCH, ShortcutFocus.OTHER).forEach { focus ->
             val state = list.copy(focus = focus)
-            listOf(ShortcutKey.C, ShortcutKey.B, ShortcutKey.U, ShortcutKey.E).forEach { key ->
+            listOf(ShortcutKey.C, ShortcutKey.B, ShortcutKey.T, ShortcutKey.U, ShortcutKey.E).forEach { key ->
                 assertNull(resolve(key, state), "$focus $key")
             }
             listOf(ShortcutKey.UP, ShortcutKey.HOME, ShortcutKey.END, ShortcutKey.ENTER, ShortcutKey.DELETE,
@@ -110,7 +111,7 @@ class KeyboardShortcutsTest {
     }
 
     @Test fun `entry actions need a selection an active list and an idle unlocked vault`() {
-        val entryKeys = listOf(ShortcutKey.C, ShortcutKey.B, ShortcutKey.U, ShortcutKey.E)
+        val entryKeys = listOf(ShortcutKey.C, ShortcutKey.B, ShortcutKey.T, ShortcutKey.U, ShortcutKey.E)
         listOf(list.copy(selection = false), list.copy(trash = true), list.copy(busy = true), list.copy(modal = true),
             list.copy(editing = true), list.copy(unlocked = false)).forEach { state ->
             entryKeys.forEach { assertNull(resolve(it, state), "$state $it") }
