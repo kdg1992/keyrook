@@ -145,6 +145,30 @@ class BackupTest {
         }
     }
 
+    @Test fun `linked parent directories are resolved while linked folders and sources are refused`() {
+        val real = Files.createDirectory(directory.toRealPath().resolve("real"))
+        val parent = directory.toRealPath().resolve("parent-link")
+        try { Files.createSymbolicLink(parent, real) } catch (_: Exception) { return }
+        Files.createDirectory(real.resolve("backups"))
+        val linkedSource = parent.resolve("vault.keyrook")
+        credentials().use { c ->
+            store.save(linkedSource, Vault(), c, parameters = testKdf)
+            val result = BackupService(parent.resolve("backups")).create(linkedSource, c)
+            assertEquals(real.resolve("backups"), result.path.parent)
+            assertArrayEquals(Files.readAllBytes(real.resolve("vault.keyrook")), Files.readAllBytes(result.path))
+
+            val folderLink = directory.toRealPath().resolve("backups-link")
+            Files.createSymbolicLink(folderLink, real.resolve("backups"))
+            assertThrows(IOException::class.java) { BackupService(folderLink).create(linkedSource, c) }
+            val sourceLink = directory.toRealPath().resolve("vault-link.keyrook")
+            Files.createSymbolicLink(sourceLink, real.resolve("vault.keyrook"))
+            assertThrows(IOException::class.java) { BackupService(real.resolve("backups")).create(sourceLink, c) }
+            Files.list(real.resolve("backups")).use { files ->
+                assertEquals(1L, files.filter { it.toString().endsWith(".keyrook.bak") }.count())
+            }
+        }
+    }
+
     @Test fun `locking clears backup configuration before opening another vault`() {
         credentials().use { c -> VaultSession().use { session ->
             session.create(source, Vault(), c, testKdf)

@@ -206,6 +206,34 @@ class IntegrityCheckTest {
         } }
     }
 
+    @Test fun `vault and backups below a linked parent directory are checked like the vault store opens them`() {
+        val real = Files.createDirectory(root.resolve("real"))
+        val parent = root.resolve("parent-link")
+        try { Files.createSymbolicLink(parent, real) } catch (_: Exception) { return }
+        val folder = Files.createDirectory(real.resolve("backups"))
+        val linkedSource = parent.resolve("vault.keyrook")
+        credentials().use { c -> VaultSession().use { session ->
+            session.create(linkedSource, Vault(), c, testKdf)
+            session.configureBackups(BackupService(parent.resolve("backups")))
+            session.backupNow()
+            val report = session.checkIntegrity()
+            assertTrue(report.intact)
+            assertEquals(BackupFolderState.CHECKED, report.backupFolder)
+            assertEquals(listOf(IntegrityState.OK, IntegrityState.OK), report.files.map { it.state })
+
+            // A vault file that is itself a symbolic link is still refused and never followed.
+            val fileLink = root.resolve("vault-link.keyrook")
+            Files.createSymbolicLink(fileLink, real.resolve("vault.keyrook"))
+            val id = session.snapshot().use { it.id }
+            val linked = IntegrityCheck().run(fileLink, id, 0, null, c)
+            assertEquals(IntegrityState.UNREADABLE, linked.files.single().state)
+            // A backup folder that is itself a symbolic link is refused as by backup creation.
+            val folderLink = root.resolve("backups-link")
+            Files.createSymbolicLink(folderLink, folder)
+            assertEquals(BackupFolderState.UNREADABLE, IntegrityCheck().run(linkedSource, id, 0, folderLink, c).backupFolder)
+        } }
+    }
+
     @Test fun `wrong credentials fail authentication for every file`() {
         val folder = folder()
         credentials().use { c ->

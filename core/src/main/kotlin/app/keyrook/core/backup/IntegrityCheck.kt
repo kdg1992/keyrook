@@ -70,9 +70,12 @@ class IntegrityCheck(private val codec: VaultCodec = VaultCodec()) {
 
     private class Candidate(val path: Path, val time: Long, val revision: Long?)
 
-    /** Same name pattern as rotation; entries are never followed, symbolic links are reported as unreadable. */
+    /**
+     * Same folder resolution and name pattern as backup creation and rotation: parent directories are canonical,
+     * a symbolically linked folder is refused, and linked entries are never followed but reported as unreadable.
+     */
     private fun listBackups(directory: Path, vaultId: String): List<Candidate> {
-        val root = rejectSymbolicLinks(directory)
+        val root = resolveWithoutFinalLink(directory)
         if (!Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS)) throw IOException("Backup folder must exist")
         val pattern = backupNamePattern(vaultId)
         return Files.newDirectoryStream(root).use { stream ->
@@ -90,9 +93,11 @@ class IntegrityCheck(private val codec: VaultCodec = VaultCodec()) {
         fun failed(state: IntegrityState) = IntegrityFileResult(kind, name, state)
         var bytes: ByteArray? = null
         return try {
-            val content = readBackupFile(path)
+            // Resolved like VaultStore: canonical parent directories, a linked file itself is refused.
+            val resolved = resolveWithoutFinalLink(path)
+            val content = readBackupFile(resolved)
             bytes = content
-            val modified = Files.getLastModifiedTime(path.toAbsolutePath().normalize(), LinkOption.NOFOLLOW_LINKS).toInstant()
+            val modified = Files.getLastModifiedTime(resolved, LinkOption.NOFOLLOW_LINKS).toInstant()
             codec.decrypt(content, credentials, allowExpensive).use { vault ->
                 val matches = vault.id == expectedId && (expectedRevision == null || vault.revision == expectedRevision)
                 IntegrityFileResult(kind, name, if (matches) IntegrityState.OK else IntegrityState.MISMATCH,
