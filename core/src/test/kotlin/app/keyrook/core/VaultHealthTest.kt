@@ -38,6 +38,16 @@ class VaultHealthTest {
         }
     }
 
+    @Test fun `empty passwords are neither weak nor reused but other checks remain`() {
+        Vault(entries = listOf(entry(""), entry(""), entry("", "2026-09-22"),
+            Entry(id(), "synthetic", EntryData.Custom(mapOf("password" to field(""), "passphrase" to field("short"))), DATE, DATE),
+            Entry(id(), "synthetic", EntryData.Ssh(SshKeyType.ED25519, field(""), field(""), field(""), field("")), DATE, DATE))).use { vault ->
+            val result = health.inspect(vault).associate { it.entryId to it.issues }
+            assertEquals(mapOf(vault.entries[2].id to setOf(HealthIssue.EXPIRED),
+                vault.entries[3].id to setOf(HealthIssue.SHORT_OR_REPETITIVE_PASSWORD)), result)
+        }
+    }
+
     @Test fun `passwords on the same entry do not create false reuse alerts`() {
         Vault(entries = listOf(Entry(id(), "synthetic", EntryData.Custom(mapOf(
             "password" to field("Synthetic-password-123!"), "passphrase" to field("Synthetic-password-123!"))), DATE, DATE))).use {

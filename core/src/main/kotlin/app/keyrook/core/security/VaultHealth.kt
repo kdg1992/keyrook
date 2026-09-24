@@ -13,7 +13,10 @@ import javax.crypto.spec.SecretKeySpec
 enum class HealthIssue { EXPIRED, EXPIRING_SOON, SHORT_OR_REPETITIVE_PASSWORD, REUSED_PASSWORD }
 data class EntryHealth(val entryId: String, val issues: Set<HealthIssue>)
 
-/** Local heuristics, not a strength certificate. Results contain IDs and reasons, never secret values. */
+/**
+ * Local heuristics, not a strength certificate. Results contain IDs and reasons, never secret values.
+ * Empty passwords are not checked for strength or reuse.
+ */
 class VaultHealth(private val clock: Clock = Clock.systemDefaultZone()) {
     fun inspect(vault: Vault, warningDays: Long = EXPIRY_WARNING_DAYS): List<EntryHealth> {
         require(warningDays in 0..365)
@@ -48,6 +51,7 @@ class VaultHealth(private val clock: Clock = Clock.systemDefaultZone()) {
         } finally { key.fill(0); groups.keys.forEach { it.clear() } }
     }
 
+    /** Non-empty passwords of [data]; an unset password is not a finding. */
     private fun passwords(data: EntryData): List<Secret> = when (data) {
         is EntryData.Web -> listOf(data.password.value)
         is EntryData.Transfer -> listOf(data.password.value)
@@ -57,7 +61,7 @@ class VaultHealth(private val clock: Clock = Clock.systemDefaultZone()) {
         is EntryData.Ssh -> listOf(data.passphrase.value)
         is EntryData.Custom -> data.values.filterKeys { it.lowercase() in setOf("password", "passwort", "passphrase") }.values.map { it.value }
         is EntryData.Domain -> emptyList()
-    }
+    }.filter { secret -> secret.useChars { it.isNotEmpty() } }
 
     companion object {
         /** Days before an expiry date (inclusive) that count as [HealthIssue.EXPIRING_SOON] by default. */
