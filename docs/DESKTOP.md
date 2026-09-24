@@ -167,6 +167,12 @@ four times the lane count. Changes re-encrypt atomically and create the configur
 backup first. Vaults with higher derivation costs still require explicit approval
 through the core API and cannot currently be opened in the desktop interface.
 
+The installed application may use up to half of the physical memory for its Java
+heap (`-XX:MaxRAMPercentage=50`; the JVM default is a quarter). Opening a schema 1
+vault close to the 64 MiB file limit needs about 1.2 GiB while it is converted,
+and Argon2 derivation needs up to 256 MiB on top; on machines with 4 GiB of memory
+the default quarter would not be enough. Vaults of typical size need far less.
+
 Entries are saved immediately through authenticated, atomic vault storage. Fields can be masked independently. Web, transfer, email, hosting-panel, server, SSH, domain and custom records have their own editors. Customers/projects can be created and assigned. Entries can be duplicated, moved to the trash, restored and permanently deleted (see below). Editing retains up to 100 historical field snapshots. Search and filters narrow the visible list; history displays hidden fields masked. Canceling an edit discards that edit.
 
 **Kunden, Projekte und Vorlagen** above the entry list opens the section for
