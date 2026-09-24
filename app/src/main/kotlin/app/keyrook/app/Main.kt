@@ -241,7 +241,7 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
         }
         if (about) AlertDialog(onDismissRequest = { about = false }, title = { Text("Keyrook") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(UiText.text("shell.aboutBody", System.getProperty("keyrook.version", "dev")))
                     UpdateCheckPanel(updates)
                     ShortcutHelpTable(mac)
