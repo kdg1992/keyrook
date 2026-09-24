@@ -284,14 +284,14 @@ For each event:
      wait 2 minutes, log back in. Expected: **Lock check** passes.
    - Repeat with the policy *loses focus or is minimized* and **30** minutes.
      Record whether the screen lock caused a focus-loss lock.
-4. A `KR-CANARY` value visible after resume on Windows or macOS, or any
-   visible value after the fallback deadline on Linux, is a failure.
+4. A `KR-CANARY` value visible after resume on any platform is a failure.
 
-Suspend limit: the inactivity deadline uses the JVM's monotonic clock. Where
-that clock pauses while the machine is suspended (Linux in particular), time
-spent in sleep does not count towards the deadline. After a Linux resume
-without an OS event, locking therefore happens when the remaining awake time
-expires. Record the observed delay.
+Suspend detection: the inactivity deadline compares the JVM's monotonic clock
+with the wall clock. When the wall clock has advanced at least 30 seconds more
+than the monotonic clock (a suspend), the vault locks on the first timer tick
+or input after resume, even if the platform delivered no sleep event. Expected
+on every platform: the vault is locked within about one second after resume
+and an expired clipboard value is cleared. Record any delay.
 
 ## 5. Clipboard expiry and ownership
 
@@ -374,7 +374,8 @@ These are documented behavior, not failures. Record the observed behavior in
   advertises per platform; Linux desktops generally deliver none, and the
   inactivity deadline or a focus-loss lock is the fallback
   ([SECURITY.md](SECURITY.md#session-behavior)).
-- Time spent suspended may not count towards the inactivity deadline.
+- Suspend is recognised from the wall clock advancing further than the monotonic
+  clock; a forward wall-clock change of 30 seconds or more while awake also locks.
 - Clipboard history and clipboard managers keep copies Keyrook cannot remove;
   clearing is best effort without an atomic OS compare-and-clear.
 - Revealed text and edited fields are immutable JVM strings; locking removes
