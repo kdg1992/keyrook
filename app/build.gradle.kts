@@ -208,6 +208,60 @@ tasks.withType<AbstractJLinkTask>().configureEach { dependsOn(requireCiPackaging
 tasks.withType<AbstractJPackageTask>().configureEach {
     dependsOn(requireCiPackaging, checkNativeDistributionLicenses, preparePackagingResources)
 }
+// jpackage's DEB maintainer scripts run xdg-desktop-menu under `set -e`. xdg-utils exits with status 3 when no
+// XDG desktop-directories directory exists (servers, containers, WSL, minimal window-manager setups), so the
+// package stays half-configured after installation and cannot be removed. Compose passes its own jpackage
+// resource directory, so the finished package's control archive is rebuilt with both calls made non-fatal.
+// The payload member is copied unchanged.
+val debMenuCommands = mapOf(
+    "postinst" to "xdg-desktop-menu install /opt/keyrook/lib/keyrook-Keyrook.desktop",
+    "prerm" to "do_if_file_belongs_to_single_package /opt/keyrook/lib/keyrook-Keyrook.desktop " +
+        "xdg-desktop-menu uninstall /opt/keyrook/lib/keyrook-Keyrook.desktop",
+)
+val debMenuWarning = "keyrook: desktop menu entry not updated (xdg-desktop-menu status \$?)"
+fun runPackagingTool(directory: File, vararg command: String): String {
+    val process = ProcessBuilder(*command).directory(directory).redirectErrorStream(true).start()
+    val output = process.inputStream.bufferedReader().readText()
+    check(process.waitFor() == 0) { "${command.joinToString(" ")} failed:\n$output" }
+    return output
+}
+fun tolerateDebMenuFailures(deb: File, work: File) {
+    work.deleteRecursively()
+    val control = work.resolve("control")
+    check(control.mkdirs()) { "Cannot create $control" }
+    val members = runPackagingTool(work, "ar", "t", deb.absolutePath).lines().filter(String::isNotEmpty)
+    check(members.size == 3 && members[0] == "debian-binary" && members[1].startsWith("control.tar.") &&
+        members[2].startsWith("data.tar.")) { "Unexpected DEB layout: $members" }
+    runPackagingTool(work, "ar", "x", deb.absolutePath, members[0], members[2])
+    runPackagingTool(work, "dpkg-deb", "--control", deb.absolutePath, control.absolutePath)
+    for ((name, command) in debMenuCommands) {
+        val script = control.resolve(name)
+        val lines = script.readLines()
+        check(lines.count { it == command } == 1) { "jpackage $name changed; review the menu registration handling" }
+        script.writeText(lines.joinToString("\n", postfix = "\n") {
+            if (it == command) "$it || echo \"$debMenuWarning\" >&2" else it
+        })
+    }
+    runPackagingTool(work, "tar", "--create", "--gzip", "--format=gnu", "--owner=0", "--group=0", "--numeric-owner",
+        "--sort=name", "--file", "control.tar.gz", "--directory", control.absolutePath, ".")
+    val rebuilt = work.resolve(deb.name)
+    runPackagingTool(work, "ar", "rcD", rebuilt.absolutePath, members[0], "control.tar.gz", members[2])
+    for (name in debMenuCommands.keys) {
+        check("|| echo \"$debMenuWarning\" >&2" in runPackagingTool(work, "dpkg-deb", "--info", rebuilt.absolutePath, name)) {
+            "Rebuilt DEB lacks the $name menu registration handling"
+        }
+    }
+    runPackagingTool(work, "dpkg-deb", "--contents", rebuilt.absolutePath)
+    rebuilt.copyTo(deb, overwrite = true)
+    work.deleteRecursively()
+}
+tasks.withType<AbstractJPackageTask>().matching { it.targetFormat == TargetFormat.Deb }.configureEach {
+    doLast {
+        val packages = destinationDir.get().asFile.walk().filter { it.isFile && it.extension == "deb" }.toList()
+        check(packages.size == 1) { "Expected one DEB package, found $packages" }
+        tolerateDebMenuFailures(packages.single(), temporaryDir.resolve("deb-control"))
+    }
+}
 compose.desktop {
     application {
         mainClass = "app.keyrook.app.MainKt"

@@ -168,8 +168,359 @@ jobs:
           if-no-files-found: error
           retention-days: ${{ github.event_name == 'workflow_dispatch' && 7 || 1 }}
 
-  publish:
+  installer-tests:
     needs: [release-please, packages]
+    if: always() && !cancelled() && needs.packages.result == 'success'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: windows
+          - os: macos-latest
+            platform: macos
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name || github.sha }}
+          persist-credentials: false
+      - name: Download this run's installers
+        shell: bash
+        env:
+          RUN_ID: ${{ github.run_id }}
+          PACKAGE_PLATFORM: ${{ matrix.platform }}
+        run: |
+          set -euo pipefail
+          gh run download "$RUN_ID" --name "packages-${PACKAGE_PLATFORM}" --dir build/packages
+          mkdir -p "$RUNNER_TEMP/installer-logs"
+
+      # Linux DEB directly on the Ubuntu runner.
+      - name: Select DEB installers
+        id: deb
+        if: runner.os == 'Linux'
+        shell: bash
+        run: node scripts/installer-test.mjs prepare deb
+      - name: Test DEB install, upgrade and removal
+        if: runner.os == 'Linux'
+        shell: bash
+        env:
+          NEW_INSTALLER: ${{ steps.deb.outputs.new-installer }}
+          NEW_VERSION: ${{ steps.deb.outputs.new-version }}
+          OLD_INSTALLER: ${{ steps.deb.outputs.old-installer }}
+          OLD_VERSION: ${{ steps.deb.outputs.old-version }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          install_deb() { sudo apt-get install --no-install-recommends -y "./$1"; }
+          launcher() {
+            local found
+            found="$(dpkg -L keyrook | grep -E '/bin/Keyrook$')"
+            [ "$(printf '%s\n' "$found" | wc -l)" -eq 1 ] || { echo "Expected one installed launcher"; exit 1; }
+            printf '%s\n' "$found"
+          }
+          expect_version() {
+            local installed
+            installed="$(dpkg-query -W -f='${Status} ${Version}\n' keyrook)"
+            echo "Installed: $installed"
+            [ "$(printf '%s\n' "$installed" | wc -l)" -eq 1 ] || { echo "Expected one keyrook package"; exit 1; }
+            [[ "$installed" =~ ^install\ ok\ installed\ ${1//./\\.}(-[0-9A-Za-z.+~]+)?$ ]] || { echo "Expected version $1"; exit 1; }
+          }
+          remove_and_verify() {
+            local root
+            root="$(dirname "$(dirname "$(launcher)")")"
+            sudo apt-get remove -y keyrook
+            if dpkg-query -W -f='${Status}\n' keyrook 2>/dev/null | grep -q '^install ok installed$'; then
+              echo "keyrook is still installed"; exit 1
+            fi
+            [ ! -e "$root" ] || { echo "Install directory remains: $root"; ls -laR "$root"; exit 1; }
+            echo "Removed $root"
+          }
+
+          # As root, xdg-desktop-menu copies the entry into the first existing applications directory of
+          # XDG_DATA_DIRS; maintainer scripts run under sudo's reset environment, so its default order applies.
+          menu_entry=
+          for directory in /usr/local/share/applications /usr/share/applications; do
+            if [ -d "$directory" ]; then menu_entry="$directory/keyrook-Keyrook.desktop"; break; fi
+          done
+          [ -n "$menu_entry" ] || { echo "No system applications directory on the runner"; exit 1; }
+          echo "Expected menu entry location: $menu_entry"
+
+          # The runner has no XDG desktop-directories directory, like servers, containers and WSL, where
+          # xdg-desktop-menu cannot register menu entries. Installation and removal must still succeed.
+          echo "::group::Fresh install of $NEW_INSTALLER without a desktop menu"
+          if [ -e /usr/share/desktop-directories ] || [ -e /usr/local/share/desktop-directories ]; then
+            echo "::warning::Runner has a desktop-directories directory; install without a menu is not exercised"
+          fi
+          install_deb "$NEW_INSTALLER"
+          expect_version "$NEW_VERSION"
+          echo "Launcher: $(launcher)"
+          node scripts/installer-test.mjs self-test "$(launcher)"
+          remove_and_verify
+          echo "::endgroup::"
+
+          # A desktop system provides the directory; the menu entry must then be registered and removed.
+          sudo mkdir -p /usr/share/desktop-directories
+          echo "::group::Fresh install of $NEW_INSTALLER with a desktop menu"
+          install_deb "$NEW_INSTALLER"
+          expect_version "$NEW_VERSION"
+          [ -f "$menu_entry" ] || { echo "Menu entry was not registered"; ls -l /usr/local/share/applications /usr/share/applications | grep -i keyrook || true; exit 1; }
+          node scripts/installer-test.mjs self-test "$(launcher)"
+          remove_and_verify
+          [ ! -e "$menu_entry" ] || { echo "Menu entry remains"; exit 1; }
+          echo "::endgroup::"
+
+          # Runs with the desktop menu directory: packages up to 0.5.0 fail to configure without it.
+          if [ -n "$OLD_INSTALLER" ]; then
+            echo "::group::Upgrade from $OLD_VERSION to $NEW_VERSION"
+            install_deb "$OLD_INSTALLER"
+            expect_version "$OLD_VERSION"
+            install_deb "$NEW_INSTALLER"
+            expect_version "$NEW_VERSION"
+            [ -f "$menu_entry" ] || { echo "Menu entry missing after upgrade"; ls -l /usr/local/share/applications /usr/share/applications | grep -i keyrook || true; exit 1; }
+            node scripts/installer-test.mjs self-test "$(launcher)"
+            remove_and_verify
+            [ ! -e "$menu_entry" ] || { echo "Menu entry remains"; exit 1; }
+            echo "::endgroup::"
+          fi
+
+      # Linux RPM in a fresh Fedora container per scenario. The package is built on Ubuntu, so the
+      # desktop libraries a Fedora workstation provides are installed explicitly before it.
+      - name: Select RPM installers
+        id: rpm
+        if: runner.os == 'Linux'
+        shell: bash
+        run: node scripts/installer-test.mjs prepare rpm
+      - name: Test RPM install, upgrade and removal
+        if: runner.os == 'Linux'
+        shell: bash
+        env:
+          FEDORA_IMAGE: fedora:44@sha256:43b29f65a41eb9c35e1cd5323e3bdf3b655c2357a9f4f1ff2f9c2798e5045d80
+          NEW_INSTALLER: ${{ steps.rpm.outputs.new-installer }}
+          NEW_VERSION: ${{ steps.rpm.outputs.new-version }}
+          OLD_INSTALLER: ${{ steps.rpm.outputs.old-installer }}
+          OLD_VERSION: ${{ steps.rpm.outputs.old-version }}
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/rpm-test.sh" <<'SCRIPT'
+          set -euo pipefail
+          dnf install -y --setopt=install_weak_deps=False \
+            mesa-libGL libX11 libXext libXrender libXi libXtst freetype fontconfig dejavu-sans-fonts
+          launcher() {
+            local found
+            found="$(rpm -ql keyrook | grep -E '/bin/Keyrook$')"
+            [ "$(printf '%s\n' "$found" | wc -l)" -eq 1 ] || { echo "Expected one installed launcher"; exit 1; }
+            printf '%s\n' "$found"
+          }
+          expect_version() {
+            local installed
+            installed="$(rpm -q --qf '%{VERSION}\n' keyrook)"
+            echo "Installed: $installed"
+            [ "$installed" = "$1" ] || { echo "Expected exactly one keyrook package at version $1"; exit 1; }
+          }
+          self_test() {
+            local directory report
+            directory="$(mktemp -d)"
+            report="$directory/report.txt"
+            timeout 120 "$(launcher)" --self-test "$report"
+            [ "$(cat "$report"; printf x)" = "$(printf 'Keyrook runtime check passed\nx')" ] || { echo "Runtime check report mismatch"; exit 1; }
+            rm -rf "$directory"
+            echo "Installed runtime check passed: $(launcher)"
+          }
+          remove_and_verify() {
+            local root
+            root="$(dirname "$(dirname "$(launcher)")")"
+            dnf remove -y keyrook
+            if rpm -q keyrook; then echo "keyrook is still installed"; exit 1; fi
+            [ ! -e "$root" ] || { echo "Install directory remains: $root"; ls -laR "$root"; exit 1; }
+            echo "Removed $root"
+          }
+          if [ "$MODE" = fresh ]; then
+            echo "Declared requirements:"
+            rpm -qpR "/work/$NEW_INSTALLER"
+            ls -ld /usr/share/desktop-directories || echo "No desktop-directories directory in the image"
+            dnf install -y "/work/$NEW_INSTALLER"
+            expect_version "$NEW_VERSION"
+            ls -l /usr/share/applications/keyrook-Keyrook.desktop || echo "No menu entry registered"
+          else
+            dnf install -y "/work/$OLD_INSTALLER"
+            expect_version "$OLD_VERSION"
+            dnf install -y "/work/$NEW_INSTALLER"
+            expect_version "$NEW_VERSION"
+          fi
+          self_test
+          remove_and_verify
+          SCRIPT
+          run_container() {
+            docker run --rm \
+              --volume "$PWD:/work:ro" --volume "$RUNNER_TEMP/rpm-test.sh:/rpm-test.sh:ro" \
+              --env MODE="$1" --env NEW_INSTALLER --env NEW_VERSION --env OLD_INSTALLER --env OLD_VERSION \
+              "$FEDORA_IMAGE" bash /rpm-test.sh
+          }
+          echo "::group::Fresh install of $NEW_INSTALLER"
+          run_container fresh
+          echo "::endgroup::"
+          if [ -n "$OLD_INSTALLER" ]; then
+            echo "::group::Upgrade from $OLD_VERSION to $NEW_VERSION"
+            run_container upgrade
+            echo "::endgroup::"
+          fi
+
+      # Windows MSI: silent per-user installation into the runner account.
+      - name: Select MSI installers
+        id: msi
+        if: runner.os == 'Windows'
+        shell: bash
+        run: node scripts/installer-test.mjs prepare msi
+      - name: Test MSI install, upgrade and removal
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          NEW_INSTALLER: ${{ steps.msi.outputs.new-installer }}
+          NEW_VERSION: ${{ steps.msi.outputs.new-version }}
+          OLD_INSTALLER: ${{ steps.msi.outputs.old-installer }}
+          OLD_VERSION: ${{ steps.msi.outputs.old-version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+          $logs = Join-Path $env:RUNNER_TEMP 'installer-logs'
+          $uninstallKeys = @(
+            'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*',
+            'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*',
+            'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
+          )
+          function Invoke-Msi([string] $action, [string] $installer, [string] $log) {
+            $path = (Resolve-Path -LiteralPath $installer).Path
+            $arguments = @($action, "`"$path`"", '/qn', '/norestart', '/l*v', "`"$(Join-Path $logs $log)`"")
+            $process = Start-Process msiexec.exe -Wait -PassThru -ArgumentList $arguments
+            if ($process.ExitCode -notin 0, 3010) { throw "msiexec $action $installer failed with exit code $($process.ExitCode)" }
+          }
+          function Get-Entries {
+            @(Get-ItemProperty -Path $uninstallKeys -ErrorAction SilentlyContinue |
+              Where-Object { $_.PSObject.Properties['DisplayName'] -and $_.DisplayName -eq 'Keyrook' })
+          }
+          function Assert-Installed([string] $version) {
+            $entries = @(Get-Entries)
+            $entries | Format-List DisplayName, DisplayVersion, PSPath | Out-String | Write-Host
+            if ($entries.Count -ne 1) { throw "Expected one installed Keyrook entry, found $($entries.Count)" }
+            if ($entries[0].DisplayVersion -ne $version) { throw "Expected version $version, found $($entries[0].DisplayVersion)" }
+            if ($entries[0].PSPath -notlike '*HKEY_CURRENT_USER*') { Write-Host '::warning::Keyrook uninstall entry is not registered per user' }
+          }
+          function Get-InstallDirectory([string] $log) {
+            $found = @(Select-String -LiteralPath (Join-Path $logs $log) -Pattern 'Property\([SC]\): INSTALLDIR = (.+)$')
+            $directory = if ($found.Count -gt 0) { $found[-1].Matches[0].Groups[1].Value.Trim() } else { Join-Path $env:LOCALAPPDATA 'Keyrook' }
+            Write-Host "Install directory: $directory"
+            return $directory
+          }
+          function Test-Launcher([string] $directory) {
+            node scripts/installer-test.mjs self-test (Join-Path $directory 'Keyrook.exe')
+            if ($LASTEXITCODE -ne 0) { throw 'Installed runtime check failed' }
+          }
+          function Remove-AndVerify([string] $installer, [string] $directory, [string] $log) {
+            Invoke-Msi '/x' $installer $log
+            if (@(Get-Entries).Count -ne 0) { throw 'Keyrook uninstall entry remains' }
+            if (Test-Path -LiteralPath (Join-Path $directory 'Keyrook.exe')) { throw 'Installed launcher remains' }
+            if (Test-Path -LiteralPath $directory) {
+              $remaining = @(Get-ChildItem -LiteralPath $directory -Recurse -Force -File)
+              if ($remaining.Count -ne 0) { $remaining | ForEach-Object FullName | Write-Host; throw "Files remain in $directory" }
+            }
+            Write-Host "Removed $directory"
+          }
+
+          if (@(Get-Entries).Count -ne 0) { throw 'Keyrook is already installed on the runner' }
+          Write-Host "::group::Fresh install of $env:NEW_INSTALLER"
+          Invoke-Msi '/i' $env:NEW_INSTALLER 'fresh-install.log'
+          Assert-Installed $env:NEW_VERSION
+          $directory = Get-InstallDirectory 'fresh-install.log'
+          Test-Launcher $directory
+          Remove-AndVerify $env:NEW_INSTALLER $directory 'fresh-uninstall.log'
+          Write-Host '::endgroup::'
+
+          if ($env:OLD_INSTALLER) {
+            Write-Host "::group::Upgrade from $env:OLD_VERSION to $env:NEW_VERSION"
+            Invoke-Msi '/i' $env:OLD_INSTALLER 'upgrade-old-install.log'
+            Assert-Installed $env:OLD_VERSION
+            Invoke-Msi '/i' $env:NEW_INSTALLER 'upgrade-new-install.log'
+            Assert-Installed $env:NEW_VERSION
+            $directory = Get-InstallDirectory 'upgrade-new-install.log'
+            Test-Launcher $directory
+            Remove-AndVerify $env:NEW_INSTALLER $directory 'upgrade-uninstall.log'
+            Write-Host '::endgroup::'
+          }
+      - name: Retain Windows Installer logs
+        if: failure() && runner.os == 'Windows'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: installer-logs-windows
+          path: ${{ runner.temp }}/installer-logs/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      # macOS DMG: the drag-install equivalent into a temporary Applications directory.
+      - name: Select DMG installers
+        id: dmg
+        if: runner.os == 'macOS'
+        shell: bash
+        run: node scripts/installer-test.mjs prepare dmg
+      - name: Test DMG install, replacement and removal
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          NEW_INSTALLER: ${{ steps.dmg.outputs.new-installer }}
+          NEW_VERSION: ${{ steps.dmg.outputs.new-version }}
+          OLD_INSTALLER: ${{ steps.dmg.outputs.old-installer }}
+          OLD_VERSION: ${{ steps.dmg.outputs.old-version }}
+        run: |
+          set -euo pipefail
+          applications="$(mktemp -d "$RUNNER_TEMP/Applications.XXXXXX")"
+          app="$applications/Keyrook.app"
+          # Replaces any existing bundle completely, as Finder's Replace does.
+          install_dmg() {
+            local mount
+            mount="$(mktemp -d "$RUNNER_TEMP/dmg.XXXXXX")"
+            # An image with a license agreement asks for acceptance on standard input.
+            { yes || true; } | PAGER=cat hdiutil attach -readonly -nobrowse -noautoopen -mountpoint "$mount" "$1" > /dev/null
+            [ -d "$mount/Keyrook.app" ] || { echo "Keyrook.app missing from $1"; hdiutil detach "$mount"; exit 1; }
+            rm -rf "$app"
+            ditto "$mount/Keyrook.app" "$app"
+            diff -rq "$mount/Keyrook.app" "$app"
+            hdiutil detach "$mount" || hdiutil detach -force "$mount"
+            rmdir "$mount"
+            [ "$(ls "$applications")" = "Keyrook.app" ] || { echo "Expected exactly one installed bundle"; exit 1; }
+            echo "Installed $1 as $app (bundle $(defaults read "$app/Contents/Info" CFBundleShortVersionString))"
+          }
+          remove_and_verify() {
+            rm -rf "$app"
+            [ ! -e "$app" ] || { echo "Bundle remains"; exit 1; }
+            echo "Removed $app"
+          }
+
+          echo "::group::Fresh install of $NEW_INSTALLER"
+          install_dmg "$NEW_INSTALLER"
+          node scripts/installer-test.mjs self-test "$app/Contents/MacOS/Keyrook"
+          remove_and_verify
+          echo "::endgroup::"
+
+          if [ -n "$OLD_INSTALLER" ]; then
+            echo "::group::Replace $OLD_VERSION with $NEW_VERSION"
+            install_dmg "$OLD_INSTALLER"
+            install_dmg "$NEW_INSTALLER"
+            node scripts/installer-test.mjs self-test "$app/Contents/MacOS/Keyrook"
+            remove_and_verify
+            echo "::endgroup::"
+          fi
+
+  publish:
+    needs: [release-please, packages, installer-tests]
     if: needs.release-please.outputs.release_created == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 40

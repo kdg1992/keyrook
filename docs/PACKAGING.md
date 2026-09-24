@@ -165,9 +165,94 @@ This verifies the application image; it does not replace installation, upgrade,
 uninstall or operating-system session-lock tests. The diagnostic is covered by
 ordinary source tests and runs from each packaged launcher before publication.
 
+### Linux desktop menu registration
+
+jpackage's DEB and RPM scripts register the menu entry with `xdg-desktop-menu`.
+xdg-utils refuses with exit status 3 ("No writable system menu directory found")
+when neither `/usr/share/desktop-directories` nor
+`/usr/local/share/desktop-directories` exists, which is common on servers,
+containers, WSL and minimal window-manager installations. The DEB scripts run
+under `set -e`, so packages up to 0.5.0 stay half-configured on such systems and
+cannot be removed with `apt-get remove`. Compose passes its own jpackage resource
+directory, so the Linux DEB task rebuilds the finished package's control archive
+with the `postinst` registration and `prerm` removal made non-fatal: they print
+`keyrook: desktop menu entry not updated` instead. The payload member is copied
+unchanged and the build fails if jpackage's script lines change. Without the
+directory, the application is still installed and runs from
+`/opt/keyrook/bin/Keyrook`, but has no menu entry.
+
+The RPM is not rewritten. RPM treats a failing `%post` as a warning, but its
+`%preun` ends with the same menu removal, so on a system without the directory
+`dnf remove keyrook` can fail; `rpm -e --nopreun keyrook` removes it there.
+The Fedora installer test logs whether its image has the directory and whether
+the menu entry was registered; RPM installation without the directory is not
+tested separately.
+
+### Installer tests
+
+The `installer-tests` job runs after all packages are built, on the same three
+standard runners, for both manual and release runs. It reuses the uploaded
+`packages-<platform>` artifact (no rebuild), verifies each installer against the
+run's checksum manifest, and then, per format:
+
+| Format | Where | Fresh install | Upgrade | Removal |
+| --- | --- | --- | --- | --- |
+| DEB | Ubuntu runner, first without and then with `/usr/share/desktop-directories` | `apt-get install ./…deb`; `dpkg-query` shows one installed version; with the directory, the menu entry exists | old DEB, then new DEB over it, with the directory | `apt-get remove keyrook`; package no longer installed, install directory and menu entry gone |
+| RPM | `fedora:44` container, pinned by digest, new container per scenario | `dnf install /…rpm`; `rpm -q` shows exactly one version | old RPM, then new RPM over it | `dnf remove keyrook`; package gone, install directory gone |
+| MSI | Windows runner account | `msiexec /i … /qn`; exactly one `Keyrook` uninstall entry with the new version | old MSI, then new MSI (same upgrade code, major upgrade) | `msiexec /x … /qn`; entry gone, launcher gone, no files left in the install directory |
+| DMG | macOS runner | attach read-only with `-nobrowse`, copy `Keyrook.app` into a temporary Applications directory, compare with the image | old bundle replaced completely by the new one, as Finder's Replace does | bundle deleted |
+
+After each fresh install and each upgrade, the installed launcher runs
+`--self-test` against a new report file in a temporary directory and must write
+exactly `Keyrook runtime check passed`. The launcher path is taken from the
+package manager (`dpkg -L` / `rpm -ql`, normally `/opt/keyrook/bin/Keyrook`), from
+the `INSTALLDIR` property in the verbose MSI log (normally
+`%LOCALAPPDATA%\Keyrook\Keyrook.exe` for the per-user MSI), or from the copied
+bundle (`Keyrook.app/Contents/MacOS/Keyrook`). The self-test is headless and
+renders offscreen, so no display server is needed.
+
+The upgrade source is the highest published, non-draft, non-prerelease release
+whose version is strictly lower than the package under test and which ships an
+installer for the same platform, architecture and format together with
+`SHA256SUMS.txt`. The newest published release is normally the one being built,
+so it is skipped by this rule. The old installer is downloaded with
+`gh release download` using the read-only `GITHUB_TOKEN` and checked against that
+release's `SHA256SUMS.txt`. When no such release exists, the upgrade scenario is
+skipped with a workflow notice; the fresh-install scenario still runs. Verbose
+Windows Installer logs are uploaded only when the job fails and expire after
+seven days. A failing installer test blocks publication.
+
+These tests do not cover:
+
+- the interactive installer UI, the MSI directory chooser, Start menu and desktop
+  shortcuts, file associations, or launching the application in a real user
+  desktop session;
+- SmartScreen, Smart App Control, Gatekeeper, quarantine attributes and the
+  macOS "Open Anyway" flow: installers from the artifact and the release API carry
+  no download quarantine, and nothing is signed or notarized;
+- per-machine (administrator) Windows installation, installing as a standard user
+  without administrator rights, or installing for another account; the runner
+  account is an administrator with UAC prompts disabled;
+- DMG license acceptance by a person and drag-and-drop into `/Applications`;
+  macOS has no uninstaller, so removal is deleting the bundle, and data written to
+  `~/Library` is not removed by that;
+- whether the RPM's declared dependencies are complete: the Fedora container
+  first installs a desktop library baseline (Mesa GL, X11 client libraries,
+  FreeType, Fontconfig, DejaVu fonts) that a Fedora workstation normally has; the
+  declared requirements are printed for review. The DEB runs on a runner image
+  that already contains many desktop libraries;
+- other distributions or releases, ARM64 Linux, x64 macOS, and upgrades that skip
+  more than one version;
+- migration of user vaults and settings across versions, since the self-test uses
+  only synthetic in-memory data.
+
+The Fedora image digest is not updated by Dependabot; review and update it
+manually alongside other workflow pins.
+
 On `main` pushes, release-please maintains the version/changelog pull request.
-When it creates a release, the same workflow builds the installers. Build jobs
-have read-only permissions. Only after all builds succeed does a separate job
+When it creates a release, the same workflow builds the installers. Build and
+installer-test jobs have read-only permissions. Only after all builds and
+installer tests succeed does a separate job
 verify their checksums and upload the complete installer set, notice archives,
 `LICENSE`, `THIRD-PARTY-NOTICES`, and combined `SHA256SUMS.txt`. Temporary transfer
 artifacts expire after one day; permanent downloads are release assets. No code
