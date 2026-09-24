@@ -95,6 +95,8 @@ internal sealed interface ListConfirmation {
     data class Trash(val id: String, val title: String) : ListConfirmation
     data class Purge(val id: String, val title: String) : ListConfirmation
     data class EmptyTrash(val count: Int) : ListConfirmation
+    /** Moves the marked entries [ids] to the trash in one save. */
+    data class TrashMarked(val ids: Set<String>) : ListConfirmation
 }
 
 /**

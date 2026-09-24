@@ -49,7 +49,7 @@ The payload is a single strict UTF-8 JSON document serialized using kotlinx.seri
 
 IDs use canonical lowercase UUID strings. Revision is a nonnegative signed 64-bit number. Creation through `VaultStore` requires revision zero; updates must retain the vault ID and increment revision exactly once. File concurrency tokens are SHA-256 digests of the complete encrypted file, held in memory.
 
-Customers contain `id` and `name`. Projects additionally have optional `customerId`. Entries contain `id`, `title`, `data`, `createdAt`, `modifiedAt`, optional `customerId` and `projectId`, `tags`, `notes`, optional `expiresOn` and `deletedAt`, and `history`. Timestamps parse as `java.time.Instant`; expiry dates parse as `java.time.LocalDate`. Deletion is represented by `deletedAt`; deleted entries remain encrypted in the payload. History items contain `changedAt` and a prior `data` value.
+Customers contain `id` and `name`. Projects additionally have optional `customerId`. Entries contain `id`, `title`, `data`, `createdAt`, `modifiedAt`, optional `customerId` and `projectId`, `tags`, `notes`, optional `expiresOn` and `deletedAt`, and `history`. Timestamps parse as `java.time.Instant`; expiry dates parse as `java.time.LocalDate`. Deletion is represented by `deletedAt`; deleted entries remain encrypted in the payload. History items contain `changedAt` and a prior `data` value. The tag `keyrook:favorite` marks a favorite in the desktop application; for the format it is an ordinary tag with the same limits.
 
 `data.type` selects the variant:
 

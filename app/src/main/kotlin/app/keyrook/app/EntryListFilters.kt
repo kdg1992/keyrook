@@ -5,6 +5,7 @@ package app.keyrook.app
 import app.keyrook.core.model.Entry
 import app.keyrook.core.model.Project
 import app.keyrook.core.model.Vault
+import app.keyrook.core.model.favorite
 import app.keyrook.core.security.VaultHealth
 import java.time.Instant
 import java.time.LocalDate
@@ -26,6 +27,10 @@ internal data class EntryListFilters(
     val customerId: String? = null,
     val projectId: String? = null,
     val tag: String? = null,
+    /** Only entries marked as favorites (see [app.keyrook.core.model.ReservedTags.FAVORITE]). */
+    val favorites: Boolean = false,
+    /** Only recently used entries, most recent first instead of in [sort] order (see [RecentEntries]). */
+    val recent: Boolean = false,
     val expiry: ExpiryFilter = ExpiryFilter.ALL,
     val sort: EntrySort = EntrySort.TITLE,
 ) {
@@ -39,8 +44,12 @@ internal data class EntryListFilters(
         return available.copy(projectId = projectId?.takeIf { id -> available.projects(vault).any { it.id == id } })
     }
 
-    /** Uses metadata only; returned entries remain owned by the supplied vault snapshot. */
-    fun select(vault: Vault, matches: Set<String>, today: LocalDate): List<Entry> {
+    /**
+     * Uses metadata only; returned entries remain owned by the supplied vault snapshot. [recentIds] are the recently
+     * used entry IDs, newest first, for the [recent] filter.
+     */
+    fun select(vault: Vault, matches: Set<String>, today: LocalDate, recentIds: List<String> = emptyList()): List<Entry> {
+        val recency = recentIds.withIndex().associate { it.value to it.index }
         val owners = vault.projects.associate { it.id to it.customerId }
         val titleOrder = compareBy<Entry> { it.title.lowercase(Locale.ROOT) }.thenBy { it.title }.thenBy { it.id }
         val order = when (sort) {
@@ -53,12 +62,13 @@ internal data class EntryListFilters(
                 (type == null || entry.data.type() == type) &&
                 (customerId == null || (entry.customerId ?: owners[entry.projectId]) == customerId) &&
                 (projectId == null || entry.projectId == projectId) &&
-                (tag == null || tag in entry.tags) && when (expiry) {
+                (tag == null || tag in entry.tags) && (!favorites || entry.favorite) &&
+                (!recent || entry.id in recency) && when (expiry) {
                     ExpiryFilter.ALL -> true
                     ExpiryFilter.NONE -> entry.expiresOn == null
                     ExpiryFilter.EXPIRED -> entry.expiresOn?.let { LocalDate.parse(it) < today } == true
                     ExpiryFilter.UPCOMING -> entry.expiresOn?.let { LocalDate.parse(it) in today..today.plusDays(VaultHealth.EXPIRY_WARNING_DAYS) } == true
                 }
-        }.sortedWith(order)
+        }.sortedWith(if (recent) compareBy<Entry> { recency.getValue(it.id) } else order)
     }
 }

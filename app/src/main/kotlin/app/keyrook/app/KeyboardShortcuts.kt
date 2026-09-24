@@ -10,10 +10,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.unit.dp
 
-internal enum class ShortcutKey { L, N, F, S, C, B, U, E, T, ESCAPE, UP, DOWN, HOME, END, ENTER, DELETE, BACKSPACE, OTHER }
+internal enum class ShortcutKey { L, N, F, S, C, B, U, E, T, A, SPACE, ESCAPE, UP, DOWN, HOME, END, ENTER, DELETE, BACKSPACE, OTHER }
 internal enum class ShortcutAction {
     LOCK, NEW_ENTRY, SEARCH, SAVE, CANCEL, FOCUS_LIST, SELECT_PREVIOUS, SELECT_NEXT, SELECT_FIRST, SELECT_LAST,
-    COPY_PASSWORD, COPY_USERNAME, COPY_TOTP, OPEN_URL, EDIT_ENTRY, TRASH_ENTRY,
+    COPY_PASSWORD, COPY_USERNAME, COPY_TOTP, OPEN_URL, EDIT_ENTRY, TRASH_ENTRY, TOGGLE_MARK, MARK_ALL,
 }
 
 /**
@@ -39,6 +39,8 @@ internal fun shortcutKey(key: Key): ShortcutKey = when (key) {
     Key.U -> ShortcutKey.U
     Key.E -> ShortcutKey.E
     Key.T -> ShortcutKey.T
+    Key.A -> ShortcutKey.A
+    Key.Spacebar -> ShortcutKey.SPACE
     Key.Escape -> ShortcutKey.ESCAPE
     Key.DirectionUp -> ShortcutKey.UP
     Key.DirectionDown -> ShortcutKey.DOWN
@@ -72,6 +74,8 @@ internal fun keyboardShortcut(key: ShortcutKey, keyDown: Boolean, control: Boole
         ShortcutKey.T -> context.onSelectedEntry(ShortcutAction.COPY_TOTP)
         ShortcutKey.U -> context.onSelectedEntry(ShortcutAction.OPEN_URL)
         ShortcutKey.E -> context.onSelectedEntry(ShortcutAction.EDIT_ENTRY)
+        // Only with list focus, so Ctrl/⌘+A keeps selecting text in text fields.
+        ShortcutKey.A -> if (context.focus == ShortcutFocus.LIST && !context.editing) ShortcutAction.MARK_ALL else null
         else -> null
     }
 }
@@ -92,6 +96,8 @@ private fun unmodifiedShortcut(key: ShortcutKey, mac: Boolean, context: Shortcut
         ShortcutKey.DELETE -> context.onSelectedEntry(ShortcutAction.TRASH_ENTRY)
         // macOS keyboards label Backspace as "delete".
         ShortcutKey.BACKSPACE -> if (mac) context.onSelectedEntry(ShortcutAction.TRASH_ENTRY) else null
+        // Marking works in the trash too, for restoring several entries at once.
+        ShortcutKey.SPACE -> if (context.selection) ShortcutAction.TOGGLE_MARK else null
         else -> null
     }
 }
@@ -116,6 +122,8 @@ internal enum class ShortcutHelp(val actions: Set<ShortcutAction>, private val l
     COPY_TOTP(setOf(ShortcutAction.COPY_TOTP), "T", null, "shortcuts.copyTotp"),
     OPEN_URL(setOf(ShortcutAction.OPEN_URL), "U", null, "shortcuts.openUrl"),
     TRASH(setOf(ShortcutAction.TRASH_ENTRY), null, "shortcuts.key.delete", "shortcuts.trash"),
+    MARK(setOf(ShortcutAction.TOGGLE_MARK), null, "shortcuts.key.space", "shortcuts.mark"),
+    MARK_ALL(setOf(ShortcutAction.MARK_ALL), "A", null, "shortcuts.markAll"),
     SAVE(setOf(ShortcutAction.SAVE), "S", null, "shortcuts.save"),
     CANCEL(setOf(ShortcutAction.CANCEL), null, "shortcuts.key.escape", "shortcuts.cancel");
 

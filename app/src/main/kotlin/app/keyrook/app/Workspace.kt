@@ -42,13 +42,17 @@ internal fun Workspace(state: AppState, current: Vault, settings: SettingsStore,
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val entryList: @Composable (Boolean) -> Unit = { compact ->
             VaultList(current, controller, busy, shortcuts, mac, listView, { listView = it }, selection,
-                { selection = it }, warningsByEntry, compact, onCreate = { creating = true },
-                onEdit = { editing = it },
+                { selection = it }, warningsByEntry, compact, state.recent.of(current.id), onUsed = state::used,
+                onCreate = { creating = true },
+                onEdit = { state.used(it.id); editing = it },
                 onDuplicate = { entry -> operation { controller.duplicate(entry.id) } },
                 onTrash = { id -> operation { controller.trash(id, false) } },
                 onRestore = { id -> operation { controller.trash(id, true) } },
                 onPurge = { id -> operation { controller.purge(setOf(id)) } },
-                onEmptyTrash = { operation { controller.emptyTrash() } })
+                onEmptyTrash = { operation { controller.emptyTrash() } },
+                onBulkTrash = { ids, restore -> operation { controller.trashAll(ids, restore) } },
+                onBulkTag = { ids, tag, add -> operation { controller.tagAll(ids, tag, add) } },
+                onFavorite = { ids, favorite -> operation { controller.setFavorite(ids, favorite) } })
         }
         if (workspaceLayout(maxWidth.value) == WorkspaceLayout.LIST_DETAIL) {
             Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -58,7 +62,9 @@ internal fun Workspace(state: AppState, current: Vault, settings: SettingsStore,
                 Box(Modifier.fillMaxHeight().width(1.dp).background(MaterialTheme.colors.onSurface.copy(alpha = 0.12f)))
                 val selected = current.entries.firstOrNull { it.id == selection.selectedId }
                 EntryDetailPane(current, selected, selected?.let { warningsByEntry[it.id] }.orEmpty(), reveal, busy,
-                    onReveal = { reveal = it }, onEdit = { editing = it },
+                    onReveal = { reveal = it }, onEdit = { state.used(it.id); editing = it },
+                    onUsed = { state.used(it.id) },
+                    onFavorite = { entry -> operation { controller.setFavorite(setOf(entry.id), !entry.favorite) } },
                     modifier = Modifier.weight(0.55f).fillMaxHeight())
             }
         } else Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { entryList(false) }
@@ -73,9 +79,11 @@ internal fun Workspace(state: AppState, current: Vault, settings: SettingsStore,
 private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, shortcuts: ShortcutActions, mac: Boolean,
                       view: ListView, onView: (ListView) -> Unit, selectionState: EntrySelection,
                       onSelection: (EntrySelection) -> Unit, issues: Map<String, Set<HealthIssue>>, compact: Boolean,
-                      onCreate: () -> Unit, onEdit: (Entry) -> Unit,
+                      recent: List<String>, onUsed: (String) -> Unit, onCreate: () -> Unit, onEdit: (Entry) -> Unit,
                       onDuplicate: (Entry) -> Unit, onTrash: (String) -> Unit, onRestore: (String) -> Unit,
-                      onPurge: (String) -> Unit, onEmptyTrash: () -> Unit) {
+                      onPurge: (String) -> Unit, onEmptyTrash: () -> Unit,
+                      onBulkTrash: (Set<String>, Boolean) -> Unit, onBulkTag: (Set<String>, String, Boolean) -> Unit,
+                      onFavorite: (Set<String>, Boolean) -> Unit) {
     val search = view.search
     val includeHidden = view.includeHidden
     val activeFilters = view.filters.normalized(vault)
@@ -89,6 +97,8 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
     var help by remember { mutableStateOf(false) }
     var confirmation by remember { mutableStateOf<ListConfirmation?>(null) }
     var notice by remember { mutableStateOf("") }
+    // Open bulk tag dialog: true adds a tag to the marked entries, false removes one.
+    var bulkTag by remember { mutableStateOf<Boolean?>(null) }
     val trashCount = vault.entries.count { it.deletedAt != null }
     val latestNew by rememberUpdatedState({ if (!busy && !trash && confirmation == null) onCreate() })
     DisposableEffect(shortcuts) {
@@ -97,16 +107,17 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         onDispose { shortcuts.newEntry = null; shortcuts.search = null }
     }
     // The list takes the focus when shown and again after its dialogs close, so arrow keys work immediately.
-    val listIdle = confirmation == null && !help
+    val listIdle = confirmation == null && !help && bulkTag == null
     LaunchedEffect(listIdle) { if (listIdle) runCatching { listFocus.requestFocus() } }
     val today by produceState(java.time.LocalDate.now()) {
         while (true) { kotlinx.coroutines.delay(60_000); value = java.time.LocalDate.now() }
     }
-    val entries = activeFilters.select(vault, matches.orEmpty(), today)
+    val entries = activeFilters.select(vault, matches.orEmpty(), today, recent)
     val selection = selectionState.update(view.query(activeFilters), matches?.let { entries.map { it.id } })
     SideEffect { if (selectionState != selection) onSelection(selection) }
     val selectedEntry = entries.firstOrNull { it.id == selection.selectedId }
     fun quickAction(entry: Entry, kind: QuickField) {
+        if (entry.data.quickField(kind) != null) onUsed(entry.id)
         if (kind == QuickField.TOTP) { notice = EntryQuickActions.copyTotpNotice(entry.data); return }
         val field = entry.data.quickField(kind)?.takeIf { EntryQuickActions.available(it) }
         notice = when {
@@ -118,7 +129,7 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         }
     }
     fun shortcutContext(focus: ShortcutFocus) = ShortcutContext(unlocked = true, busy = busy, editing = false,
-        modal = confirmation != null || help, focus = focus, selection = selectedEntry != null, trash = trash)
+        modal = confirmation != null || help || bulkTag != null, focus = focus, selection = selectedEntry != null, trash = trash)
     fun handleListKey(event: KeyEvent): Boolean {
         val action = keyboardShortcut(event, mac, shortcutContext(ShortcutFocus.LIST)) ?: return false
         when (action) {
@@ -126,6 +137,16 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
             ShortcutAction.SELECT_NEXT -> onSelection(selection.next())
             ShortcutAction.SELECT_FIRST -> onSelection(selection.first())
             ShortcutAction.SELECT_LAST -> onSelection(selection.last())
+            ShortcutAction.MARK_ALL -> onSelection(selection.markAll())
+            // Delete acts on the marked entries when there are any, otherwise on the selected one.
+            ShortcutAction.TRASH_ENTRY -> {
+                val entry = selectedEntry
+                confirmation = when {
+                    selection.marked.isNotEmpty() -> ListConfirmation.TrashMarked(selection.markedIds.toSet())
+                    entry != null -> ListConfirmation.Trash(entry.id, entry.title)
+                    else -> return false
+                }
+            }
             else -> {
                 val entry = selectedEntry ?: return false
                 when (action) {
@@ -134,7 +155,7 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
                     ShortcutAction.COPY_TOTP -> quickAction(entry, QuickField.TOTP)
                     ShortcutAction.OPEN_URL -> quickAction(entry, QuickField.URL)
                     ShortcutAction.EDIT_ENTRY -> onEdit(entry)
-                    ShortcutAction.TRASH_ENTRY -> confirmation = ListConfirmation.Trash(entry.id, entry.title)
+                    ShortcutAction.TOGGLE_MARK -> onSelection(selection.toggleMark(entry.id))
                     else -> return false
                 }
             }
@@ -163,9 +184,13 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         searchField(Modifier.weight(1f))
         listButtons()
     }
-    Row {
+    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
         Checkbox(includeHidden, onCheckedChange = { onView(view.copy(includeHidden = it)) })
         Text(UiText.text("shell.hiddenSearch"))
+        Checkbox(activeFilters.favorites, onCheckedChange = { applyFilters(activeFilters.copy(favorites = it)) })
+        Text(UiText.text("filters.favorites"))
+        Checkbox(activeFilters.recent, onCheckedChange = { applyFilters(activeFilters.copy(recent = it)) })
+        Text(UiText.text("filters.recent"))
     }
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Choice(UiText.text("shell.type"), activeFilters.type?.name, EntryType.entries.map { it.name to it.label }) {
@@ -177,7 +202,8 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         Choice(UiText.text("shell.project"), activeFilters.projectId, activeFilters.projects(vault).map { it.id to it.name }) {
             applyFilters(activeFilters.copy(projectId = it))
         }
-        Choice(UiText.text("shell.tag"), activeFilters.tag, vault.entries.flatMap { it.tags }.distinct().sorted().map { it to it }) {
+        Choice(UiText.text("shell.tag"), activeFilters.tag,
+            vault.entries.flatMap { ReservedTags.visible(it.tags) }.distinct().sorted().map { it to it }) {
             applyFilters(activeFilters.copy(tag = it))
         }
     }
@@ -190,6 +216,10 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         }
         TextButton(onClick = { onView(ListView()) }) { Text(UiText.text("shell.reset")) }
     }
+    if (entries.isNotEmpty()) BulkBar(selection, entries, trash, busy, onSelection,
+        onTrash = { confirmation = ListConfirmation.TrashMarked(selection.markedIds.toSet()) },
+        onRestore = { onBulkTrash(selection.markedIds.toSet(), true) }, onTag = { bulkTag = it },
+        onFavorite = { onFavorite(selection.markedIds.toSet(), it) })
     if (notice.isNotEmpty()) Text(notice)
     if (matches == null) Text(UiText.text("shell.searching"))
     else if (entries.isEmpty()) Text(UiText.text("shell.noEntries"))
@@ -217,7 +247,9 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
                 onEdit = { onEdit(entry) }, onDuplicate = { onDuplicate(entry) }, onRestore = { onRestore(entry.id) },
                 onPurge = { confirmation = ListConfirmation.Purge(entry.id, entry.title) },
                 onTrash = { confirmation = ListConfirmation.Trash(entry.id, entry.title) },
-                markers = passwordMarkers(issues[entry.id].orEmpty()), compact = compact)
+                markers = passwordMarkers(issues[entry.id].orEmpty()), compact = compact,
+                marked = entry.id in selection.marked, onMark = { onSelection(selection.toggleMark(entry.id)) },
+                onFavorite = if (trash) null else ({ onFavorite(setOf(entry.id), !entry.favorite) }))
         }
     }
     if (help) AlertDialog(onDismissRequest = { help = false }, title = { Text(UiText.text("shortcuts.title")) },
@@ -228,6 +260,9 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         is ListConfirmation.Trash -> ConfirmationDialog(UiText.text("list.trashTitle"), UiText.text("list.trashBody", pending.title),
             UiText.text("list.trashConfirm"), busy, irreversible = false,
             onConfirm = { dismiss(); onTrash(pending.id) }, onDismiss = ::dismiss)
+        is ListConfirmation.TrashMarked -> ConfirmationDialog(UiText.text("list.trashTitle"),
+            UiText.text("bulk.trashBody", pending.ids.size), UiText.text("list.trashConfirm"), busy, irreversible = false,
+            onConfirm = { dismiss(); onBulkTrash(pending.ids, false) }, onDismiss = ::dismiss)
         is ListConfirmation.Purge -> ConfirmationDialog(UiText.text("list.purgeTitle"), UiText.text("list.purgeBody", pending.title),
             UiText.text("list.purgeConfirm"), busy, irreversible = true,
             onConfirm = { dismiss(); onPurge(pending.id) }, onDismiss = ::dismiss)
@@ -236,4 +271,69 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
             onConfirm = { dismiss(); onEmptyTrash() }, onDismiss = ::dismiss)
         null -> Unit
     }
+    bulkTag?.let { add ->
+        val ids = selection.markedIds.toSet()
+        BulkTagDialog(add, vault.entries.filter { it.id in ids }, busy, onDismiss = { bulkTag = null }) { tag ->
+            bulkTag = null
+            onBulkTag(ids, tag, add)
+        }
+    }
+}
+
+/** Count of marked entries and the actions for them; shown above the list while it has entries. */
+@Composable
+private fun BulkBar(selection: EntrySelection, entries: List<Entry>, trash: Boolean, busy: Boolean,
+                    onSelection: (EntrySelection) -> Unit, onTrash: () -> Unit, onRestore: () -> Unit,
+                    onTag: (Boolean) -> Unit, onFavorite: (Boolean) -> Unit) {
+    val count = selection.markedIds.size
+    val anyTag = entries.any { it.id in selection.marked && ReservedTags.visible(it.tags).isNotEmpty() }
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        TextButton(onClick = { onSelection(selection.markAll()) }) {
+            Text(UiText.text(if (count == entries.size) "bulk.clear" else "bulk.selectAll"))
+        }
+        if (count > 0) {
+            Text(UiText.text("bulk.count", count))
+            if (trash) TextButton(enabled = !busy, onClick = onRestore) { Text(UiText.text("bulk.restore")) }
+            else TextButton(enabled = !busy, onClick = onTrash) { Text(UiText.text("bulk.trash")) }
+            TextButton(enabled = !busy, onClick = { onTag(true) }) { Text(UiText.text("bulk.addTag")) }
+            TextButton(enabled = !busy && anyTag, onClick = { onTag(false) }) { Text(UiText.text("bulk.removeTag")) }
+            if (!trash) {
+                TextButton(enabled = !busy, onClick = { onFavorite(true) }) { Text(UiText.text("bulk.favorite")) }
+                TextButton(enabled = !busy, onClick = { onFavorite(false) }) { Text(UiText.text("bulk.unfavorite")) }
+            }
+            if (count < entries.size) TextButton(onClick = { onSelection(selection.clearMarks()) }) { Text(UiText.text("bulk.clear")) }
+        }
+    }
+}
+
+/** Asks for the tag to add, or offers the tags of the marked [entries] to remove. */
+@Composable
+private fun BulkTagDialog(add: Boolean, entries: List<Entry>, busy: Boolean, onDismiss: () -> Unit,
+                          onConfirm: (String) -> Unit) {
+    var text by remember { mutableStateOf("") }
+    var chosen by remember { mutableStateOf<String?>(null) }
+    val tags = entries.flatMap { ReservedTags.visible(it.tags) }.distinct().sorted()
+    val tag = if (add) text.trim() else chosen.orEmpty()
+    val error = bulkTagError(tag)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(UiText.text(if (add) "bulk.addTagTitle" else "bulk.removeTagTitle", entries.size)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (add) {
+                    OutlinedTextField(text, { if (it.length <= MAX_TAG_CHARS + 16) text = it }, enabled = !busy,
+                        label = { Text(UiText.text("shell.tag")) }, singleLine = true,
+                        isError = text.isNotEmpty() && error != null)
+                    if (text.isNotEmpty()) FieldError(error)
+                } else Choice(UiText.text("shell.tag"), chosen, tags.map { it to it }, !busy) { chosen = it }
+            }
+        },
+        confirmButton = {
+            Button(enabled = !busy && error == null, onClick = { onConfirm(tag) }) {
+                Text(UiText.text(if (add) "bulk.addTag" else "bulk.removeTag"))
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(UiText.text("common.cancel")) } },
+    )
 }

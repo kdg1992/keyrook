@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package app.keyrook.app
 
+import app.keyrook.core.model.ReservedTags
 import app.keyrook.core.model.Vault
 import java.nio.CharBuffer
 import java.util.Locale
@@ -22,7 +23,8 @@ internal object VaultSearch {
             val remaining = terms.toMutableSet()
             fun inspect(text: CharSequence) { remaining.removeAll { term -> text.contains(term, ignoreCase = true) } }
             inspect(entry.title)
-            entry.tags.forEach(::inspect)
+            // Reserved tags are hidden, so they neither match nor explain a match.
+            ReservedTags.visible(entry.tags).forEach(::inspect)
             customers[entry.customerId]?.let(::inspect)
             projects[entry.projectId]?.let(::inspect)
             entry.expiresOn?.let(::inspect)

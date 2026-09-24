@@ -84,4 +84,30 @@ class EntryListFiltersTest {
             assertEquals(listOf("one"), EntryListFilters(expiry = ExpiryFilter.UPCOMING, sort = sort).ids(vault))
         }
     }
+
+    @Test fun `favorites filter keeps only entries with the reserved tag in both lists`() {
+        Vault(entries = listOf(entry("plain", tags = listOf("favorite")), entry("star", tags = listOf(ReservedTags.FAVORITE)),
+            entry("both", tags = listOf("ops", ReservedTags.FAVORITE)), entry("gone", trash = true, tags = listOf(ReservedTags.FAVORITE))))
+            .use { vault ->
+                assertEquals(listOf("both", "star"), EntryListFilters(favorites = true).ids(vault))
+                assertEquals(listOf("both"), EntryListFilters(favorites = true, tag = "ops").ids(vault))
+                assertEquals(listOf("gone"), EntryListFilters(favorites = true, trash = true).ids(vault))
+                assertEquals(listOf("both", "plain", "star"), EntryListFilters().ids(vault))
+            }
+    }
+
+    @Test fun `recent filter keeps recently used entries newest first regardless of sort`() {
+        Vault(entries = listOf(entry("a"), entry("b"), entry("c"), entry("t", trash = true))).use { vault ->
+            val recent = listOf("c", "t", "a", "missing")
+            val all = vault.entries.map { it.id }.toSet()
+            listOf(EntrySort.TITLE, EntrySort.MODIFIED).forEach { sort ->
+                assertEquals(listOf("c", "a"),
+                    EntryListFilters(recent = true, sort = sort).select(vault, all, today, recent).map { it.id })
+            }
+            assertEquals(listOf("t"), EntryListFilters(recent = true, trash = true).select(vault, all, today, recent).map { it.id })
+            assertEquals(listOf("a"), EntryListFilters(recent = true).select(vault, setOf("a"), today, recent).map { it.id })
+            assertTrue(EntryListFilters(recent = true).ids(vault).isEmpty())
+            assertEquals(listOf("a", "b", "c"), EntryListFilters().select(vault, all, today, recent).map { it.id })
+        }
+    }
 }

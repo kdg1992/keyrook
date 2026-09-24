@@ -139,4 +139,18 @@ class InputValidationTest {
         assertEquals("Titel ist erforderlich.", InputError(InputProblem.TITLE_REQUIRED).message(Locale.GERMAN))
         assertEquals("A port is required (1–65535).", InputError(InputProblem.PORT_REQUIRED).message(Locale.ENGLISH))
     }
+
+    @Test fun `bulk tags must be non-blank short and free of commas`() {
+        assertNull(bulkTagError("ops"))
+        assertNull(bulkTagError("x".repeat(MAX_TAG_CHARS)))
+        assertEquals(InputProblem.TAG_REQUIRED, bulkTagError("")?.problem)
+        assertEquals(InputProblem.TAG_REQUIRED, bulkTagError("  ")?.problem)
+        assertEquals(InputError(InputProblem.TAG_TOO_LONG, MAX_TAG_CHARS), bulkTagError("x".repeat(MAX_TAG_CHARS + 1)))
+        assertEquals(InputProblem.TAG_COMMA, bulkTagError("a,b")?.problem)
+    }
+
+    @Test fun `bulk tags cannot name the reserved favorite tag`() {
+        assertEquals(InputProblem.TAG_RESERVED, bulkTagError(ReservedTags.FAVORITE)?.problem)
+        assertNull(bulkTagError("favorite"))
+    }
 }
