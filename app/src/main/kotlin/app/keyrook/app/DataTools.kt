@@ -136,7 +136,7 @@ private fun restoreBackup() {
 }
 
 private fun importData(controller: VaultController) {
-    val format = choose(UiText.text("transfer.importFormat"), arrayOf("Keyrook JSON", UiText.text("transfer.csvMapping"), "Bitwarden JSON", "KeePass XML")) ?: return
+    val format = choose(UiText.text("transfer.importFormat"), arrayOf("Keyrook JSON", UiText.text("transfer.csvMapping"), "KeePass CSV", "Bitwarden JSON", "KeePass XML")) ?: return
     val path = selectPath() ?: return
     val transfer = VaultTransfer()
     val bytes = readTransfer(path)
@@ -145,6 +145,10 @@ private fun importData(controller: VaultController) {
             "Keyrook JSON" -> transfer.importJson(bytes)
             "Bitwarden JSON" -> transfer.importBitwarden(bytes)
             "KeePass XML" -> transfer.importKeePassXml(bytes)
+            "KeePass CSV" -> try { transfer.importKeePassCsv(bytes) } catch (_: KeePassCsvHeaderException) {
+                inform(UiText.text("csv.keepassMismatch"))
+                return
+            }
             else -> {
                 importMappedCsv(bytes, selectMapping = { columns -> onEdt { askCsvMapping(columns) } }) ?: return
             }

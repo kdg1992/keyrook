@@ -27,6 +27,22 @@ class PlaintextConsent(acknowledgedExposure: Boolean, confirmedExport: Boolean) 
 data class CsvMapping(val title: String, val url: String? = null, val username: String? = null,
                       val password: String? = null, val notes: String? = null)
 
+/** Raised before any row is parsed when a file selected as KeePass CSV has other columns. */
+class KeePassCsvHeaderException : IllegalArgumentException("CSV header does not match a KeePass CSV export")
+
+/**
+ * Fixed KeePass CSV presets. The header must contain exactly these five columns (any order), so no
+ * additional exported column is silently dropped. Username and password are imported as hidden fields.
+ */
+enum class KeePassCsvLayout(val mapping: CsvMapping, internal val backslashEscapes: Boolean) {
+    /** "KeePass CSV (1.x)" export of KeePass 2.x and 1.x: all fields quoted, quotes as `\"`, backslashes as `\\`. */
+    KEEPASS_1X(CsvMapping("Account", "Web Site", "Login Name", "Password", "Comments"), true),
+    /** KeePass 2.x standard field names with ordinary CSV quoting (doubled quotes). */
+    KEEPASS_2X_FIELDS(CsvMapping("Title", "URL", "UserName", "Password", "Notes"), false);
+
+    val columns: Set<String> get() = setOf(mapping.title, mapping.url!!, mapping.username!!, mapping.password!!, mapping.notes!!)
+}
+
 /** All returned models/buffers are caller-owned. Input bytes are never retained or logged. */
 class VaultTransfer {
     private val json = Json { encodeDefaults = true; classDiscriminator = "type" }
@@ -64,22 +80,57 @@ class VaultTransfer {
             require(rows.size == 2 && rows[1].size == 1)
             val content = rows[1][0].toByteArray(Charsets.UTF_8)
             try { importJson(content) } finally { content.fill(0) }
-        } else {
-            val header = rows[0]
-            validateCsvHeader(header)
-            val selected = mapping ?: CsvMapping("Title", "URL", "UserName", "Password", "Notes")
-            listOfNotNull(selected.title, selected.url, selected.username, selected.password, selected.notes).forEach {
-                require(it in header)
-            }
-            buildVault { entries ->
-                for (row in rows.drop(1)) {
-                    require(row.size == header.size)
-                    fun value(column: String?) = if (column == null) "" else row[header.indexOf(column)]
-                    entries += web(value(selected.title), value(selected.url), value(selected.username),
-                        value(selected.password), value(selected.notes))
-                }
+        } else mappedCsv(rows, mapping ?: CsvMapping("Title", "URL", "UserName", "Password", "Notes"))
+    }
+
+    /** Uses the generic CSV parser with a fixed [KeePassCsvLayout]; the header is validated before any row. */
+    fun importKeePassCsv(bytes: ByteArray): Vault {
+        val header = csvColumns(bytes).toSet()
+        val layout = KeePassCsvLayout.entries.firstOrNull { it.columns == header } ?: throw KeePassCsvHeaderException()
+        return guarded {
+            val text = bounded(bytes).toString(Charsets.UTF_8).removePrefix("\uFEFF")
+            val rows = csv(if (layout.backslashEscapes) keePass1xEscapes(text) else text)
+            require(rows.isNotEmpty() && rows[0].toSet() == layout.columns)
+            mappedCsv(rows, layout.mapping)
+        }
+    }
+
+    private fun mappedCsv(rows: List<List<String>>, selected: CsvMapping): Vault {
+        val header = rows[0]
+        validateCsvHeader(header)
+        listOfNotNull(selected.title, selected.url, selected.username, selected.password, selected.notes).forEach {
+            require(it in header)
+        }
+        return buildVault { entries ->
+            for (row in rows.drop(1)) {
+                require(row.size == header.size)
+                fun value(column: String?) = if (column == null) "" else row[header.indexOf(column)]
+                entries += web(value(selected.title), value(selected.url), value(selected.username),
+                    value(selected.password), value(selected.notes))
             }
         }
+    }
+
+    /**
+     * KeePass 1.x CSV encodes `"` as `\"` and `\` as `\\` inside quoted fields. Rewriting these escapes to
+     * RFC 4180 lets the generic parser read the file; any other backslash sequence is refused.
+     */
+    private fun keePass1xEscapes(text: String): String {
+        val output = StringBuilder(text.length)
+        try {
+            var index = 0
+            while (index < text.length) {
+                val c = text[index++]
+                if (c != '\\') { output.append(c); continue }
+                require(index < text.length)
+                when (text[index++]) {
+                    '\\' -> output.append('\\')
+                    '"' -> output.append("\"\"")
+                    else -> throw InvalidImportException()
+                }
+            }
+            return output.toString()
+        } finally { for (i in output.indices) output.setCharAt(i, '\u0000') }
     }
 
     /** Only column names are returned; data rows are not retained for the mapping dialog. */
