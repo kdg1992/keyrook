@@ -39,9 +39,11 @@ Use a trusted local directory. The code refuses a symbolic-link vault leaf and c
 Desktop Argon2 settings use the core's automatic resource limits. Changing them
 uses the same atomic save and pre-save backup path, preserving the factors.
 Generating a key file uses `SecureRandom`, exclusive creation and private file
-permissions; the owned 32-byte buffer is erased on every exit path. Replacing or
-removing the key-file factor requires explicit confirmation alongside password
-replacement. No operation rewrites old backups with new factors or KDF settings.
+permissions; the owned 32-byte buffer is erased on every exit path. Its path is
+resolved like a vault file: a symbolic link among the parent directories is
+accepted, while a key file path that is itself a symbolic link is refused and never
+followed. Replacing or removing the key-file factor requires explicit confirmation
+alongside password replacement. No operation rewrites old backups with new factors or KDF settings.
 
 The desktop controller runs vault operations on a serial worker, keeping Argon2 and storage off the event thread. UI snapshots are independent and closed on replacement/lock. Locking immediately removes the document and unsaved editors from presentation state, closes its snapshot and clears the owned clipboard, even while work is running. It invalidates the operation generation and closes open application dialogs. Messages, questions and password prompts are drawn inside the main window; a worker waiting for an answer is released as if the user had canceled, and its generation is checked before a question is shown and again after it is answered, so an answer from before the lock is never used. A password confirmed too late is erased instead of delivered. Late results are closed instead of reopening the vault or changing the locked screen. Session cleanup is queued behind outstanding work; an atomic write already started is allowed to finish rather than being interrupted. Consequently locking can complete presentation cleanup before the worker has erased its credentials. Process termination, sleep suspension and power loss can still stop a worker at any point.
 

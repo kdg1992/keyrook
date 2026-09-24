@@ -192,11 +192,12 @@ internal fun readBackupFile(path: Path): ByteArray {
  * Resolves [path] the way [VaultStore] resolves vault files: parent directories are canonicalized, so a symbolic
  * link above the final component (for example macOS `/var` to `/private/var`) is accepted, while a final component
  * that is itself a symbolic link is refused and never followed. Missing parent directories raise [IOException].
+ * Backups, the integrity check and key-file generation share it so all user-selected paths behave alike.
  */
-internal fun resolveWithoutFinalLink(path: Path): Path {
+fun resolveWithoutFinalLink(path: Path): Path {
     val absolute = path.toAbsolutePath().normalize()
     val name = absolute.fileName ?: return absolute
     val resolved = absolute.parent.toRealPath().resolve(name)
-    if (Files.isSymbolicLink(resolved)) throw IOException("Symbolic links are not accepted for backups")
+    if (Files.isSymbolicLink(resolved)) throw IOException("Symbolic links are not accepted as the final path component")
     return resolved
 }

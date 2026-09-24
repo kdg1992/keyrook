@@ -145,7 +145,8 @@ invalid until it is fixed.
 Choose an existing `.keyrook` file to open, or a new file to create. Creation requires the master password twice. The optional key file must contain exactly 32 bytes and must be available again when unlocking. Existing files are never replaced during creation.
 
 **Schlüsseldatei erzeugen** writes 32 cryptographically random bytes to a new
-file with private permissions. Keep a separate safe copy; losing this factor
+file with private permissions. Like a vault file, it may be placed in a folder reached
+through a symbolic link, but the chosen file name must not be a link itself. Keep a separate safe copy; losing this factor
 makes the vault unrecoverable. Generating a file does not change an existing
 vault. **Passwort / Schlüsseldatei ändern** explicitly confirms replacement of
 the selected factors: select the existing key file to retain it, another file

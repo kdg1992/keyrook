@@ -5,6 +5,7 @@ package app.keyrook.core
 import app.keyrook.core.backup.BackupPolicy
 import app.keyrook.core.backup.BackupService
 import app.keyrook.core.backup.countManagedBackups
+import app.keyrook.core.backup.resolveWithoutFinalLink
 import app.keyrook.core.crypto.InvalidVaultException
 import app.keyrook.core.model.Vault
 import app.keyrook.core.service.VaultSession
@@ -169,6 +170,16 @@ class BackupTest {
                 assertEquals(1L, files.filter { it.toString().endsWith(".keyrook.bak") }.count())
             }
         }
+    }
+
+    @Test fun `path resolution follows linked parents but refuses a linked final component`() {
+        val real = Files.createDirectory(directory.toRealPath().resolve("real"))
+        val parent = directory.toRealPath().resolve("parent-link")
+        try { Files.createSymbolicLink(parent, real) } catch (_: Exception) { return }
+        assertEquals(real.resolve("new.key"), resolveWithoutFinalLink(parent.resolve("new.key")))
+        val finalLink = Files.createSymbolicLink(directory.toRealPath().resolve("final-link"), real.resolve("absent"))
+        assertThrows(IOException::class.java) { resolveWithoutFinalLink(finalLink) }
+        assertThrows(IOException::class.java) { resolveWithoutFinalLink(directory.resolve("missing").resolve("new.key")) }
     }
 
     @Test fun `counting managed backups ignores other files and never exceeds what rotation keeps`() {

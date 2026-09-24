@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package app.keyrook.app
 
+import app.keyrook.core.backup.resolveWithoutFinalLink
 import app.keyrook.core.crypto.KdfParameters
 import java.nio.file.Files
 import java.nio.file.LinkOption
@@ -19,12 +20,8 @@ internal fun parseKdfParameters(memoryKiB: String, iterations: String, paralleli
 /** Only the selected new key file receives the random factor; the working buffer is always erased. */
 internal fun generateKeyFile(target: Path) {
     ensureOperationCurrent()
-    val path = target.toAbsolutePath().normalize()
-    var part = path.root
-    for (component in path) {
-        part = part.resolve(component)
-        require(!Files.isSymbolicLink(part)) { "Key file path must not contain symbolic links" }
-    }
+    // Resolved like vault files: a linked parent directory is accepted, a link as the key file itself never.
+    val path = resolveWithoutFinalLink(target)
     require(Files.isDirectory(path.parent, LinkOption.NOFOLLOW_LINKS))
     val bytes = ByteArray(32)
     try {
