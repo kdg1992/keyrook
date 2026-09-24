@@ -1,0 +1,78 @@
+# SPDX-FileCopyrightText: 2026 Kim Daniel Geisthardt
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Bug report
+description: Report incorrect behavior in Keyrook.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never paste secrets, vault files, key files, backups, exports, real hostnames or credentials** in this issue. Issues are public. Reproduce the problem with a new vault and synthetic test data.
+
+        Suspected security vulnerabilities must be reported privately through the repository's **Security** tab (**Report a vulnerability**), not here.
+  - type: input
+    id: version
+    attributes:
+      label: Keyrook version
+      description: Shown in the Info dialog, or the release you installed.
+      placeholder: "0.6.0"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      description: Name, version and architecture.
+      placeholder: "Windows 11 x64, macOS 15 on Apple silicon, Ubuntu 24.04 x64"
+    validations:
+      required: true
+  - type: dropdown
+    id: installer
+    attributes:
+      label: Installer type
+      options:
+        - MSI (Windows)
+        - DMG (macOS)
+        - DEB (Linux)
+        - RPM (Linux)
+        - Built from source
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps starting from a new vault with synthetic data.
+      placeholder: |
+        1. Create a new vault
+        2. Add a web login with test values
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include error messages as text. Remove any real names, paths or values first.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Settings that may matter (language, window lock choice, backups), screenshots with synthetic data only.
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      options:
+        - label: This report contains no real secrets, vault files, hostnames or credentials.
+          required: true

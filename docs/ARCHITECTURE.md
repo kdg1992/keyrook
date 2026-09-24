@@ -31,6 +31,8 @@ Core packages, from bottom to top:
 | `backup` (`BackupService.kt`) | Ciphertext copies, rotation, authenticated preview, restore to a new file |
 | `service` (`VaultSession.kt`) | Owns the unlocked document and credentials; serializes create/open/save/lock |
 | `transfer`, `ssh`, `generator`, `security` | Import/export, SSH key handling, password generation, local warning list |
+| `otp` (`Totp.kt`) | RFC 6238 TOTP code generation from Base32 secrets and `otpauth://totp` URIs |
+| `settings` (`SettingsCodec.kt`, `WindowGeometry.kt`) | Parsing and bounds of the non-secret preferences file, including window placement; the file itself is read and written in `app` |
 | `update` (`ReleaseCheck.kt`) | Network-free validation of a release document and version comparison; the request itself is made in `app` (`UpdateCheck.kt`) |
 
 In `app`, `VaultController.kt` wraps one `VaultSession` and implements the

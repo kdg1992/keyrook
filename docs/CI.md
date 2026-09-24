@@ -35,14 +35,7 @@ The Dependabot configuration schedules Monday updates for Gradle and GitHub Acti
 
 ## Safe initial activation
 
-The initial repository has no dependency graph or active workflows. Introduce the setup in this order:
-
-1. Publish the core/build prerequisites and `ci/setup` through reviewed PRs. Verify all three build checks before continuing.
-2. Publish the graph-generation and upload workflows as the first `ci/security` change. After merging, run `Dependency submission` on `main` and verify the graph under **Insights → Dependency graph**.
-3. Add CodeQL and Dependency Review in a follow-up security PR. The privileged `workflow_run` uploader must already exist on the default branch for that PR's graph to be submitted. Do not bypass a failed dependency review to bootstrap its own uploader.
-4. Publish `ci/release` through a separate reviewed PR. The release workflow is permission-sensitive and requires maintainer approval before merging.
-
-All workflow files are ready for these separate changes; do not publish the security bootstrap and its dependent review gate as one first PR. There is no need to rewrite history or disable a required check.
+This section is historical. The workflows were activated through separate reviewed pull requests: build checks first, then dependency-graph generation and its privileged uploader, then CodeQL and Dependency Review, and finally the release workflow. The uploader had to exist on the default branch before the review gate could evaluate a PR's graph. Follow the same order when bootstrapping a fork or a new repository; never bypass a failed dependency review to activate its own uploader.
 
 ## Release process
 

@@ -1,8 +1,10 @@
 # Manual acceptance protocol for release 1.0
 
 This protocol covers what CI cannot verify: installing, upgrading and removing
-the unsigned installers, and the behavior of locking, clipboard handling and
-the update check on real desktops with real operating-system events. The
+the unsigned installers interactively as a user would (CI only runs them
+silently, see [installer tests](PACKAGING.md#installer-tests)), and the
+behavior of locking, clipboard handling and the update check on real desktops
+with real operating-system events. The
 maintainer runs it on physical or fully virtualized machines before release
 1.0 is approved. The coverage split between CI and this protocol is listed in
 [READINESS.md](READINESS.md#verification-coverage).

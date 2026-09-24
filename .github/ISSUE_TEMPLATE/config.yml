@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Kim Daniel Geisthardt
+# SPDX-License-Identifier: GPL-3.0-or-later
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/kdg1992/keyrook/security/advisories/new
+    about: Report vulnerabilities privately. Do not open a public issue.

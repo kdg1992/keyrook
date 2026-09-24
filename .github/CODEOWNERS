@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: 2026 Kim Daniel Geisthardt
+# SPDX-License-Identifier: GPL-3.0-or-later
+# The last matching pattern takes precedence. Sensitive paths are listed
+# explicitly so they keep an owner if the default rule changes.
+* @kdg1992
+/.github/workflows/ @kdg1992
+/licenses/ @kdg1992
+/core/src/main/kotlin/app/keyrook/core/crypto/ @kdg1992
+/core/src/main/kotlin/app/keyrook/core/format/ @kdg1992

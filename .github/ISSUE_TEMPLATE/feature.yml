@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: 2026 Kim Daniel Geisthardt
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Feature request
+description: Suggest a new feature or an improvement.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Keyrook is an offline credential vault. Features that add network services, synchronization or browser integration are outside version 1; see docs/ARCHITECTURE.md for the prepared extension points. Do not include real credentials or hostnames in examples.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and what makes it difficult today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How should Keyrook behave?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds or other approaches you have tried.
+    validations:
+      required: false
+  - type: textarea
+    id: security
+    attributes:
+      label: Security considerations
+      description: Does the feature handle secrets, write files, use the network or change locking or clipboard behavior?
+    validations:
+      required: false
