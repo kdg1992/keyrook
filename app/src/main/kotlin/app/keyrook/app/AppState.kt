@@ -76,7 +76,12 @@ internal class AppState {
         recent = recent.used(open.id, id)
     }
 
-    fun operation(action: () -> Vault?) {
+    /**
+     * Runs [action] on the vault worker and presents the vault it returns. [onSuccess] runs on the UI thread only when
+     * the action succeeded in the current session, so a dialog that starts an operation can stay open with its input
+     * when it fails. Nothing runs while another operation is busy.
+     */
+    fun operation(onSuccess: () -> Unit = {}, action: () -> Vault?) {
         if (busy) return
         busy = true
         message = ""
@@ -95,6 +100,7 @@ internal class AppState {
                         editing = null
                         creating = false
                         inactivity.activity()
+                        onSuccess()
                     } else {
                         // Only the reasons of refused checks are shown, never the messages of other exceptions.
                         message = failureMessage(result.exceptionOrNull())

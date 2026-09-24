@@ -206,6 +206,11 @@ class OrganizationManagementTest {
             controller.addCustomer(" " + "x".repeat(MAX_NAME_CHARS) + " ").close()
             controller.session.snapshot().use { assertEquals(3L, it.revision) }
         }
+        // The add buttons and Enter accept exactly the names the controller accepts.
+        assertTrue(validOrganizationName(" Kunde "))
+        assertTrue(validOrganizationName(" " + "x".repeat(MAX_NAME_CHARS) + " "))
+        assertFalse(validOrganizationName(" \t "))
+        assertFalse(validOrganizationName("x".repeat(MAX_NAME_CHARS + 1)))
     }
 
     @Test fun `refused organization changes name their reason and unknown failures stay generic`() {

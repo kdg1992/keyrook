@@ -5,13 +5,14 @@ package app.keyrook.app
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 
 @Composable
 internal fun Choice(label: String, value: String?, options: List<Pair<String, String>>, enabled: Boolean = true,
-                    nullable: Boolean = true, changed: (String?) -> Unit) {
+                    nullable: Boolean = true, modifier: Modifier = Modifier, changed: (String?) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Box {
-        TextButton(enabled = enabled, onClick = { expanded = true }) {
+        TextButton(enabled = enabled, onClick = { expanded = true }, modifier = modifier) {
             Text(UiText.text("choice.label", label, options.find { it.first == value }?.second ?: UiText.text("choice.none")))
         }
         DropdownMenu(expanded, onDismissRequest = { expanded = false }) {

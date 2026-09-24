@@ -39,8 +39,8 @@ internal fun Workspace(state: AppState, current: Vault, settings: SettingsStore,
     var organizer by state::organizer
     // The entry whose layout the save-as-template dialog is naming; null while it is closed.
     var templateSource by remember { mutableStateOf<Entry?>(null) }
-    fun operation(action: () -> Vault?) = state.operation(action)
-    AppToolbar(dataActions(controller, settings, dialogs, ::operation, settingsFailed = {
+    fun operation(onSuccess: () -> Unit = {}, action: () -> Vault?) = state.operation(onSuccess, action)
+    AppToolbar(dataActions(controller, settings, dialogs, { action -> operation(action = action) }, settingsFailed = {
         SwingUtilities.invokeLater { if (live.get()) message = UiText.text("settings.saveFailed") }
     }), busy, organizer, onOrganizer = { organizer = !organizer })
     if (organizer) OrganizationTools(current, controller, busy, ::operation, onClose = { organizer = false })
@@ -78,9 +78,9 @@ internal fun Workspace(state: AppState, current: Vault, settings: SettingsStore,
         } else Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { entryList(false) }
     }
     templateSource?.let { entry ->
+        // Closes only once the template is saved; a refused name keeps the dialog open with its input.
         SaveTemplateDialog(entry, busy, onDismiss = { templateSource = null }) { name ->
-            templateSource = null
-            operation { controller.saveTemplate(entry.id, name) }
+            operation(onSuccess = { templateSource = null }) { controller.saveTemplate(entry.id, name) }
         }
     }
 }
@@ -343,6 +343,7 @@ private fun BulkTagDialog(add: Boolean, entries: List<Entry>, busy: Boolean, onD
     val tags = entries.flatMap { ReservedTags.visible(it.tags) }.distinct().sorted()
     val tag = if (add) text.trim() else chosen.orEmpty()
     val error = bulkTagError(tag)
+    fun confirm() { if (!busy && error == null) onConfirm(tag) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(UiText.text(if (add) "bulk.addTagTitle" else "bulk.removeTagTitle", entries.size)) },
@@ -351,13 +352,15 @@ private fun BulkTagDialog(add: Boolean, entries: List<Entry>, busy: Boolean, onD
                 if (add) {
                     OutlinedTextField(text, { if (it.length <= MAX_TAG_CHARS + 16) text = it }, enabled = !busy,
                         label = { Text(UiText.text("shell.tag")) }, singleLine = true,
-                        isError = text.isNotEmpty() && error != null)
+                        isError = text.isNotEmpty() && error != null,
+                        modifier = Modifier.focusRequester(rememberInitialFocus()).submitOnEnter(::confirm))
                     if (text.isNotEmpty()) FieldError(error)
-                } else Choice(UiText.text("shell.tag"), chosen, tags.map { it to it }, !busy) { chosen = it }
+                } else Choice(UiText.text("shell.tag"), chosen, tags.map { it to it }, !busy,
+                    modifier = Modifier.focusRequester(rememberInitialFocus())) { chosen = it }
             }
         },
         confirmButton = {
-            Button(enabled = !busy && error == null, onClick = { onConfirm(tag) }) {
+            Button(enabled = !busy && error == null, onClick = ::confirm) {
                 Text(UiText.text(if (add) "bulk.addTag" else "bulk.removeTag"))
             }
         },
