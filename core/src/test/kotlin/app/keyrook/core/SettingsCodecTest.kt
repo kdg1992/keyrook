@@ -12,7 +12,7 @@ class SettingsCodecTest {
     @Test fun `settings round trip with an explicit version`() {
         val document = SettingsDocument(theme = "DARK", language = "ENGLISH", inactivityMinutes = 10, clipboardSeconds = 30,
             windowLock = "FOCUS_LOSS", lastVaultPath = "/vaults/a.keyrook",
-            backups = mapOf("/vaults/a.keyrook" to BackupSettingsDocument("/backups", 5, 7, true)))
+            backups = mapOf("/vaults/a.keyrook" to BackupSettingsDocument("/backups", 5, 7, true)), updateCheck = "ON_START")
         val bytes = SettingsCodec.encode(document)
         assertTrue(String(bytes, Charsets.UTF_8).contains("\"version\": ${SettingsCodec.VERSION}"))
         assertEquals(document, SettingsCodec.decode(bytes))
@@ -42,11 +42,12 @@ class SettingsCodecTest {
         assertEquals(expected, decoded)
         assertNull(decoded!!.language)
         assertNull(decoded.windowLock)
+        assertNull(decoded.updateCheck)
         assertEquals(expected, SettingsCodec.decode(SettingsCodec.encode(expected)))
     }
 
     @Test fun `corrupt unknown and oversized input is rejected without exceptions`() {
-        listOf("", "{", "null", "[]", "{\"version\":2}", "{\"version\":0}", "{\"theme\":1}", "{\"language\":1}", "{\"windowLock\":1}",
+        listOf("", "{", "null", "[]", "{\"version\":2}", "{\"version\":0}", "{\"theme\":1}", "{\"language\":1}", "{\"windowLock\":1}", "{\"updateCheck\":true}",
             "{\"unexpected\":true}", "{\"lastKeyFilePath\":\"/keys/a.key\"}", "{\"backups\":{\"/a\":{\"folder\":\"/b\"}}}").forEach {
             assertNull(SettingsCodec.decode(it.toByteArray()), it)
         }

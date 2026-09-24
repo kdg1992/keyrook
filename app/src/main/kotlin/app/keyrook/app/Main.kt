@@ -59,6 +59,7 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
     var creating by remember { mutableStateOf(false) }
     var locking by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
+    val updates = rememberUpdateChecks(settings)
     remember { runCatching { SecretClipboard.configure(settings.current().clipboardSeconds) } }
     var unlockDelay by remember { mutableStateOf(0L) }
     val inactivity = remember { InactivityDeadline() }
@@ -186,7 +187,9 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
                         }
                     }
                     Text(UiText.text("shell.settingsHint"))
+                    UpdateCheckSetting(preferences.checkUpdatesOnStart) { value -> updatePreferences { it.copy(checkUpdatesOnStart = value) } }
                 }
+                UpdateNotice(updates)
                 if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                 if (message.isNotEmpty()) Text(message, color = MaterialTheme.colors.error)
                 if (notice.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -238,8 +241,9 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
         }
         if (about) AlertDialog(onDismissRequest = { about = false }, title = { Text("Keyrook") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(UiText.text("shell.aboutBody", System.getProperty("keyrook.version", "dev")))
+                    UpdateCheckPanel(updates)
                     ShortcutHelpTable(mac)
                 }
             },
