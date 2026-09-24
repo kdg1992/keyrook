@@ -26,6 +26,9 @@ import java.util.UUID
 
 data class BackupPolicy(val latest: Int = 30, val daily: Int = 30) {
     init { require(latest in 1..1000 && daily in 0..3660) }
+
+    /** Upper bound of managed backups that survive a rotation: the latest versions plus one per retained day. */
+    val maximumKept: Int get() = latest + daily
 }
 
 /** The date is filesystem metadata, not an authenticated creation time. Counts include trash. */
@@ -142,6 +145,20 @@ class BackupService internal constructor(
 /** Group 1 is the file-system time in epoch milliseconds, group 2 the revision; neither is authenticated. */
 internal fun backupNamePattern(vaultId: String) =
     Regex("${Regex.escape(vaultId)}_([0-9]{1,19})_([0-9]{1,19})_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\.keyrook\\.bak")
+
+/**
+ * Number of regular files in [directory] that match this vault's managed backup naming pattern, i.e. the files
+ * that rotation may delete. Symbolic links and unrelated files are not counted. Throws [IOException] when the
+ * folder is missing, unreadable or itself a symbolic link. Nothing is created, written or decrypted.
+ */
+fun countManagedBackups(directory: Path, vaultId: String): Int {
+    val root = resolveWithoutFinalLink(directory)
+    if (!Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS)) throw IOException("Backup folder must exist")
+    val pattern = backupNamePattern(vaultId)
+    return Files.newDirectoryStream(root).use { stream ->
+        stream.count { pattern.matchEntire(it.fileName.toString()) != null && Files.isRegularFile(it, LinkOption.NOFOLLOW_LINKS) }
+    }
+}
 
 /** Reads a bounded regular file below canonical parent directories; a symbolic link as the file itself is refused. */
 internal fun readBackupFile(path: Path): ByteArray {

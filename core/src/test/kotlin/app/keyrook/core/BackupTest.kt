@@ -4,6 +4,7 @@ package app.keyrook.core
 
 import app.keyrook.core.backup.BackupPolicy
 import app.keyrook.core.backup.BackupService
+import app.keyrook.core.backup.countManagedBackups
 import app.keyrook.core.crypto.InvalidVaultException
 import app.keyrook.core.model.Vault
 import app.keyrook.core.service.VaultSession
@@ -166,6 +167,29 @@ class BackupTest {
             Files.list(real.resolve("backups")).use { files ->
                 assertEquals(1L, files.filter { it.toString().endsWith(".keyrook.bak") }.count())
             }
+        }
+    }
+
+    @Test fun `counting managed backups ignores other files and never exceeds what rotation keeps`() {
+        val root = folder()
+        Files.write(root.resolve("unrelated.keyrook.bak"), byteArrayOf(1, 2, 3))
+        credentials().use { c ->
+            val vault = Vault()
+            store.save(source, vault, c, parameters = testKdf)
+            assertEquals(0, countManagedBackups(root, vault.id))
+            val policy = BackupPolicy(latest = 2, daily = 1)
+            val paths = listOf("2026-01-01T12:00:00Z", "2026-01-02T12:00:00Z", "2026-01-02T13:00:00Z",
+                "2026-01-02T14:00:00Z").map { date ->
+                BackupService(root, policy, Clock.fixed(Instant.parse(date), ZoneOffset.UTC)).create(source, c).path
+            }
+            assertEquals(2, countManagedBackups(root, vault.id))
+            assertTrue(countManagedBackups(root, vault.id) <= policy.maximumKept)
+            assertEquals(0, countManagedBackups(root, "00000000-0000-0000-0000-000000000001"))
+            try {
+                Files.createSymbolicLink(root.resolve(paths[0].fileName.toString().replace("_0_", "_1_")), paths.last())
+                assertEquals(2, countManagedBackups(root, vault.id))
+            } catch (_: UnsupportedOperationException) {} catch (_: IOException) {}
+            assertThrows(IOException::class.java) { countManagedBackups(directory.toRealPath().resolve("missing"), vault.id) }
         }
     }
 

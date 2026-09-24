@@ -61,6 +61,55 @@ class BackupConfigurationTest {
         }
     }
 
+    @Test fun `remembered retention that would delete existing backups needs confirmation`() {
+        val folder = Path.of("backups").toAbsolutePath()
+        val enabled = StoredBackup(folder, BackupPolicy(2, 1), true)
+        val configuration = BackupConfiguration(folder, BackupPolicy(2, 1))
+        assertEquals(RememberedBackup.None, decideRememberedBackup(null, 5))
+        assertEquals(RememberedBackup.Unavailable, decideRememberedBackup(enabled, null))
+        assertEquals(RememberedBackup.Restore(configuration, 0), decideRememberedBackup(enabled, 0))
+        // Rotation keeps at most latest + daily files, so as many as that are left untouched by an unchanged policy.
+        assertEquals(RememberedBackup.Restore(configuration, 3), decideRememberedBackup(enabled, 3))
+        assertEquals(RememberedBackup.Confirm(configuration, 4), decideRememberedBackup(enabled, 4))
+        val tampered = StoredBackup(folder, BackupPolicy(1, 0), true)
+        assertEquals(RememberedBackup.Confirm(BackupConfiguration(folder, BackupPolicy(1, 0)), 60),
+            decideRememberedBackup(tampered, 60))
+        val disabled = enabled.copy(enabled = false)
+        assertEquals(RememberedBackup.Disabled(folder, 2), decideRememberedBackup(disabled, 2))
+        assertEquals(RememberedBackup.None, decideRememberedBackup(disabled, 0))
+        assertEquals(RememberedBackup.None, decideRememberedBackup(disabled, null))
+    }
+
+    @Test fun `declined destructive retention leaves backups unconfigured and files intact`() {
+        val root = directory.toRealPath()
+        val folder = Files.createDirectory(root.resolve("backups"))
+        val settings = SettingsStore(root.resolve("config"))
+        VaultController().use { controller ->
+            controller.unlock(root.resolve("test.keyrook"), "synthetic retention password".toCharArray(), null, true,
+                KdfParameters(iterations = 1)).close()
+            val vault = controller.vaultPath!!
+            assertTrue(applyBackupConfiguration(controller, BackupConfiguration(folder, BackupPolicy(5, 0)), settings))
+            repeat(4) { controller.session.snapshot().use { controller.session.save(it) } }
+            assertEquals(4L, backupCount(folder))
+            // Simulates a tampered settings file that shrinks retention.
+            assertTrue(settings.update { it.withBackup(vault, StoredBackup(folder, BackupPolicy(1, 0), true)) })
+            controller.lock()
+            controller.unlock(vault, "synthetic retention password".toCharArray(), null, false).close()
+            val asked = mutableListOf<String>()
+            val declined = restoreRememberedBackups(controller, settings) { asked += it; false }
+            assertEquals(BackupNotice(UiText.text("settings.backupRetentionDeclined"), true), declined)
+            assertEquals(listOf(UiText.text("settings.backupRetentionConfirm", folder.toString(), 1, 0, 4)), asked)
+            assertFalse(controller.session.backupStatus().configured)
+            controller.session.snapshot().use { controller.session.save(it) }
+            assertEquals(4L, backupCount(folder))
+            controller.lock()
+            controller.unlock(vault, "synthetic retention password".toCharArray(), null, false).close()
+            val accepted = restoreRememberedBackups(controller, settings) { true }
+            assertEquals(BackupNotice(UiText.text("settings.backupRestored", folder.toString(), 1, 0), false), accepted)
+            assertTrue(controller.session.backupStatus().configured)
+        }
+    }
+
     private fun withVault(root: Path, action: (VaultController) -> Unit) {
         VaultController().use { controller ->
             Secret("synthetic backup configuration password".toCharArray()).use { secret ->
