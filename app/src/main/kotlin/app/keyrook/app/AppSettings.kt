@@ -33,6 +33,8 @@ internal data class AppSettings(
     val backups: Map<String, StoredBackup> = emptyMap(),
     val language: AppLanguage = AppLanguage.SYSTEM,
     val windowLock: WindowLockPolicy = WindowLockPolicy.MINIMIZE,
+    /** Off unless the user enabled it; read once at start, so a change applies from the next start. */
+    val checkUpdatesOnStart: Boolean = false,
 ) {
     fun backupFor(vault: Path): StoredBackup? = backups[vaultKey(vault)]
 
@@ -48,10 +50,13 @@ internal data class AppSettings(
         backups = backups.mapValues { (_, value) ->
             BackupSettingsDocument(value.folder.toString(), value.policy.latest, value.policy.daily, value.enabled)
         },
+        updateCheck = if (checkUpdatesOnStart) UPDATE_CHECK_ON_START else UPDATE_CHECK_MANUAL,
     )
 
     companion object {
         const val MAX_BACKUP_VAULTS = 64
+        const val UPDATE_CHECK_ON_START = "ON_START"
+        const val UPDATE_CHECK_MANUAL = "MANUAL"
         private const val MAX_PATH_LENGTH = 4096
 
         /** Every value is checked against the UI's choices; anything else falls back to its default. */
@@ -71,6 +76,8 @@ internal data class AppSettings(
                 backups = backups,
                 language = AppLanguage.entries.find { it.name == document.language } ?: defaults.language,
                 windowLock = WindowLockPolicy.entries.find { it.name == document.windowLock } ?: defaults.windowLock,
+                // Only the exact enabling value turns automatic checks on; missing and unknown values keep them off.
+                checkUpdatesOnStart = document.updateCheck == UPDATE_CHECK_ON_START,
             )
         }
 

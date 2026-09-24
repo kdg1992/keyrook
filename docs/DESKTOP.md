@@ -240,7 +240,7 @@ heuristics; a password without a warning is not guaranteed strong.
 
 ## Locking and current boundaries
 
-Use **Sicherheit** (**Security** in English) to choose the appearance (follow system, light or dark), the language (follow system, German or English), the inactivity deadline (default five minutes), when the window locks and clipboard expiry (default 20 seconds). These preferences are saved and survive restarts.
+Use **Sicherheit** (**Security** in English) to choose the appearance (follow system, light or dark), the language (follow system, German or English), the inactivity deadline (default five minutes), when the window locks, clipboard expiry (default 20 seconds) and whether to check for updates on start (default off; see [Updates](#updates)). These preferences are saved and survive restarts.
 
 **Sperren, wenn das Fenster…** (**Lock when the window…**) controls locking on window events and applies immediately:
 
@@ -258,9 +258,34 @@ Failed unlock attempts produce increasing waiting periods, capped at 60 seconds.
 
 Do not treat the clipboard timer as protection against OS clipboard history. Native packaging and platform-specific end-to-end verification are separate from the local offscreen UI test.
 
+## Updates
+
+Keyrook never downloads or installs updates. To update manually, back up your
+vault, download the installer for your platform from the
+[release page](https://github.com/kdg1992/keyrook/releases), compare its SHA-256
+with `SHA256SUMS.txt` and install it over the existing version as described in
+[PACKAGING.md](PACKAGING.md#unsigned-installers). Vaults and `settings.json`
+are separate files and remain in place.
+
+**Nach Updates suchen** (**Check for updates**) in the **Info** (**About**)
+dialog asks `api.github.com` once for the latest published release and reports
+whether this version is up to date, whether a newer version is available (with
+its release notes as plain text and a **Release-Seite öffnen** button) or that
+the check failed. Development builds report that the check was skipped and
+send nothing. The release page opens in the system browser only after that
+click.
+
+Under **Sicherheit**, **Beim Start automatisch nach Updates suchen** (**Check
+for updates on start**) is off by default. When enabled, the same request is
+sent once from the next start on, in the background and independently of
+whether a vault is open; a notice appears only if a newer version exists and can
+be dismissed. Without a click or this option Keyrook makes no network request.
+The exact request and the reasons why automatic installation is intentionally
+absent are described in [SECURITY.md](SECURITY.md#update-check).
+
 ## Saved settings
 
-Keyrook stores non-secret preferences in `settings.json` in the platform configuration directory: `%APPDATA%\Keyrook` on Windows, `~/Library/Application Support/Keyrook` on macOS and `$XDG_CONFIG_HOME/keyrook` (or `~/.config/keyrook`) on Linux. The file contains the appearance, language, inactivity deadline, window lock choice, clipboard expiry, the last opened vault path and per-vault backup settings (folder, retention, enabled). The unlock form is pre-filled with the last vault path. Passwords, key-file paths, key-file contents and vault contents are never saved there, so an optional key file must be selected again. If the file cannot be written, a notice appears and the changed preference applies until the application exits. A damaged, unknown or out-of-range file or value falls back to defaults; delete the file to reset all preferences. See [SECURITY.md](SECURITY.md#saved-settings).
+Keyrook stores non-secret preferences in `settings.json` in the platform configuration directory: `%APPDATA%\Keyrook` on Windows, `~/Library/Application Support/Keyrook` on macOS and `$XDG_CONFIG_HOME/keyrook` (or `~/.config/keyrook`) on Linux. The file contains the appearance, language, inactivity deadline, window lock choice, clipboard expiry, whether updates are checked on start, the last opened vault path and per-vault backup settings (folder, retention, enabled). The unlock form is pre-filled with the last vault path. Passwords, key-file paths, key-file contents and vault contents are never saved there, so an optional key file must be selected again. If the file cannot be written, a notice appears and the changed preference applies until the application exits. A damaged, unknown or out-of-range file or value falls back to defaults; delete the file to reset all preferences. See [SECURITY.md](SECURITY.md#saved-settings).
 
 Desktop text uses German and English resource catalogs. The language choice
 applies immediately without restarting or locking; messages already shown stay
@@ -272,5 +297,6 @@ provided by the Java runtime and follow its default locale (normally the
 operating-system language), not the Keyrook language choice.
 
 Settings files written before the language preference existed load unchanged
-and use the system language. A settings file that contains the language is not
+and use the system language. Files written before the update-check option
+existed load with automatic update checks disabled. A settings file that contains the language is not
 readable by earlier builds, which then fall back to their defaults.

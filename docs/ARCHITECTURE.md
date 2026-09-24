@@ -31,6 +31,7 @@ Core packages, from bottom to top:
 | `backup` (`BackupService.kt`) | Ciphertext copies, rotation, authenticated preview, restore to a new file |
 | `service` (`VaultSession.kt`) | Owns the unlocked document and credentials; serializes create/open/save/lock |
 | `transfer`, `ssh`, `generator`, `security` | Import/export, SSH key handling, password generation, local warning list |
+| `update` (`ReleaseCheck.kt`) | Network-free validation of a release document and version comparison; the request itself is made in `app` (`UpdateCheck.kt`) |
 
 In `app`, `VaultController.kt` wraps one `VaultSession` and implements the
 document edits the UI offers (entries, trash, customers, projects). Some
@@ -133,7 +134,8 @@ are the part later extensions are expected to reuse.
 None of the following is implemented. Version 1 opens no network listener,
 starts no local server, registers no IPC endpoint or native messaging host and
 makes no outbound connection apart from explicit browser links opened through
-`Desktop.browse`. Each section names the intended integration point, the
+`Desktop.browse` and the opt-in update check (one HTTPS request to
+`api.github.com`, see [SECURITY.md](SECURITY.md#update-check)). Each section names the intended integration point, the
 boundary it must respect and what must not be done.
 
 ### Server synchronization and multi-user roles
