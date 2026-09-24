@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package app.keyrook.app
 
+import app.keyrook.core.model.Vault
+import app.keyrook.core.transfer.KeePassCsvHeaderException
+import app.keyrook.core.transfer.PlaintextConsent
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -89,5 +92,37 @@ class DataToolsTest {
         }
         assertEquals(2, buffers.size)
         assertTrue(buffers.all { bytes -> bytes.all { it == 0.toByte() } })
+    }
+
+    @Test fun `format choices select behavior by type in every label language`() {
+        try {
+            val mappedLabels = listOf(AppLanguage.GERMAN, AppLanguage.ENGLISH).map { language ->
+                UiText.select(language)
+                val importLabels = ImportFormat.entries.map { it.label }
+                assertEquals(importLabels.size, importLabels.toSet().size)
+                assertTrue(importLabels.all { it.isNotBlank() })
+                assertEquals(PlaintextFormat.entries.size, PlaintextFormat.entries.map { it.label }.toSet().size)
+                Vault().use { source ->
+                    val consent = PlaintextConsent(true, true)
+                    val json = exportTransfer(PlaintextFormat.JSON, source, consent)
+                    val csv = exportTransfer(PlaintextFormat.CSV, source, consent)
+                    assertTrue(String(csv, Charsets.UTF_8).startsWith("keyrook-json"))
+                    assertFalse(String(json, Charsets.UTF_8).startsWith("keyrook-json"))
+                    importTransfer(ImportFormat.KEYROOK_JSON, json, selectMapping = { fail("JSON needs no mapping") }, guard = {})!!
+                        .use { assertEquals(source.id, it.id) }
+                    importTransfer(ImportFormat.MAPPED_CSV, csv, selectMapping = { fail("Keyrook CSV needs no mapping") }, guard = {})!!
+                        .use { assertEquals(source.id, it.id) }
+                }
+                val keePass = "Title,UserName,Password,URL,Notes\nExample,user,synthetic-password,https://example.invalid,note\n".toByteArray()
+                importTransfer(ImportFormat.KEEPASS_CSV, keePass, selectMapping = { fail("KeePass CSV has a fixed layout") }, guard = {})!!
+                    .use { assertEquals("Example", it.entries.single().title) }
+                assertThrows(KeePassCsvHeaderException::class.java) {
+                    importTransfer(ImportFormat.KEEPASS_CSV, "Name,Secret\na,b\n".toByteArray(), selectMapping = { null }, guard = {})
+                }
+                assertNull(importTransfer(ImportFormat.MAPPED_CSV, "Name,Secret\na,b\n".toByteArray(), selectMapping = { null }, guard = {}))
+                ImportFormat.MAPPED_CSV.label
+            }
+            assertNotEquals(mappedLabels[0], mappedLabels[1])
+        } finally { UiText.select(AppLanguage.GERMAN) }
     }
 }

@@ -60,6 +60,46 @@ class AppSettingsTest {
         assertEquals(ThemeMode.LIGHT, memory.current().theme)
     }
 
+    @Test fun `language survives a restart and unknown languages fall back to the system choice`() {
+        val config = directory.toRealPath().resolve("config")
+        val store = SettingsStore(config)
+        assertEquals(AppLanguage.SYSTEM, store.current().language)
+        assertTrue(store.update { it.copy(language = AppLanguage.ENGLISH, theme = ThemeMode.DARK) })
+        assertTrue(Files.readString(config.resolve(SettingsStore.FILE_NAME)).contains("\"language\": \"ENGLISH\""))
+        assertEquals(AppLanguage.ENGLISH, SettingsStore(config).current().language)
+        assertEquals(ThemeMode.DARK, SettingsStore(config).current().theme)
+        assertTrue(store.update { it.copy(language = AppLanguage.GERMAN) })
+        assertEquals(AppLanguage.GERMAN, SettingsStore(config).current().language)
+        Files.writeString(config.resolve(SettingsStore.FILE_NAME), """{"version":1,"theme":"DARK","language":"KLINGON"}""")
+        assertEquals(AppSettings(theme = ThemeMode.DARK), SettingsStore(config).current())
+    }
+
+    @Test fun `settings files written before the language preference still load`() {
+        val root = directory.toRealPath()
+        val config = Files.createDirectory(root.resolve("config"))
+        val vault = root.resolve("a.keyrook")
+        val folder = Files.createDirectory(root.resolve("backups"))
+        fun json(path: Path) = path.toString().replace("\\", "\\\\")
+        Files.writeString(config.resolve(SettingsStore.FILE_NAME), """{
+            "version": 1,
+            "theme": "DARK",
+            "inactivityMinutes": 15,
+            "clipboardSeconds": 60,
+            "lastVaultPath": "${json(vault)}",
+            "backups": {
+                "${json(vault)}": {
+                    "folder": "${json(folder)}",
+                    "latest": 3,
+                    "daily": 4,
+                    "enabled": true
+                }
+            }
+        }""")
+        val loaded = SettingsStore(config).current()
+        assertEquals(AppSettings(ThemeMode.DARK, 15, 60, vault, mapOf(vaultKey(vault) to StoredBackup(folder, BackupPolicy(3, 4), true))), loaded)
+        assertEquals(AppLanguage.SYSTEM, loaded.language)
+    }
+
     @Test fun `corrupt unknown and out of range files fall back to defaults`() {
         val config = Files.createDirectory(directory.toRealPath().resolve("config"))
         val file = config.resolve(SettingsStore.FILE_NAME)

@@ -140,24 +140,47 @@ private fun restoreBackup() {
     }
 }
 
+/** Import choices are identified by type, never by their translated label. */
+internal enum class ImportFormat(private val labelKey: String) {
+    KEYROOK_JSON("transfer.format.keyrookJson"), MAPPED_CSV("transfer.csvMapping"), KEEPASS_CSV("transfer.format.keepassCsv"),
+    BITWARDEN_JSON("transfer.format.bitwardenJson"), KEEPASS_XML("transfer.format.keepassXml");
+    val label: String get() = UiText.text(labelKey)
+}
+
+internal enum class PlaintextFormat(private val labelKey: String) {
+    JSON("transfer.format.json"), CSV("transfer.format.csv");
+    val label: String get() = UiText.text(labelKey)
+}
+
+/**
+ * Returns null when the CSV mapping is canceled. KeePass CSV files with other columns raise [KeePassCsvHeaderException].
+ * The mapped CSV path erases [bytes] early; the caller still erases them afterwards on every path.
+ */
+internal fun importTransfer(format: ImportFormat, bytes: ByteArray, selectMapping: (List<String>) -> CsvMapping?,
+                            guard: () -> Unit = capturedOperationGuard(), transfer: VaultTransfer = VaultTransfer()): Vault? =
+    when (format) {
+        ImportFormat.KEYROOK_JSON -> transfer.importJson(bytes)
+        ImportFormat.BITWARDEN_JSON -> transfer.importBitwarden(bytes)
+        ImportFormat.KEEPASS_XML -> transfer.importKeePassXml(bytes)
+        ImportFormat.KEEPASS_CSV -> transfer.importKeePassCsv(bytes)
+        ImportFormat.MAPPED_CSV -> importMappedCsv(bytes, guard, selectMapping)
+    }
+
+internal fun exportTransfer(format: PlaintextFormat, vault: Vault, consent: PlaintextConsent,
+                            transfer: VaultTransfer = VaultTransfer()): ByteArray = when (format) {
+    PlaintextFormat.JSON -> transfer.exportJson(vault, consent)
+    PlaintextFormat.CSV -> transfer.exportCsv(vault, consent)
+}
+
 private fun importData(controller: VaultController) {
-    val format = choose(UiText.text("transfer.importFormat"), arrayOf("Keyrook JSON", UiText.text("transfer.csvMapping"), "KeePass CSV", "Bitwarden JSON", "KeePass XML")) ?: return
+    val format = choose(UiText.text("transfer.importFormat"), ImportFormat.entries, ImportFormat::label) ?: return
     val path = selectPath() ?: return
-    val transfer = VaultTransfer()
     val bytes = readTransfer(path)
     val imported = try {
-        when (format) {
-            "Keyrook JSON" -> transfer.importJson(bytes)
-            "Bitwarden JSON" -> transfer.importBitwarden(bytes)
-            "KeePass XML" -> transfer.importKeePassXml(bytes)
-            "KeePass CSV" -> try { transfer.importKeePassCsv(bytes) } catch (_: KeePassCsvHeaderException) {
-                inform(UiText.text("csv.keepassMismatch"))
-                return
-            }
-            else -> {
-                importMappedCsv(bytes, selectMapping = { columns -> onEdt { askCsvMapping(columns) } }) ?: return
-            }
-        }
+        importTransfer(format, bytes, selectMapping = { columns -> onEdt { askCsvMapping(columns) } }) ?: return
+    } catch (_: KeePassCsvHeaderException) {
+        inform(UiText.text("csv.keepassMismatch"))
+        return
     } finally { bytes.fill(0) }
     imported.use {
         if (!confirm(UiText.text("transfer.importConfirm", it.entries.size))) return
@@ -173,13 +196,12 @@ private fun importData(controller: VaultController) {
 
 private fun exportPlaintext(controller: VaultController) {
     if (!confirm(UiText.text("transfer.plainWarning"))) return
-    val format = choose(UiText.text("transfer.plainFormat"), arrayOf("JSON", "CSV")) ?: return
+    val format = choose(UiText.text("transfer.plainFormat"), PlaintextFormat.entries, PlaintextFormat::label) ?: return
     val target = selectPath(save = true) ?: return
     if (!confirm(UiText.text("transfer.plainConfirm"))) return
     controller.session.snapshot().use { vault ->
-        val transfer = VaultTransfer()
         val consent = PlaintextConsent(true, true)
-        val bytes = if (format == "JSON") transfer.exportJson(vault, consent) else transfer.exportCsv(vault, consent)
+        val bytes = exportTransfer(format, vault, consent)
         try { writePrivateNew(target, bytes) } finally { bytes.fill(0) }
     }
     inform(UiText.text("transfer.plainDone"))
@@ -301,8 +323,14 @@ private fun showReport(title: String, text: String) = onEdt {
     }
     JOptionPane.showMessageDialog(null, JScrollPane(area), title, JOptionPane.INFORMATION_MESSAGE)
 }
-private fun choose(title: String, values: Array<String>): String? = onEdt {
-    JOptionPane.showInputDialog(null, title, "Keyrook", JOptionPane.QUESTION_MESSAGE, null, values, values[0]) as? String
+private class LabeledChoice<T>(val value: T, private val label: String) { override fun toString() = label }
+
+/** The dialog shows catalog labels; the selection is mapped back by identity, so labels never act as keys. */
+private fun <T : Any> choose(title: String, values: List<T>, label: (T) -> String): T? = onEdt {
+    val options = values.map { LabeledChoice(it, label(it)) }
+    val selected = JOptionPane.showInputDialog(null, title, "Keyrook", JOptionPane.QUESTION_MESSAGE, null,
+        options.toTypedArray<Any>(), options[0])
+    options.firstOrNull { it === selected }?.value
 }
 private fun <T> onEdt(action: () -> T): T {
     val guard = capturedOperationGuard()

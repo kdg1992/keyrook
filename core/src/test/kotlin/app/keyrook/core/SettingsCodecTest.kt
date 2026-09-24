@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test
 
 class SettingsCodecTest {
     @Test fun `settings round trip with an explicit version`() {
-        val document = SettingsDocument(theme = "DARK", inactivityMinutes = 10, clipboardSeconds = 30,
+        val document = SettingsDocument(theme = "DARK", language = "ENGLISH", inactivityMinutes = 10, clipboardSeconds = 30,
             lastVaultPath = "/vaults/a.keyrook",
             backups = mapOf("/vaults/a.keyrook" to BackupSettingsDocument("/backups", 5, 7, true)))
         val bytes = SettingsCodec.encode(document)
@@ -19,8 +19,33 @@ class SettingsCodecTest {
         assertEquals(SettingsDocument(), SettingsCodec.decode("{}".toByteArray()))
     }
 
+    @Test fun `settings written before the language preference still decode`() {
+        val written = """{
+            "version": 1,
+            "theme": "DARK",
+            "inactivityMinutes": 10,
+            "clipboardSeconds": 30,
+            "lastVaultPath": "/vaults/a.keyrook",
+            "backups": {
+                "/vaults/a.keyrook": {
+                    "folder": "/backups",
+                    "latest": 5,
+                    "daily": 7,
+                    "enabled": true
+                }
+            }
+        }"""
+        val expected = SettingsDocument(theme = "DARK", inactivityMinutes = 10, clipboardSeconds = 30,
+            lastVaultPath = "/vaults/a.keyrook",
+            backups = mapOf("/vaults/a.keyrook" to BackupSettingsDocument("/backups", 5, 7, true)))
+        val decoded = SettingsCodec.decode(written.toByteArray())
+        assertEquals(expected, decoded)
+        assertNull(decoded!!.language)
+        assertEquals(expected, SettingsCodec.decode(SettingsCodec.encode(expected)))
+    }
+
     @Test fun `corrupt unknown and oversized input is rejected without exceptions`() {
-        listOf("", "{", "null", "[]", "{\"version\":2}", "{\"version\":0}", "{\"theme\":1}",
+        listOf("", "{", "null", "[]", "{\"version\":2}", "{\"version\":0}", "{\"theme\":1}", "{\"language\":1}",
             "{\"unexpected\":true}", "{\"lastKeyFilePath\":\"/keys/a.key\"}", "{\"backups\":{\"/a\":{\"folder\":\"/b\"}}}").forEach {
             assertNull(SettingsCodec.decode(it.toByteArray()), it)
         }

@@ -4,10 +4,11 @@ package app.keyrook.app
 
 import app.keyrook.core.model.Vault
 import java.nio.CharBuffer
+import java.util.Locale
 
 /** Searches current values without creating a plaintext index or immutable copies of secret fields. */
 internal object VaultSearch {
-    fun find(vault: Vault, query: String, includeHidden: Boolean = false,
+    fun find(vault: Vault, query: String, includeHidden: Boolean = false, locale: Locale = UiText.locale,
              cancelled: () -> Boolean = { false }): Set<String> {
         require(query.length <= 256)
         val terms = query.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
@@ -25,8 +26,8 @@ internal object VaultSearch {
             customers[entry.customerId]?.let(::inspect)
             projects[entry.projectId]?.let(::inspect)
             entry.expiresOn?.let(::inspect)
-            inspect(entry.data.type().label)
-            entry.data.labels().forEach(::inspect)
+            inspect(entry.data.type().label(locale))
+            entry.data.labels(locale).forEach(::inspect)
             if (remaining.isNotEmpty()) entry.notes.useChars { inspect(CharBuffer.wrap(it)) }
             for (field in entry.data.fields()) {
                 if (cancelled()) return emptySet()

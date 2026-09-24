@@ -12,7 +12,7 @@ enum class EntryType(private val key: String) {
     WEB("web"), TRANSFER("transfer"), EMAIL("email"), PANEL("panel"),
     SERVER("server"), SSH("ssh"), DOMAIN("domain"), CUSTOM("custom");
 
-    val label: String get() = label(Locale.GERMAN)
+    val label: String get() = label(UiText.locale)
     fun label(locale: Locale): String = UiText.localized(locale, "entry.type.$key")
 }
 
@@ -42,7 +42,7 @@ fun blankData(type: EntryType): EntryData {
     }
 }
 
-fun EntryData.labels(locale: Locale = Locale.GERMAN): List<String> = when (this) {
+fun EntryData.labels(locale: Locale = UiText.locale): List<String> = when (this) {
     is EntryData.Web -> listOf(UiText.localized(locale, "field.url"), UiText.localized(locale, "field.username"), UiText.localized(locale, "field.password")) + if (totp != null) listOf(UiText.localized(locale, "field.totp")) else emptyList()
     is EntryData.Transfer -> listOf(UiText.localized(locale, "field.host"), UiText.localized(locale, "field.username"), UiText.localized(locale, "field.password"), UiText.localized(locale, "field.directory"))
     is EntryData.Email -> listOf(UiText.localized(locale, "field.address"), UiText.localized(locale, "field.username"), UiText.localized(locale, "field.password")) +

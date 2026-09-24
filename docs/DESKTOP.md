@@ -1,6 +1,6 @@
 # Desktop usage
 
-Run `./gradlew :app:run` with JDK 25. The interface is German and supports light/dark themes; by default it follows the operating system. Use test data while the application remains a development build.
+Run `./gradlew :app:run` with JDK 25. The interface is available in German and English and supports light/dark themes; by default both follow the operating system (German for a German system language, English otherwise). Use test data while the application remains a development build.
 
 ## Keyboard navigation
 
@@ -159,7 +159,7 @@ heuristics; a password without a warning is not guaranteed strong.
 
 ## Locking and current boundaries
 
-Use **Sicherheit** to choose the appearance (follow system, light or dark), the inactivity deadline (default five minutes) and clipboard expiry (default 20 seconds). These preferences are saved and survive restarts. Switching to another application or minimizing Keyrook also locks it. Supported operating-system session/sleep notifications trigger locking; notification coverage varies by platform. The application additionally uses its own inactivity timer. See [SECURITY.md](SECURITY.md) for the limits of OS-event detection.
+Use **Sicherheit** (**Security** in English) to choose the appearance (follow system, light or dark), the language (follow system, German or English), the inactivity deadline (default five minutes) and clipboard expiry (default 20 seconds). These preferences are saved and survive restarts. Switching to another application or minimizing Keyrook also locks it. Supported operating-system session/sleep notifications trigger locking; notification coverage varies by platform. The application additionally uses its own inactivity timer. See [SECURITY.md](SECURITY.md) for the limits of OS-event detection.
 
 **Sperren** remains available during vault operations. Locking discards unsaved edits, clears the displayed snapshot and owned clipboard, and closes open application dialogs. Already-started atomic writes finish before the worker clears session credentials. Results from before the lock cannot reopen the display. Reopen the vault to check the saved state if locking happened during a save.
 
@@ -169,8 +169,17 @@ Do not treat the clipboard timer as protection against OS clipboard history. Nat
 
 ## Saved settings
 
-Keyrook stores non-secret preferences in `settings.json` in the platform configuration directory: `%APPDATA%\Keyrook` on Windows, `~/Library/Application Support/Keyrook` on macOS and `$XDG_CONFIG_HOME/keyrook` (or `~/.config/keyrook`) on Linux. The file contains the appearance, inactivity deadline, clipboard expiry, the last opened vault path and per-vault backup settings (folder, retention, enabled). The unlock form is pre-filled with the last vault path. Passwords, key-file paths, key-file contents and vault contents are never saved there, so an optional key file must be selected again. If the file cannot be written, a notice appears and the changed preference applies until the application exits. A damaged, unknown or out-of-range file or value falls back to defaults; delete the file to reset all preferences. See [SECURITY.md](SECURITY.md#saved-settings).
+Keyrook stores non-secret preferences in `settings.json` in the platform configuration directory: `%APPDATA%\Keyrook` on Windows, `~/Library/Application Support/Keyrook` on macOS and `$XDG_CONFIG_HOME/keyrook` (or `~/.config/keyrook`) on Linux. The file contains the appearance, language, inactivity deadline, clipboard expiry, the last opened vault path and per-vault backup settings (folder, retention, enabled). The unlock form is pre-filled with the last vault path. Passwords, key-file paths, key-file contents and vault contents are never saved there, so an optional key file must be selected again. If the file cannot be written, a notice appears and the changed preference applies until the application exits. A damaged, unknown or out-of-range file or value falls back to defaults; delete the file to reset all preferences. See [SECURITY.md](SECURITY.md#saved-settings).
 
-Desktop text uses German and English resource catalogs. German remains the
-product language; a language selector is not yet exposed. User-supplied names,
-custom field identifiers and persisted data are not translated.
+Desktop text uses German and English resource catalogs. The language choice
+applies immediately without restarting or locking; messages already shown stay
+in the language they were created in. User-supplied names, custom field
+identifiers and persisted data are not translated, and protocol and file-format
+names such as SSH, SFTP, IMAP, JSON or KeePass CSV stay as they are. The buttons
+of standard system dialogs (file chooser, confirmation and input dialogs) are
+provided by the Java runtime and follow its default locale (normally the
+operating-system language), not the Keyrook language choice.
+
+Settings files written before the language preference existed load unchanged
+and use the system language. A settings file that contains the language is not
+readable by earlier builds, which then fall back to their defaults.
