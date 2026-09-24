@@ -214,7 +214,7 @@ an existing one.
 
 Full-text search includes current titles, tags, notes, field names and visible values, customer/project names and expiry dates. Space-separated terms must all match the same record, without case sensitivity. **Verborgene Felder durchsuchen** explicitly includes hidden current values; matching values are never exposed in result rows. History is excluded. Searches run in the background over an independently owned snapshot, are canceled when replaced or locked, and do not create a persistent plaintext index. Queries are limited to 256 characters.
 
-Filter the list by type, customer, project, tag and expiry, and with **Nur Favoriten** (**Favorites only**) to [favorites](#favorites). Expiry options separate past dates, today through the next 30 days (inclusive), and records without an expiry date. Sort by title, latest modification or earliest expiry; undated records appear last in expiry order. Customer selection limits compatible projects. **Filter zurücksetzen** restores the active list, title order and default filters, and clears the search and hidden-field search option.
+Filter the list by type, customer, project, tag and expiry, with **Nur Favoriten** (**Favorites only**) to [favorites](#favorites), and with **Zuletzt verwendet (diese Sitzung)** (**Recently used (this session)**) to [recently used entries](#recently-used-entries). Expiry options separate past dates, today through the next 30 days (inclusive), and records without an expiry date. Sort by title, latest modification or earliest expiry; undated records appear last in expiry order. Customer selection limits compatible projects. **Filter zurücksetzen** restores the active list, title order and default filters, and clears the search and hidden-field search option.
 
 The password generator supports 12–256 characters and selectable character classes. It uses `SecureRandom` with rejection sampling, so each selected class occurs at least once and every such password is equally likely. Three presets are offered: **Standard** (all symbols `!@#$%^&*()-_=+[]{}:,.?`, 12–256 characters), **Shell/FTP-sicher** (**Shell/FTP-safe**; symbols limited to `-`, `_` and `.`, so quotes, backslash, `$`, backtick, `!`, `&`, `;`, `|`, `<`, `>`, brackets and braces, `*`, `?`, `~`, `#`, `%`, space, `=`, `+`, `/`, `:`, `@`, `,` and `^` never occur and the password can be pasted into shells, URLs, FTP/SFTP clients and configuration files without quoting) and **Max. 16 Zeichen** (**Max 16 characters**; all symbols, 12–16 characters, for legacy panels that truncate or reject longer passwords). Switching to a preset whose maximum is below the entered length sets the length to that maximum; longer lengths are refused rather than cut. **Keine verwechselbaren Zeichen** (**No ambiguous characters**) combines with every preset and leaves out `0 O o 1 l I | 5 S 2 Z 8 B`, which reduces the character set and therefore the strength per character; choose a longer length where the target allows it. The last successfully used preset, length, character classes and ambiguity choice are remembered in the settings file. Passphrase generation accepts a user-supplied reviewed UTF-8 wordlist, optionally with a BOM, up to 6.5 MB. It must contain 1024–65536 distinct letter-only words of 2–32 characters, one per line; surrounding whitespace and blank lines are ignored. Choose hyphens or spaces between generated words. The chosen word count must provide at least 60 bits of selection entropy: at least six words for lists below 4096 words, otherwise at least five. Invalid lists and insufficient word counts have separate messages. No small demonstration wordlist is bundled. After a passphrase was generated from a chosen list, its path, the word count and the separator are remembered in the settings file, and **Passphrase mit gespeicherter Wortliste erzeugen** (**Generate passphrase with remembered word list**) reads and checks the list again with the same rules and limits; the full path is shown above it. The list content is never stored. If the remembered file is missing, a symbolic link or larger than 6.5 MB at start, the generator silently offers the normal file selection instead; if it fails the checks when used, a short notice asks for a word list and the path is forgotten. **Wortliste vergessen** (**Forget word list**) removes the path.
 
@@ -329,6 +329,21 @@ favorite. Bitwarden favorites are imported as the ordinary tag `favorite`; to
 turn them into Keyrook favorites, filter by that tag, select all and use **Als
 Favoriten markieren**. CSV imports with a column mapping and KeePass CSV import
 no tags.
+
+### Recently used entries
+
+**Zuletzt verwendet (diese Sitzung)** (**Recently used (this session)**) above
+the list shows the up to ten entries most recently used in this session, the
+latest first, instead of the chosen sort order. An entry counts as used when it
+is opened in the editor (**Bearbeiten**, Enter, Ctrl/⌘ + E), when one of its
+values is copied from the list, the detail view or a shortcut (including the
+TOTP code), and when its link is opened. Using an entry again moves it to the
+front without listing it twice. The other filters and the search still apply,
+so the trash view shows recently used trashed entries.
+
+The list is kept in memory only: it is never saved, locking empties it, and it
+is not carried over to another vault or a restart. See
+[SECURITY.md](SECURITY.md#session-behavior).
 
 Cards help to tell same-named entries apart: besides title, type and tags they
 show the customer (direct or inherited from the project) and project, the

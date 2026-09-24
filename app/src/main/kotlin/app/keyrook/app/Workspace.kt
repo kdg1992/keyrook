@@ -42,8 +42,9 @@ internal fun Workspace(state: AppState, current: Vault, settings: SettingsStore,
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val entryList: @Composable (Boolean) -> Unit = { compact ->
             VaultList(current, controller, busy, shortcuts, mac, listView, { listView = it }, selection,
-                { selection = it }, warningsByEntry, compact, onCreate = { creating = true },
-                onEdit = { editing = it },
+                { selection = it }, warningsByEntry, compact, state.recent.of(current.id), onUsed = state::used,
+                onCreate = { creating = true },
+                onEdit = { state.used(it.id); editing = it },
                 onDuplicate = { entry -> operation { controller.duplicate(entry.id) } },
                 onTrash = { id -> operation { controller.trash(id, false) } },
                 onRestore = { id -> operation { controller.trash(id, true) } },
@@ -61,7 +62,8 @@ internal fun Workspace(state: AppState, current: Vault, settings: SettingsStore,
                 Box(Modifier.fillMaxHeight().width(1.dp).background(MaterialTheme.colors.onSurface.copy(alpha = 0.12f)))
                 val selected = current.entries.firstOrNull { it.id == selection.selectedId }
                 EntryDetailPane(current, selected, selected?.let { warningsByEntry[it.id] }.orEmpty(), reveal, busy,
-                    onReveal = { reveal = it }, onEdit = { editing = it },
+                    onReveal = { reveal = it }, onEdit = { state.used(it.id); editing = it },
+                    onUsed = { state.used(it.id) },
                     onFavorite = { entry -> operation { controller.setFavorite(setOf(entry.id), !entry.favorite) } },
                     modifier = Modifier.weight(0.55f).fillMaxHeight())
             }
@@ -77,7 +79,7 @@ internal fun Workspace(state: AppState, current: Vault, settings: SettingsStore,
 private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, shortcuts: ShortcutActions, mac: Boolean,
                       view: ListView, onView: (ListView) -> Unit, selectionState: EntrySelection,
                       onSelection: (EntrySelection) -> Unit, issues: Map<String, Set<HealthIssue>>, compact: Boolean,
-                      onCreate: () -> Unit, onEdit: (Entry) -> Unit,
+                      recent: List<String>, onUsed: (String) -> Unit, onCreate: () -> Unit, onEdit: (Entry) -> Unit,
                       onDuplicate: (Entry) -> Unit, onTrash: (String) -> Unit, onRestore: (String) -> Unit,
                       onPurge: (String) -> Unit, onEmptyTrash: () -> Unit,
                       onBulkTrash: (Set<String>, Boolean) -> Unit, onBulkTag: (Set<String>, String, Boolean) -> Unit,
@@ -110,11 +112,12 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
     val today by produceState(java.time.LocalDate.now()) {
         while (true) { kotlinx.coroutines.delay(60_000); value = java.time.LocalDate.now() }
     }
-    val entries = activeFilters.select(vault, matches.orEmpty(), today)
+    val entries = activeFilters.select(vault, matches.orEmpty(), today, recent)
     val selection = selectionState.update(view.query(activeFilters), matches?.let { entries.map { it.id } })
     SideEffect { if (selectionState != selection) onSelection(selection) }
     val selectedEntry = entries.firstOrNull { it.id == selection.selectedId }
     fun quickAction(entry: Entry, kind: QuickField) {
+        if (entry.data.quickField(kind) != null) onUsed(entry.id)
         if (kind == QuickField.TOTP) { notice = EntryQuickActions.copyTotpNotice(entry.data); return }
         val field = entry.data.quickField(kind)?.takeIf { EntryQuickActions.available(it) }
         notice = when {
@@ -186,6 +189,8 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         Text(UiText.text("shell.hiddenSearch"))
         Checkbox(activeFilters.favorites, onCheckedChange = { applyFilters(activeFilters.copy(favorites = it)) })
         Text(UiText.text("filters.favorites"))
+        Checkbox(activeFilters.recent, onCheckedChange = { applyFilters(activeFilters.copy(recent = it)) })
+        Text(UiText.text("filters.recent"))
     }
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Choice(UiText.text("shell.type"), activeFilters.type?.name, EntryType.entries.map { it.name to it.label }) {

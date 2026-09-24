@@ -34,6 +34,8 @@ internal class AppState {
     var selection by mutableStateOf(EntrySelection())
     var reveal by mutableStateOf(RevealState())
     var organizer by mutableStateOf(false)
+    // Recently used entries of the open vault; memory only and reset on lock (see RecentEntries).
+    var recent by mutableStateOf(RecentEntries())
     var warningsOpen by mutableStateOf(false)
     var confirmClose by mutableStateOf(false)
     val inactivity = InactivityDeadline()
@@ -49,6 +51,7 @@ internal class AppState {
         editing = null; creating = false; about = false; showSettings = false
         if (confirmClose) { confirmClose = false; onCloseAnswered(false) }
         reveal = RevealState(); listView = ListView(); selection = EntrySelection(); organizer = false; warningsOpen = false
+        recent = RecentEntries()
         vault?.close(); vault = null
         runCatching { SecretClipboard.clear() }
         busy = true
@@ -61,6 +64,12 @@ internal class AppState {
             }
         }
     }
+    /** Records that the entry [id] of the open vault was opened in the editor, copied from or had its link opened. */
+    fun used(id: String) {
+        val open = vault ?: return
+        recent = recent.used(open.id, id)
+    }
+
     fun operation(action: () -> Vault?) {
         if (busy) return
         busy = true

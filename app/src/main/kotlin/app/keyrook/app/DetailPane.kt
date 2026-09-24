@@ -42,7 +42,7 @@ private fun formatInstant(value: String): String = runCatching {
 @Composable
 internal fun EntryDetailPane(vault: Vault, entry: Entry?, issues: Set<HealthIssue>, reveal: RevealState, busy: Boolean,
                              onReveal: (RevealState) -> Unit, onEdit: (Entry) -> Unit, onFavorite: (Entry) -> Unit,
-                             modifier: Modifier = Modifier) {
+                             onUsed: (Entry) -> Unit, modifier: Modifier = Modifier) {
     val latestReveal by rememberUpdatedState(onReveal)
     DisposableEffect(Unit) { onDispose { latestReveal(RevealState()) } }
     val key = entry?.let { RevealKey(vault.id, it.id, it.modifiedAt) }
@@ -61,8 +61,9 @@ internal fun EntryDetailPane(vault: Vault, entry: Entry?, issues: Set<HealthIssu
     var notice by remember(entry.id) { mutableStateOf("") }
     val actions = entry.deletedAt == null
     fun copy(label: String, secret: Secret) {
-        notice = if (runCatching { secret.useChars { SecretClipboard.copy(String(it)) } }.isSuccess)
-            UiText.text("list.copied", label) else UiText.text("list.copyFailed")
+        val copied = runCatching { secret.useChars { SecretClipboard.copy(String(it)) } }.isSuccess
+        notice = if (copied) UiText.text("list.copied", label) else UiText.text("list.copyFailed")
+        if (copied) onUsed(entry)
     }
     Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -93,7 +94,9 @@ internal fun EntryDetailPane(vault: Vault, entry: Entry?, issues: Set<HealthIssu
         entry.data.fields().forEachIndexed { index, field ->
             val label = labels.getOrElse(index) { "" }
             val open: (() -> Unit)? = if (field.kind != FieldKind.URL) null else ({
-                notice = if (runCatching { EntryQuickActions.open(field) }.isSuccess) "" else UiText.text("list.openFailed")
+                val opened = runCatching { EntryQuickActions.open(field) }.isSuccess
+                notice = if (opened) "" else UiText.text("list.openFailed")
+                if (opened) onUsed(entry)
             })
             DetailValue(label = label, value = field.value, hidden = field.hidden, shown = current.shows(key, index),
                 actions = actions, busy = busy, onToggle = { onReveal(current.toggle(key, index)) },
@@ -101,7 +104,8 @@ internal fun EntryDetailPane(vault: Vault, entry: Entry?, issues: Set<HealthIssu
         }
         val totp = (entry.data as? EntryData.Web)?.totp
         if (actions && totp != null && totp.value.present()) TotpCodeRow(totp, shown = current.shows(key, RevealState.TOTP_CODE),
-            busy = busy, onToggle = { onReveal(current.toggle(key, RevealState.TOTP_CODE)) }, onNotice = { notice = it })
+            busy = busy, onToggle = { onReveal(current.toggle(key, RevealState.TOTP_CODE)) },
+            onNotice = { notice = it; onUsed(entry) })
         val notesLabel = UiText.text("editor.notes")
         DetailValue(label = notesLabel, value = entry.notes, hidden = true, shown = current.shows(key, RevealState.NOTES),
             actions = actions, busy = busy, onToggle = { onReveal(current.toggle(key, RevealState.NOTES)) },
