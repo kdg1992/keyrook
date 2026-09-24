@@ -77,7 +77,14 @@ Before deserialization a guard rejects nesting beyond 32 levels, individual JSON
 
 ## Compatibility and migrations
 
-Envelope version 1 is the only envelope. Schema 1 was the first document schema; schema 2 is current and the only schema written. A frozen schema 1 test vector, independently encrypted using the JDK AES-GCM provider, protects compatibility alongside RFC and NIST primitive vectors; it is read through the registered migration. Unsupported versions fail with the generic invalid-vault error without modifying the file.
+Envelope version 1 is the only envelope. Schema 1 was the first document schema, written by Keyrook up to 0.7.x; schema 2 is current since 0.8.0 and the only schema written. Unsupported versions fail with the generic invalid-vault error without modifying the file.
+
+Two frozen test vectors in `core/src/test/kotlin/app/keyrook/core/Fixtures.kt` protect compatibility alongside RFC and NIST primitive vectors. Both are checked in as fixed bytes with sequential salt and nonce and one Argon2 iteration, and were encrypted independently of Keyrook's cipher code with the JDK AES-GCM provider:
+
+- `frozenV1Fixture`: an empty schema 1 vault without key file, read through the registered migration (`CodecTest`, `FormatMigrationTest`).
+- `frozenV2Fixture`: a schema 2 vault protected by password and key file, with customers with and without contact details and notes, a project with description and notes, pinned and unpinned entries (one of them in the trash), history, an expiry date, a TOTP secret and two templates. `CodecTest` checks that it decodes without migration to exactly this content.
+
+These bytes are never regenerated. A later schema adds its own frozen vector and keeps the earlier ones readable.
 
 **Envelope.** The header parser reads the magic and then dispatches on the envelope version; only version 1 has a branch. A future envelope would add a separate branch that parses its own layout (including its own header length, which is the AAD) into the same in-memory header, while encryption keeps writing only the newest envelope. Unknown versions are rejected before key derivation.
 
