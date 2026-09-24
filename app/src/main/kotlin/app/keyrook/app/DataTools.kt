@@ -21,7 +21,7 @@ internal class DataAction(private val labelKey: String, val run: () -> Unit) {
     val label: String get() = UiText.text(labelKey)
 }
 
-/** The data menu's actions in groups (backups, transfer, account); each starts one guarded vault operation. */
+/** The data menu's actions in groups (backups, transfer, reports, account); each starts one guarded vault operation. */
 internal fun dataActions(controller: VaultController, settings: SettingsStore, dialogs: Dialogs,
                          operation: (() -> Vault?) -> Unit, settingsFailed: () -> Unit): List<List<DataAction>> = listOf(
     listOf(
@@ -80,6 +80,7 @@ internal fun dataActions(controller: VaultController, settings: SettingsStore, d
         DataAction("transfer.import") { operation { importData(controller, dialogs); controller.session.snapshot() } },
         DataAction("transfer.exportPlain") { operation { exportPlaintext(controller, dialogs); controller.session.snapshot() } },
     ),
+    reportActions(controller, dialogs, operation),
     listOf(
         DataAction("credentials.replaceTitle") { operation {
             askCredentials(dialogs, UiText.text("credentials.replaceTitle"), confirm = true, replacing = true)?.use {
@@ -261,7 +262,7 @@ internal fun askCredentials(dialogs: Dialogs, title: String, confirm: Boolean = 
 }
 
 /** Runs file choosers on the event thread for a worker, checking the worker's session before and after. */
-private fun <T> onEdt(action: () -> T): T {
+internal fun <T> onEdt(action: () -> T): T {
     val guard = capturedOperationGuard()
     val guarded = { guard(); action().also { guard() } }
     if (SwingUtilities.isEventDispatchThread()) return guarded()

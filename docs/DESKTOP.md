@@ -329,6 +329,49 @@ check the mapping before confirming the import.
 
 **Klartext exportieren** warns twice before writing, in two separate questions: before the format is chosen and again after the new target file is selected. Questions start with the focus on **Nein**, so Enter alone never confirms; Escape cancels. JSON is the full Keyrook model. Keyrook CSV uses a `keyrook-json` header and one quoted JSON record so every type, reference and history roundtrips without flattening losses. It is not intended for spreadsheet editing. Both include secrets and deleted/history records. Keep them private and use encrypted export when possible.
 
+## Customer reports
+
+The reports in the **Daten** menu group entries by the customer assignment that
+**Kunden und Projekte** already manages: an entry belongs to its own customer or,
+without one, to the customer of its project (the same rule as the customer filter
+of the entry list). Tags play no role. Trashed entries are never included. Reports
+never show passwords, private keys, passphrases, TOTP secrets, notes, history or
+custom field values, and they never show a field whose hidden option is set.
+
+**Kundenübersicht** lists every customer sorted by name, followed by *Ohne Kunde*
+for entries without a customer: the number of active entries per type, the
+domain entries with their domain and expiry date, and the server and file-transfer
+entries with host and port. A hidden domain or host field appears as *Verborgen*.
+The overview is shown as read-only plain text and is not saved.
+
+**Übergabeblatt exportieren** asks for a customer and a new `.html` file and
+writes a handover sheet for that customer's active entries, grouped by type:
+title, type, project, tags, expiry date, ports, protocols, SSH key type and the
+titles of linked servers and registrar logins, plus these fields when they are
+not marked hidden: URLs, hosts, user names, e-mail addresses and mail servers,
+start directories, roles, operating systems, SSH fingerprints, domain names and
+registrars. Custom entries show title and metadata only; SSH public keys are
+left out. The page is a single self-contained file without links, scripts or
+external resources; every value is HTML-escaped, and it can be printed from a
+browser. Like other exports, the file is created new (never replacing an existing
+file) and readable only by your user account. Check it before handing it over:
+titles, tags and visible fields appear as entered.
+
+**Ablaufdaten exportieren** writes the expiry dates of all active entries to a
+new file. Keyrook has one expiry date per entry (the editor's expiry field), so
+domain, certificate, contract and other dates are all exported the same way.
+Each row or event holds the date, title, type, customer, project and, for domain
+entries, the domain name when that field is not hidden.
+
+- *Kalender (ICS)*: an RFC 5545 calendar with one all-day event per entry. Keyrook
+  asks for a reminder in days before the date (0–365, 0 for none; the default is
+  30). Each event's UID is derived from the entry ID, so importing a newer export
+  into the same calendar updates the events instead of duplicating them where the
+  calendar application supports this.
+- *CSV*: UTF-8, comma-separated, every field quoted as in RFC 4180, with a header
+  row. Cells starting with `=`, `+`, `-`, `@`, a tab or a carriage return get a
+  leading `'` so spreadsheet applications do not run them as formulas.
+
 ## Warning list
 
 The vault health check looks at active entries for expiry within 30 days, expired
