@@ -366,6 +366,8 @@ Under every choice, supported operating-system session/sleep notifications (scre
 
 **Sperren** remains available during vault operations. Locking discards unsaved edits, clears the displayed snapshot and owned clipboard, and closes open application dialogs; an open question or password prompt counts as canceled. Already-started atomic writes finish before the worker clears session credentials. Results from before the lock cannot reopen the display. Reopen the vault to check the saved state if locking happened during a save.
 
+Closing the window while an operation such as a save, backup, integrity check or export is still running asks first, because quitting stops that operation; **Trotzdem beenden** quits anyway and **Abbrechen** keeps Keyrook open. If the operation ends before you answer, the question closes and the window stays open so its result can be read. Closing without a running operation quits immediately.
+
 Failed unlock attempts produce increasing waiting periods, capped at 60 seconds. Only a rejected password or key file counts as a failed attempt; a missing, unreadable, damaged or busy vault file, or a key file of the wrong size, is reported without a delay. A countdown shows when the next attempt is available. Locking does not reset that delay; a successful unlock or application restart does. This is not protection against attacks on a copied vault file.
 
 Do not treat the clipboard timer as protection against OS clipboard history. Native packaging and platform-specific end-to-end verification are separate from the local offscreen UI test.
