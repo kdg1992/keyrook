@@ -22,8 +22,10 @@ class GeneratorPreferencesTest {
         val store = SettingsStore(config)
         assertEquals(GeneratorPreferences(), store.current().generator)
         val options = PasswordOptions(14, true, false, true, true, PasswordPreset.MAX_16, excludeAmbiguous = true)
-        assertTrue(store.update { it.copy(generator = it.generator.withPasswordOptions(options)) })
-        assertTrue(store.update { it.copy(generator = it.generator.copy(wordListPath = list, wordCount = 8, separator = ' ')) })
+        store.update { it.copy(generator = it.generator.withPasswordOptions(options)) }
+        assertTrue(store.flush())
+        store.update { it.copy(generator = it.generator.copy(wordListPath = list, wordCount = 8, separator = ' ')) }
+        assertTrue(store.flush())
         val reloaded = SettingsStore(config).current().generator
         assertEquals(GeneratorPreferences(PasswordPreset.MAX_16, 14, true, false, true, true, true, list, 8, ' '), reloaded)
         assertEquals(options, reloaded.passwordOptions())

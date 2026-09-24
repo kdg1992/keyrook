@@ -11,6 +11,8 @@ fun main(args: Array<String>) {
     val settings = SettingsStore.platform()
     // Select the language before the first composition so no text is rendered in the wrong language.
     UiText.select(settings.current().language)
+    // Settings are written in the background; any other way the process ends still writes the latest ones.
+    Runtime.getRuntime().addShutdownHook(Thread({ settings.flush() }, "settings-flush"))
     val icon = loadWindowIcon()
     application {
         val windowState = rememberMainWindowState(settings)
@@ -22,7 +24,7 @@ fun main(args: Array<String>) {
             PersistWindowGeometry(windowState, settings)
             KeyrookApp(window, settings, closeRequested) { quit ->
                 closeRequested = false
-                if (quit) { saveWindowGeometry(settings, windowState); exitApplication() }
+                if (quit) { saveWindowGeometry(settings, windowState); settings.flush(); exitApplication() }
             }
         }
     }
