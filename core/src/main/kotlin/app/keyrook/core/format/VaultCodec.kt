@@ -5,7 +5,10 @@ package app.keyrook.core.format
 import app.keyrook.core.crypto.*
 import app.keyrook.core.model.Vault
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.decodeFromStream
 import kotlinx.serialization.json.encodeToStream
 import java.io.ByteArrayInputStream
@@ -14,14 +17,24 @@ import java.nio.ByteBuffer
 import java.nio.CharBuffer
 import java.nio.charset.CodingErrorAction
 
-/** No plaintext leaves this codec except a validated, authenticated in-memory model. */
+/**
+ * No plaintext leaves this codec except a validated, authenticated in-memory model.
+ * Documents with an older schema are migrated through [migrations] in memory only; encryption always
+ * writes the current envelope and schema.
+ */
 @OptIn(ExperimentalSerializationApi::class)
-class VaultCodec {
+class VaultCodec internal constructor(private val migrations: SchemaMigrations) {
+    constructor() : this(SchemaMigrations.PRODUCTION)
+
     private val json = Json {
         encodeDefaults = true
         ignoreUnknownKeys = false
         isLenient = false
         classDiscriminator = "type"
+    }
+    private val probe = Json {
+        ignoreUnknownKeys = true
+        isLenient = false
     }
 
     fun encrypt(vault: Vault, credentials: Credentials, parameters: KdfParameters = KdfParameters(),
@@ -49,11 +62,8 @@ class VaultCodec {
         } finally { key.fill(0) }
         return try {
             checkJsonLimits(plaintext)
-            SecretSerializer.trackDecoding {
-                val vault = json.decodeFromStream<Vault>(ByteArrayInputStream(plaintext))
-                validate(vault)
-                vault
-            }
+            val version = probe.decodeFromStream<SchemaProbe>(ByteArrayInputStream(plaintext)).schemaVersion
+            if (version == migrations.current) decodeCurrent(plaintext) else migrate(plaintext, version)
         } catch (_: Exception) {
             // Parser messages may include decrypted field contents; never attach the original exception.
             throw InvalidVaultException()
@@ -66,6 +76,27 @@ class VaultCodec {
         return try { SecretSerializer.trackDecoding { json.decodeFromStream<Vault>(ByteArrayInputStream(bytes)) } }
         catch (_: Exception) { throw InvalidVaultException() }
         finally { bytes.fill(0) }
+    }
+
+    private fun decodeCurrent(bytes: ByteArray): Vault = SecretSerializer.trackDecoding {
+        val vault = json.decodeFromStream<Vault>(ByteArrayInputStream(bytes))
+        validate(vault)
+        vault
+    }
+
+    /**
+     * Only reached for an older schema with a registered contiguous chain; newer or unbridged versions are
+     * rejected before a tree is built. The tree holds immutable strings until garbage collection, and the
+     * re-encoded bytes are wiped. The result passes the same guard, decoder and validation as a stored document.
+     */
+    private fun migrate(plaintext: ByteArray, version: Int): Vault {
+        if (migrations.chain(version) == null) throw InvalidVaultException()
+        val document = migrations.migrate(json.decodeFromStream<JsonObject>(ByteArrayInputStream(plaintext)))
+        val bytes = SecretSerializer.trackDecoding { json.decodeFromJsonElement<Vault>(document) }.use { migrated ->
+            validate(migrated)
+            encode(migrated)
+        }
+        return try { decodeCurrent(bytes) } finally { bytes.fill(0) }
     }
 
     private fun validate(vault: Vault) {
@@ -150,6 +181,10 @@ class VaultCodec {
         }
     }
 }
+
+/** Reads only the schema version so the matching decoder or migration chain can be chosen. */
+@Serializable
+private class SchemaProbe(val schemaVersion: Int)
 
 private class WipingOutput(private val limit: Int) : OutputStream() {
     private var buffer = ByteArray(4096)

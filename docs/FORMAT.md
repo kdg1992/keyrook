@@ -72,6 +72,20 @@ Before deserialization a guard rejects nesting beyond 32 levels, individual JSON
 
 ## Compatibility and migrations
 
-Version 1 is the first supported envelope and schema. There is no predecessor migration to run. Unsupported versions fail without modifying the file. A frozen v1 test vector, independently encrypted using the JDK AES-GCM provider, protects compatibility alongside RFC and NIST primitive vectors.
+Version 1 is the first supported envelope and schema, and both remain the only versions written. A frozen v1 test vector, independently encrypted using the JDK AES-GCM provider, protects compatibility alongside RFC and NIST primitive vectors. Unsupported versions fail with the generic invalid-vault error without modifying the file.
 
-Any future incompatible schema or envelope change requires a new version and an explicit, tested migration. A migration must authenticate the source, preserve its original bytes and write the new version through the atomic storage path. Planned extensions that would require such a change are listed in [ARCHITECTURE.md](ARCHITECTURE.md).
+**Envelope.** The header parser reads the magic and then dispatches on the envelope version; only version 1 has a branch. A future envelope would add a separate branch that parses its own layout (including its own header length, which is the AAD) into the same in-memory header, while encryption keeps writing only the newest envelope. Unknown versions are rejected before key derivation.
+
+**Schema.** After authentication and the JSON guard, the codec reads only `schemaVersion`:
+
+- equal to the current schema (1): decoded and validated exactly as before;
+- lower, with a contiguous chain of registered `SchemaMigration(from, to)` steps: the decrypted JSON tree is transformed step by step in ascending order, then re-encoded and passed through the same guard, decoder and schema validation as a stored current document;
+- higher, negative, non-numeric or without a complete chain: rejected.
+
+Each step must set `schemaVersion` to its target and keep `id` and `revision` unchanged, otherwise the document is rejected. The production registry contains no steps because no predecessor schema exists.
+
+A migrated document is held only in memory; opening never writes the file. The next ordinary save writes the current format through the unchanged atomic storage path with the next revision. If a session backup folder is configured, the existing pre-commit backup copies the original, still-authenticated older ciphertext before that first replacement, exactly as before every other save. Without a configured backup the older file is replaced like any other revision.
+
+A future incompatible change must never be silent. It requires, together: a version bump (schema or envelope), a registered migration step (or header branch) from the previous version, a frozen fixture of the previous version, and tests proving the step applies, that output validates like a fresh document, that values and secrets survive, and that newer or unbridged versions are still rejected. `FormatMigrationTest` demonstrates this with a synthetic test-only schema 0.
+
+Planned extensions that would require such a change are listed in [ARCHITECTURE.md](ARCHITECTURE.md).
