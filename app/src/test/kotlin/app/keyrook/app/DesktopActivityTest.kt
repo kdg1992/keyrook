@@ -18,6 +18,20 @@ class DesktopActivityTest {
         assertTrue(deadline.expired(1))
     }
 
+    @Test fun `first input after a suspend requests lock before it can refresh the deadline`() {
+        var nanos = 0L
+        var wall = 1_700_000_000_000L
+        val deadline = InactivityDeadline({ wall }, { nanos })
+        var locks = 0
+        nanos += 1_000_000_000L
+        wall += 8 * 3_600_000L
+        handleDesktopActivity(true, 5, deadline) { locks++ }
+        assertEquals(1, locks)
+        assertTrue(deadline.expired(5), "The input must not have reset the deadline")
+        handleDesktopActivity(false, 5, deadline) { fail("No active session") }
+        assertFalse(deadline.expired(5))
+    }
+
     @Test fun `input before expiry refreshes deadline and inactive input prepares next session`() {
         var now = 0L
         val deadline = InactivityDeadline { now }

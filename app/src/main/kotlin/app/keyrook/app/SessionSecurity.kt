@@ -39,9 +39,53 @@ class UnlockBackoff(private val nanoTime: () -> Long = System::nanoTime) {
     @Synchronized fun succeeded() { failures = 0; delayNanos = 0 }
 }
 
-internal class InactivityDeadline(private val nanoTime: () -> Long = System::nanoTime) {
-    private var lastActivity = nanoTime()
-    @Synchronized fun activity() { lastActivity = nanoTime() }
+/**
+ * Measures elapsed time with the monotonic clock and, because that clock can pause while the machine is suspended,
+ * also with forward wall-clock steps. Backward wall-clock steps are ignored, so they never extend a limit. A wall clock
+ * running at least [SUSPEND_GAP_MILLIS] ahead of the monotonic clock between two observations counts as a suspend and
+ * reaches every limit until [restart].
+ */
+internal class ElapsedTime(private val nanoTime: () -> Long, private val wallMillis: () -> Long) {
+    private var startNanos = 0L
+    private var lastNanos = 0L
+    private var lastWall = 0L
+    private var wallElapsedMillis = 0L
+    private var suspended = false
+    init { restart() }
+
+    fun restart() {
+        startNanos = nanoTime()
+        lastNanos = startNanos
+        lastWall = wallMillis()
+        wallElapsedMillis = 0
+        suspended = false
+    }
+
+    fun reached(limitNanos: Long): Boolean {
+        val nanos = nanoTime()
+        val wall = wallMillis()
+        val wallDelta = wall - lastWall
+        if (wallDelta > 0) {
+            wallElapsedMillis = if (wallDelta > Long.MAX_VALUE - wallElapsedMillis) Long.MAX_VALUE else wallElapsedMillis + wallDelta
+            if (wallDelta - (nanos - lastNanos) / 1_000_000 >= SUSPEND_GAP_MILLIS) suspended = true
+        }
+        lastNanos = nanos
+        lastWall = wall
+        return suspended || nanos - startNanos >= limitNanos || wallElapsedMillis >= limitNanos / 1_000_000
+    }
+
+    companion object {
+        const val SUSPEND_GAP_MILLIS = 30_000L
+    }
+}
+
+/** [wallMillis] precedes [nanoTime] so a single trailing lambda still supplies the monotonic clock. */
+internal class InactivityDeadline(
+    wallMillis: () -> Long = System::currentTimeMillis,
+    nanoTime: () -> Long = System::nanoTime,
+) {
+    private val elapsed = ElapsedTime(nanoTime, wallMillis)
+    @Synchronized fun activity() = elapsed.restart()
     @Synchronized fun activityBeforeExpiry(timeoutMinutes: Int): Boolean {
         if (expired(timeoutMinutes)) return false
         activity()
@@ -49,6 +93,6 @@ internal class InactivityDeadline(private val nanoTime: () -> Long = System::nan
     }
     @Synchronized fun expired(timeoutMinutes: Int): Boolean {
         require(timeoutMinutes in 1..30)
-        return nanoTime() - lastActivity >= timeoutMinutes * 60_000_000_000L
+        return elapsed.reached(timeoutMinutes * 60_000_000_000L)
     }
 }

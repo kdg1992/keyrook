@@ -117,4 +117,22 @@ class DesktopLockMonitorIntegrationTest {
             assertTrue(onEdt.get())
         } finally { SwingUtilities.invokeAndWait { monitor?.close() } }
     }
+
+    @Test fun `real Swing timer locks on its first tick after a suspend paused the monotonic clock`() {
+        val locked = CountDownLatch(1)
+        var monitor: DesktopLockMonitor? = null
+        try {
+            SwingUtilities.invokeAndWait {
+                var active = true
+                var wall = System.currentTimeMillis()
+                val deadline = InactivityDeadline({ wall }, { 0L })
+                monitor = DesktopLockMonitor({ active }, { 30 }, {
+                    active = false
+                    locked.countDown()
+                }, deadline, { WindowLockPolicy.NEVER })
+                wall += 8 * 3_600_000L
+            }
+            assertTrue(locked.await(5, TimeUnit.SECONDS), "Swing timer did not lock after the suspend")
+        } finally { SwingUtilities.invokeAndWait { monitor?.close() } }
+    }
 }

@@ -20,15 +20,18 @@ class ClipboardLifecycleTest {
     @Test fun `expiry clears through wrapper and erases locally retained characters`() {
         val clipboard = TestClipboard()
         val timer = ManualTimer()
-        ClipboardGuard(clipboard, timer).use { guard ->
+        timer.guard(clipboard).use { guard ->
             guard.copy("synthetic-secret")
             val owned = clipboard.getContents(null)!!
-            assertEquals(20L, timer.tasks.single().seconds)
+            assertEquals(1000L, timer.tasks.single().millis)
             assertEquals("synthetic-secret", clipboard.text())
             val markerFlavor = owned.transferDataFlavors.single { it != DataFlavor.stringFlavor }
             assertTrue(markerFlavor.isMimeTypeEqual(DataFlavor.javaJVMLocalObjectMimeType))
             assertFalse(owned.getTransferData(markerFlavor) is java.io.Serializable)
-            timer.runNext()
+            timer.elapse(19)
+            assertEquals("synthetic-secret", clipboard.text())
+            assertEquals(1, timer.pending())
+            timer.elapse(1)
             assertEquals("", clipboard.text())
             assertErased(owned)
             assertEquals(0, timer.pending())
@@ -39,7 +42,7 @@ class ClipboardLifecycleTest {
     @Test fun `identical text from another owner survives before delayed ownership callback`() {
         val clipboard = TestClipboard()
         val timer = ManualTimer()
-        ClipboardGuard(clipboard, timer).use { guard ->
+        timer.guard(clipboard).use { guard ->
             guard.copy("synthetic-secret")
             val owned = clipboard.getContents(null)!!
             clipboard.setContents(StringSelection("synthetic-secret"), null)
@@ -55,7 +58,7 @@ class ClipboardLifecycleTest {
     @Test fun `wrapped ownership callbacks erase old content without canceling newer expiry`() {
         val clipboard = TestClipboard()
         val timer = ManualTimer()
-        ClipboardGuard(clipboard, timer).use { guard ->
+        timer.guard(clipboard).use { guard ->
             guard.copy("first-secret")
             val first = clipboard.getContents(null)!!
             guard.copy("second-secret")
@@ -75,7 +78,7 @@ class ClipboardLifecycleTest {
     @Test fun `close retries busy clipboard before shutting down and refuses further writes`() {
         val clipboard = TestClipboard()
         val timer = ManualTimer()
-        val guard = ClipboardGuard(clipboard, timer)
+        val guard = timer.guard(clipboard)
         guard.copy("synthetic-secret")
         val owned = clipboard.getContents(null)!!
         clipboard.busy = true
@@ -97,7 +100,7 @@ class ClipboardLifecycleTest {
     @Test fun `permanently busy clipboard has bounded close retries and releases owned secret`() {
         val clipboard = TestClipboard()
         val timer = ManualTimer()
-        val guard = ClipboardGuard(clipboard, timer)
+        val guard = timer.guard(clipboard)
         guard.copy("synthetic-secret")
         val owned = clipboard.getContents(null)!!
         clipboard.busy = true
@@ -112,7 +115,7 @@ class ClipboardLifecycleTest {
     @Test fun `repeated busy clears keep one retry and expired old task cannot clear new copy`() {
         val clipboard = TestClipboard()
         val timer = ManualTimer()
-        ClipboardGuard(clipboard, timer).use { guard ->
+        timer.guard(clipboard).use { guard ->
             guard.copy("first-secret")
             val oldExpiry = timer.tasks.single()
             clipboard.busy = true
@@ -129,7 +132,7 @@ class ClipboardLifecycleTest {
     @Test fun `failed replacement preserves original expiry and clears previous native content`() {
         val clipboard = TestClipboard()
         val timer = ManualTimer()
-        ClipboardGuard(clipboard, timer).use { guard ->
+        timer.guard(clipboard).use { guard ->
             guard.copy("first-secret")
             val original = clipboard.getContents(null)
             clipboard.busy = true
@@ -138,8 +141,38 @@ class ClipboardLifecycleTest {
             assertEquals("first-secret", clipboard.nativeText)
             assertEquals(1, timer.pending())
             clipboard.busy = false
-            timer.runNext()
+            timer.elapse(20)
             assertEquals("", clipboard.nativeText)
+            assertEquals("", clipboard.text())
+        }
+    }
+
+    @Test fun `expiry that elapsed during a suspend clears on the first check after resume`() {
+        val clipboard = TestClipboard()
+        val timer = ManualTimer()
+        timer.guard(clipboard).use { guard ->
+            guard.copy("synthetic-secret")
+            val owned = clipboard.getContents(null)!!
+            timer.elapse(5)
+            timer.suspend(20)
+            assertEquals("synthetic-secret", clipboard.text(), "Nothing runs while the machine is suspended")
+            timer.runNext()
+            assertEquals("", clipboard.text())
+            assertErased(owned)
+            assertEquals(0, timer.pending())
+        }
+    }
+
+    @Test fun `backward wall clock does not extend clipboard expiry`() {
+        val clipboard = TestClipboard()
+        val timer = ManualTimer()
+        timer.guard(clipboard).use { guard ->
+            guard.copy("synthetic-secret")
+            timer.elapse(10)
+            timer.wall -= 3_600_000
+            timer.elapse(9)
+            assertEquals("synthetic-secret", clipboard.text())
+            timer.elapse(1)
             assertEquals("", clipboard.text())
         }
     }
@@ -176,18 +209,41 @@ class ClipboardLifecycleTest {
         }
     }
 
+    /** Runs tasks on a synthetic monotonic clock; the wall clock follows it except during a simulated suspend. */
     private class ManualTimer : ScheduledThreadPoolExecutor(1) {
         val tasks = mutableListOf<Task>()
+        var nanos = 0L
+        var wall = 1_700_000_000_000L
         override fun schedule(command: Runnable, delay: Long, unit: TimeUnit): ScheduledFuture<*> {
             if (isShutdown) throw RejectedExecutionException()
-            return Task(command, unit.toSeconds(delay)).also { tasks += it }
+            return Task(command, unit.toMillis(delay), nanos + unit.toNanos(delay)).also { tasks += it }
         }
+        fun guard(clipboard: Clipboard) = ClipboardGuard(clipboard, this, { nanos }, { wall })
         fun pending(): Int = tasks.count { !it.isDone }
-        fun runNext() { tasks.first { !it.isDone }.run() }
+        fun runNext() {
+            val next = tasks.filter { !it.isDone }.minBy { it.due }
+            advanceTo(next.due)
+            next.run()
+        }
+        fun elapse(seconds: Long) {
+            val until = nanos + seconds * 1_000_000_000
+            while (true) {
+                val next = tasks.filter { !it.isDone && it.due <= until }.minByOrNull { it.due } ?: break
+                advanceTo(next.due)
+                next.run()
+            }
+            advanceTo(until)
+        }
+        fun suspend(seconds: Long) { wall += seconds * 1000 }
+        private fun advanceTo(target: Long) {
+            if (target <= nanos) return
+            wall += (target - nanos) / 1_000_000
+            nanos = target
+        }
     }
 
-    private class Task(val action: Runnable, val seconds: Long) : FutureTask<Unit>(action, Unit), ScheduledFuture<Unit> {
-        override fun getDelay(unit: TimeUnit): Long = unit.convert(seconds, TimeUnit.SECONDS)
+    private class Task(val action: Runnable, val millis: Long, val due: Long) : FutureTask<Unit>(action, Unit), ScheduledFuture<Unit> {
+        override fun getDelay(unit: TimeUnit): Long = unit.convert(millis, TimeUnit.MILLISECONDS)
         override fun compareTo(other: Delayed): Int = getDelay(TimeUnit.NANOSECONDS).compareTo(other.getDelay(TimeUnit.NANOSECONDS))
     }
 }
