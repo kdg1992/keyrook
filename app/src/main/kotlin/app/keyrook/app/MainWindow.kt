@@ -34,8 +34,12 @@ internal const val WINDOW_ICON_RESOURCE = "app/keyrook/app/keyrook-icon.png"
 /** Window changes are written once the geometry has been unchanged this long, so dragging does not write repeatedly. */
 internal const val WINDOW_SAVE_DELAY_MILLIS = 750L
 
-/** A new minimum-size value for the main window in dp, matching the smallest geometry the settings accept. */
-internal fun minimumWindowSize() = Dimension(WindowGeometry.MIN_WIDTH, WindowGeometry.MIN_HEIGHT)
+/**
+ * A new minimum-size value for the main window in dp: the smallest geometry the settings accept, grown by the interface
+ * scale in percent but never beyond the primary screen of [screens].
+ */
+internal fun minimumWindowSize(scalePercent: Int = DEFAULT_UI_SCALE, screens: List<ScreenArea> = connectedScreens()): Dimension =
+    WindowGeometry.minimumSize(scalePercent, screens).let { Dimension(it.width, it.height) }
 
 /**
  * Usable bounds (without task bars or docks) of every connected screen, the default screen first.
@@ -57,9 +61,12 @@ internal fun connectedScreens(): List<ScreenArea> = try {
     }
 } catch (_: Exception) { emptyList() }
 
-/** The saved geometry, or the default size, fitted to [screens]: off-screen positions are centered, oversized windows reduced. */
-internal fun initialWindowGeometry(saved: WindowGeometry?, screens: List<ScreenArea>): WindowGeometry =
-    (saved ?: WindowGeometry.DEFAULT).fitTo(screens)
+/**
+ * The saved geometry, or the default size grown by the interface scale, fitted to [screens]: off-screen positions are
+ * centered, oversized windows reduced.
+ */
+internal fun initialWindowGeometry(saved: WindowGeometry?, screens: List<ScreenArea>, scalePercent: Int = DEFAULT_UI_SCALE): WindowGeometry =
+    (saved ?: WindowGeometry.defaultFor(scalePercent)).fitTo(screens)
 
 /**
  * The geometry to remember for [state]. Position and size are taken only from a floating window; while maximized only the
@@ -93,7 +100,7 @@ internal fun saveWindowGeometry(settings: SettingsStore, state: WindowState) {
 /** Creates the main window state from the saved geometry, validated against the currently connected screens. */
 @Composable
 internal fun rememberMainWindowState(settings: SettingsStore): WindowState {
-    val geometry = remember { initialWindowGeometry(settings.current().window, connectedScreens()) }
+    val geometry = remember { settings.current().let { initialWindowGeometry(it.window, connectedScreens(), it.uiScale) } }
     val x = geometry.x
     val y = geometry.y
     return rememberWindowState(

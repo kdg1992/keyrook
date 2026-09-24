@@ -46,6 +46,16 @@ class MainWindowTest {
         assertEquals(WindowGeometry.MIN_WIDTH to WindowGeometry.MIN_HEIGHT, minimumWindowSize().let { it.width to it.height })
     }
 
+    @Test fun `a larger interface scale enlarges the default and minimum window within the screen`() {
+        val laptop = ScreenArea(0, 0, 1366, 728)
+        assertEquals(1080 to 728, minimumWindowSize(150, listOf(laptop)).let { it.width to it.height })
+        assertEquals(1080 to 780, minimumWindowSize(150, emptyList()).let { it.width to it.height })
+        assertEquals(WindowGeometry.MIN_WIDTH to WindowGeometry.MIN_HEIGHT, minimumWindowSize(90, listOf(laptop)).let { it.width to it.height })
+        assertEquals(WindowGeometry(0, 0, 1366, 728, false), initialWindowGeometry(null, listOf(laptop), 150))
+        // Saved geometry wins over the scaled default.
+        assertEquals(WindowGeometry(100, 50, 1000, 700, false), initialWindowGeometry(previous, listOf(ScreenArea(0, 0, 1920, 1040)), 150))
+    }
+
     @Test fun `saving the window geometry keeps the other preferences`() {
         val settings = SettingsStore(null)
         settings.update { it.copy(theme = ThemeMode.DARK) }

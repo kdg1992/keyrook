@@ -3,8 +3,9 @@
 This protocol covers what CI cannot verify: installing, upgrading and removing
 the unsigned installers interactively as a user would (CI only runs them
 silently, see [installer tests](PACKAGING.md#installer-tests)), and the
-behavior of locking, clipboard handling and the update check on real desktops
-with real operating-system events. The
+behavior of locking, clipboard handling, the update check and accessibility
+(screen readers, interface scaling, high contrast) on real desktops with real
+operating-system events. The
 maintainer runs it on physical or fully virtualized machines before release
 1.0 is approved. The coverage split between CI and this protocol is listed in
 [READINESS.md](READINESS.md#verification-coverage).
@@ -367,6 +368,73 @@ Do not touch the mouse during steps 1–9.
     Switch to **English**, restart, and confirm English is kept. Standard file
     chooser buttons follow the operating-system language, not this choice.
 
+## 8. Accessibility
+
+Use the synthetic test vault. Record the screen reader and its version in
+*Notes*.
+
+### 8.1 Screen reader
+
+Run once per platform: WIN with NVDA (Java Access Bridge enabled with
+`jabswitch -enable`, then restart Keyrook) and with Narrator, MAC with
+VoiceOver, LNX-G with Orca.
+
+1. Start Keyrook with the screen reader running. Tab through the unlock form.
+   Expected: **Open**/**Create** are announced as option buttons
+   with their selection state, every text field is announced with its label,
+   and the title is announced as a heading.
+2. Unlock and select `Acceptance server`. Tab into the detail view.
+   Expected: the masked password is announced as *Password: hidden*, not as
+   bullet characters; its buttons are announced as *Show Password* (state
+   *hidden*), *Copy Password*; the URL row of `Acceptance web` offers
+   *Open URL*.
+3. Activate *Show Password*. Expected: the button is now announced as
+   *Hide Password* with the state *shown*. Press Ctrl+L. Expected: **Lock
+   check** passes.
+4. Unlock, open an entry in the editor, Tab to the **Hidden** option of the
+   password field. Expected: it is announced as a check box named
+   *Password: Hidden* with its checked state; Space toggles it.
+5. Tab to the header's appearance button and **Security**. Expected: the
+   appearance button names the appearance it switches to, and **Security**
+   announces *collapsed* or *expanded*.
+6. Tab through the entry list. Expected: each card's check box is announced as
+   *Select* followed by the entry title, and the star as *<title>: Mark as
+   favorite* or *<title>: Remove from favorites* with its state. Mark two
+   entries with Space. Expected: the selection count in the bulk bar is
+   announced.
+
+### 8.2 Interface scale 150 %
+
+On WIN and one Linux system, with the operating-system scaling at 100 % and
+again at 150 % (Windows display scale, GNOME *Scale*):
+
+1. In **Security**, set **Interface scale** to **150%**. Expected: text,
+   buttons and spacing grow at once without restarting or locking; the window
+   grows to at least 1080 × 780 dp unless the screen is smaller, in which case
+   it fits the screen.
+2. Try to make the window smaller. Expected: it stops at that size. Open the
+   warning list, the **Data** menu, a confirmation and a password dialog.
+   Expected: they are scaled as well and their buttons are fully visible.
+3. Walk through the entry list, detail view and editor with the window at its
+   minimum size. Expected: no control is cut off without a scroll bar.
+4. Restart. Expected: 150 % is kept. Set **100%** again. Expected: sizes
+   return to normal and the window can be made as small as 720 × 520 dp again.
+
+### 8.3 High contrast
+
+On each platform, in both light and dark appearance:
+
+1. In **Security**, set **Contrast** to **High contrast**. Expected: the
+   background becomes pure white (light) or black (dark), text is black or
+   white, text buttons are dark blue (light) or yellow (dark), and warning
+   chips and error messages remain readable.
+2. Move through the unlock form or entry list with Tab. Expected: the focused
+   control is clearly visible at every step (tint on buttons, thick border on
+   text fields, thicker border on the selected entry card).
+3. Switch **Appearance** between light and dark. Expected: high contrast is
+   kept in both. Restart. Expected: both choices are kept.
+4. Set **Contrast** to **Standard**. Expected: the previous colours return.
+
 ## Known limits
 
 These are documented behavior, not failures. Record the observed behavior in
@@ -385,6 +453,10 @@ These are documented behavior, not failures. Record the observed behavior in
 - Installers are unsigned and the macOS application is not notarized.
 - Key-file paths are never saved; the key file must be selected after each
   start.
+- The system file chooser and window title bar follow the operating system's
+  scaling and contrast settings, not Keyrook's. Whether live-region
+  announcements of error messages are spoken depends on the platform's Java
+  accessibility bridge.
 
 ## Reporting a failure
 

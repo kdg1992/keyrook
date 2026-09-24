@@ -9,6 +9,8 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import app.keyrook.core.crypto.Secret
@@ -68,8 +70,8 @@ internal fun EntryDetailPane(vault: Vault, entry: Entry?, issues: Set<HealthIssu
     Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (actions) FavoriteToggle(entry.favorite, busy) { onFavorite(entry) }
-            Text(entry.title, style = MaterialTheme.typography.h5)
+            if (actions) FavoriteToggle(entry.title, entry.favorite, busy) { onFavorite(entry) }
+            Text(entry.title, Modifier.semantics { heading() }, style = MaterialTheme.typography.h5)
         }
         Text(listOfNotNull(entry.data.type().label,
             info.customer?.let { UiText.text("list.customerValue", it) },
@@ -123,18 +125,24 @@ private fun DetailValue(label: String, value: Secret, hidden: Boolean, shown: Bo
     Column {
         Text(label, style = MaterialTheme.typography.caption)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            val masked = present && hidden && !(shown && actions)
             val text = when {
                 !present -> UiText.text("detail.empty")
-                hidden && !(shown && actions) -> MASK
+                masked -> MASK
                 else -> value.plainText()
             }
-            Text(text, Modifier.weight(1f), fontFamily = if (hidden) FontFamily.Monospace else null)
+            Text(text, Modifier.weight(1f).then(if (masked) Modifier.maskedValueSemantics(label) else Modifier),
+                fontFamily = if (hidden) FontFamily.Monospace else null)
             if (present && actions) {
-                if (hidden) TextButton(onClick = onToggle) {
+                // Buttons name the value they act on; every row has the same visible "Show", "Copy" and "Open".
+                if (hidden) TextButton(onClick = onToggle, modifier = Modifier.revealSemantics(label, shown)) {
                     Text(UiText.text(if (shown) "detail.hide" else "detail.show"))
                 }
-                TextButton(enabled = !busy, onClick = onCopy) { Text(UiText.text("common.copy")) }
-                if (onOpen != null) TextButton(enabled = !busy, onClick = onOpen) { Text(UiText.text("common.open")) }
+                TextButton(enabled = !busy, onClick = onCopy, modifier = Modifier.describedAs(UiText.text("a11y.copyValue", label))) {
+                    Text(UiText.text("common.copy"))
+                }
+                if (onOpen != null) TextButton(enabled = !busy, onClick = onOpen,
+                    modifier = Modifier.describedAs(UiText.text("a11y.openValue", label))) { Text(UiText.text("common.open")) }
             }
         }
     }

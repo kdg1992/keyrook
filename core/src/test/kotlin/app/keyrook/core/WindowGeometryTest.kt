@@ -5,6 +5,7 @@ package app.keyrook.core
 import app.keyrook.core.settings.ScreenArea
 import app.keyrook.core.settings.WindowGeometry
 import app.keyrook.core.settings.WindowSettingsDocument
+import app.keyrook.core.settings.WindowSize
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -71,5 +72,26 @@ class WindowGeometryTest {
         assertEquals(geometry, geometry.fitTo(emptyList()))
         assertEquals(WindowGeometry.DEFAULT, WindowGeometry.DEFAULT.fitTo(emptyList()))
         assertThrows<IllegalArgumentException> { ScreenArea(0, 0, 0, 100) }
+    }
+
+    @Test fun `the minimum size grows with the interface scale but stays within the primary screen`() {
+        assertEquals(WindowSize(WindowGeometry.MIN_WIDTH, WindowGeometry.MIN_HEIGHT), WindowGeometry.minimumSize(100, listOf(primary)))
+        assertEquals(WindowSize(WindowGeometry.MIN_WIDTH, WindowGeometry.MIN_HEIGHT), WindowGeometry.minimumSize(90, listOf(primary)))
+        assertEquals(WindowSize(1080, 780), WindowGeometry.minimumSize(150, listOf(primary, right)))
+        assertEquals(WindowSize(1080, 780), WindowGeometry.minimumSize(150, emptyList()))
+        // A small laptop screen caps the scaled minimum so the window still fits.
+        assertEquals(WindowSize(1080, 728), WindowGeometry.minimumSize(150, listOf(ScreenArea(0, 0, 1366, 728))))
+        // Never below the stored-geometry minimum, even on a screen smaller than that.
+        assertEquals(WindowSize(WindowGeometry.MIN_WIDTH, WindowGeometry.MIN_HEIGHT),
+            WindowGeometry.minimumSize(150, listOf(ScreenArea(0, 0, 640, 480))))
+        assertEquals(WindowSize(WindowGeometry.MIN_WIDTH * 4, WindowGeometry.MIN_HEIGHT * 4), WindowGeometry.minimumSize(Int.MAX_VALUE, emptyList()))
+    }
+
+    @Test fun `the default window grows with the interface scale and is fitted to the screen`() {
+        assertEquals(WindowGeometry.DEFAULT, WindowGeometry.defaultFor(100))
+        assertEquals(WindowGeometry(null, null, 1650, 1140, false), WindowGeometry.defaultFor(150))
+        assertEquals(WindowGeometry(135, 0, 1650, 1040, false), WindowGeometry.defaultFor(150).fitTo(listOf(primary)))
+        assertEquals(WindowGeometry(null, null, 990, 684, false), WindowGeometry.defaultFor(90))
+        assertEquals(WindowGeometry(null, null, WindowGeometry.MIN_WIDTH, WindowGeometry.MIN_HEIGHT, false), WindowGeometry.defaultFor(Int.MIN_VALUE))
     }
 }

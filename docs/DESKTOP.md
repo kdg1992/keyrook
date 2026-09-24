@@ -495,7 +495,7 @@ the window stays responsive. Its result appears in three places:
 
 ## Locking and current boundaries
 
-Use **Sicherheit** (**Security** in English) to choose the appearance (follow system, light or dark), the language (follow system, German or English), the inactivity deadline (default five minutes), when the window locks, clipboard expiry (default 20 seconds) and whether to check for updates on start (default off; see [Updates](#updates)). These preferences are saved and survive restarts.
+Use **Sicherheit** (**Security** in English) to choose the appearance (follow system, light or dark), the contrast and interface scale (see [Accessibility](#accessibility)), the language (follow system, German or English), the inactivity deadline (default five minutes), when the window locks, clipboard expiry (default 20 seconds) and whether to check for updates on start (default off; see [Updates](#updates)). These preferences are saved and survive restarts.
 
 **Sperren, wenn das Fenster…** (**Lock when the window…**) controls locking on window events and applies immediately:
 
@@ -542,11 +542,13 @@ absent are described in [SECURITY.md](SECURITY.md#update-check).
 
 ## Saved settings
 
-Keyrook stores non-secret preferences in `settings.json` in the platform configuration directory: `%APPDATA%\Keyrook` on Windows, `~/Library/Application Support/Keyrook` on macOS and `$XDG_CONFIG_HOME/keyrook` (or `~/.config/keyrook`) on Linux. The file contains the appearance, language, inactivity deadline, window lock choice, clipboard expiry, whether updates are checked on start, the main window's size, position and maximized state, the last opened vault path, per-vault backup settings (folder, retention, enabled) and the last password generator choices (preset, length, character classes, ambiguity option, passphrase word count and separator, and the path of a chosen passphrase word list, never its content or any generated value). The unlock form is pre-filled with the last vault path. Passwords, key-file paths, key-file contents and vault contents are never saved there, so an optional key file must be selected again. If the file cannot be written, a notice appears and the changed preference applies until the application exits. A damaged, unknown or out-of-range file or value falls back to defaults; delete the file to reset all preferences. See [SECURITY.md](SECURITY.md#saved-settings).
+Keyrook stores non-secret preferences in `settings.json` in the platform configuration directory: `%APPDATA%\Keyrook` on Windows, `~/Library/Application Support/Keyrook` on macOS and `$XDG_CONFIG_HOME/keyrook` (or `~/.config/keyrook`) on Linux. The file contains the appearance, contrast, interface scale, language, inactivity deadline, window lock choice, clipboard expiry, whether updates are checked on start, the main window's size, position and maximized state, the last opened vault path, per-vault backup settings (folder, retention, enabled) and the last password generator choices (preset, length, character classes, ambiguity option, passphrase word count and separator, and the path of a chosen passphrase word list, never its content or any generated value). The unlock form is pre-filled with the last vault path. Passwords, key-file paths, key-file contents and vault contents are never saved there, so an optional key file must be selected again. If the file cannot be written, a notice appears and the changed preference applies until the application exits. A damaged, unknown or out-of-range file or value falls back to defaults; delete the file to reset all preferences. See [SECURITY.md](SECURITY.md#saved-settings).
 
 ### Window size and position
 
 The main window reopens with the size, position and maximized state it had when it was last moved, resized or closed. Changes are written once the window has stayed unchanged for a moment, and again on closing; minimized and full-screen states are not recorded, and while the window is maximized the previous normal size and position are kept for restoring. At start the stored values are checked: sizes are kept between 720 × 520 and 16384 × 16384 dp and reduced to fit the screen, and a window whose title bar would not be visible on any currently connected screen (for example after disconnecting a monitor) opens centered on the main screen instead. The window cannot be made smaller than 720 × 520 dp. The first start, or a missing or damaged entry, uses 1100 × 760 dp centered on the main screen.
+
+A larger interface scale raises both limits by the same factor, so the same content stays visible: at 150 % the window cannot be made smaller than 1080 × 780 dp, and the first start uses 1650 × 1140 dp. Both are reduced to the usable area of the main screen, never below 720 × 520 dp. When the scale is raised, a smaller window grows to the new minimum at once; a saved window size is kept as it is otherwise.
 
 Desktop text uses German and English resource catalogs. The language choice
 applies immediately without restarting or locking; messages already shown stay
@@ -561,5 +563,63 @@ provided by the Java runtime; its buttons follow the runtime's default locale
 
 Settings files written before the language preference existed load unchanged
 and use the system language. Files written before the update-check option
-existed load with automatic update checks disabled. Files written before the generator choices existed load with the **Standard** preset, the previous defaults and no remembered word list. A settings file that contains the language is not
+existed load with automatic update checks disabled. Files written before the generator choices existed load with the **Standard** preset, the previous defaults and no remembered word list. Files written before the
+contrast and interface-scale options existed load with standard contrast and
+100 %; an unknown scale or contrast value falls back to these defaults. A settings file that contains the language is not
 readable by earlier builds, which then fall back to their defaults.
+
+## Accessibility
+
+Under **Sicherheit** (**Security**), two display preferences apply immediately
+to the main window and every dialog drawn in it, and are saved like the other
+settings:
+
+- **Skalierung** (**Interface scale**): 90 %, 100 % (default), 115 %, 130 % or
+  150 %. All sizes and text are enlarged together, on top of the scaling the
+  operating system already applies. The window's minimum and first-start size
+  grow with it (see [Window size and position](#window-size-and-position)). The
+  system file chooser and the window title bar are drawn by the operating
+  system and follow its own scaling.
+- **Kontrast** (**Contrast**): **Standard** (default) or **Hoher Kontrast**
+  (**High contrast**). High contrast replaces the colours of the selected light
+  or dark appearance with black on white or white on black, a dark-blue or
+  yellow accent and dark red or light red for errors. Every text colour
+  reaches at least 7:1 against its background (WCAG AAA), which a unit test
+  checks from the palette. Keyboard focus and pressed controls get a stronger
+  tint than in the standard colours, and focused text fields keep their thick
+  accent-coloured border. Disabled controls are drawn faded in both modes.
+
+Screen readers read the Compose accessibility tree through the Java
+accessibility bridge: Narrator or NVDA on Windows (the Java Access Bridge
+must be enabled, for example with `jabswitch -enable`), VoiceOver on macOS
+and Orca on Linux. What they announce:
+
+- Buttons that repeat for every value name the value they act on, for example
+  **Passwort anzeigen**, **Passwort kopieren** and **URL öffnen** (*Show
+  password*, *Copy password*, *Open URL*) in the detail view, the editor and
+  for the TOTP code, instead of only **Anzeigen**, **Kopieren** or
+  **Öffnen**.
+- Show/hide buttons also announce whether the value is currently **verborgen**
+  or **angezeigt** (*hidden* or *shown*), and a masked value is read as
+  *Passwort: verborgen* rather than as bullet characters. Revealed values are
+  read like any other text, so reveal only what may be heard.
+- Check boxes and option buttons are one control together with their label:
+  clicking the label toggles them and the label is read with the state. The
+  per-field **Verborgen** and **URL-Feld** options in the editor name their
+  field.
+- The theme button in the header names the appearance it switches to, the
+  **Sicherheit** button announces whether the settings are expanded, and the
+  application name, entry title and editor and unlock headings are reported as
+  headings. Error and notice messages under the header are marked as live
+  regions where the platform bridge supports it.
+- The favorite star of a list card or the detail view is named after its
+  entry and action (for example *Acceptance web: Mark as favorite*) and
+  announces whether the entry is a favorite; the bulk-selection check box of a
+  card is named *Select* plus the entry title, and the number of selected
+  entries is a live region.
+- Every text field has a visible label that is also its accessible name. List
+  cards report their selection (see [Entry selection](#entry-selection)).
+
+The focus order follows the visual order: header, settings, messages, then the
+unlock form, editor or entry list with its detail view. Dialogs take the focus
+when they open.

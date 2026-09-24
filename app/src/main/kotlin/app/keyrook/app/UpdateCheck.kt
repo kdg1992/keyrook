@@ -169,10 +169,7 @@ internal fun rememberUpdateChecks(settings: SettingsStore): UpdateChecks {
 
 @Composable
 internal fun UpdateCheckSetting(enabled: Boolean, onChange: (Boolean) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(enabled, onCheckedChange = onChange)
-        Text(UiText.text("update.onStart"))
-    }
+    LabeledCheckbox(enabled, UiText.text("update.onStart"), onCheckedChange = onChange)
     Text(UiText.text("update.onStartHint"))
 }
 
