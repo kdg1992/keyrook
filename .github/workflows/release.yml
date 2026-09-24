@@ -246,7 +246,14 @@ jobs:
             echo "Removed $root"
           }
 
-          menu_entry=/usr/share/applications/keyrook-Keyrook.desktop
+          # As root, xdg-desktop-menu copies the entry into the first existing applications directory of
+          # XDG_DATA_DIRS; maintainer scripts run under sudo's reset environment, so its default order applies.
+          menu_entry=
+          for directory in /usr/local/share/applications /usr/share/applications; do
+            if [ -d "$directory" ]; then menu_entry="$directory/keyrook-Keyrook.desktop"; break; fi
+          done
+          [ -n "$menu_entry" ] || { echo "No system applications directory on the runner"; exit 1; }
+          echo "Expected menu entry location: $menu_entry"
 
           # The runner has no XDG desktop-directories directory, like servers, containers and WSL, where
           # xdg-desktop-menu cannot register menu entries. Installation and removal must still succeed.
@@ -266,7 +273,7 @@ jobs:
           echo "::group::Fresh install of $NEW_INSTALLER with a desktop menu"
           install_deb "$NEW_INSTALLER"
           expect_version "$NEW_VERSION"
-          [ -f "$menu_entry" ] || { echo "Menu entry was not registered"; exit 1; }
+          [ -f "$menu_entry" ] || { echo "Menu entry was not registered"; ls -l /usr/local/share/applications /usr/share/applications | grep -i keyrook || true; exit 1; }
           node scripts/installer-test.mjs self-test "$(launcher)"
           remove_and_verify
           [ ! -e "$menu_entry" ] || { echo "Menu entry remains"; exit 1; }
@@ -279,7 +286,7 @@ jobs:
             expect_version "$OLD_VERSION"
             install_deb "$NEW_INSTALLER"
             expect_version "$NEW_VERSION"
-            [ -f "$menu_entry" ] || { echo "Menu entry missing after upgrade"; exit 1; }
+            [ -f "$menu_entry" ] || { echo "Menu entry missing after upgrade"; ls -l /usr/local/share/applications /usr/share/applications | grep -i keyrook || true; exit 1; }
             node scripts/installer-test.mjs self-test "$(launcher)"
             remove_and_verify
             [ ! -e "$menu_entry" ] || { echo "Menu entry remains"; exit 1; }
