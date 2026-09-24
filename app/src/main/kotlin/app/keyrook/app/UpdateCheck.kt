@@ -35,8 +35,9 @@ internal val UPDATE_TIMEOUT: Duration = Duration.ofSeconds(10)
 private const val UPDATE_TOTAL_TIMEOUT_SECONDS = 20L
 
 /**
- * The only outbound request Keyrook makes itself: one HTTPS GET for the latest release, sent only after an explicit click or
- * when the user enabled the check on start. No cookies, credentials, identifiers or query parameters; redirects are refused.
+ * The release check's only request: one HTTPS GET for the latest release, sent only after an explicit click or when the
+ * user enabled the check on start. Besides it, Keyrook sends requests only for the optional breach check the user starts
+ * (see BreachChecks). No cookies, credentials, identifiers or query parameters; redirects are refused.
  */
 internal fun latestReleaseRequest(version: String?): HttpRequest =
     HttpRequest.newBuilder(URI(ReleaseCheck.LATEST_RELEASE_API))
