@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.7.0](https://github.com/kdg1992/keyrook/compare/v0.6.1...v0.7.0) (2026-09-24)
+
+
+### Features
+
+* **a11y:** add interface scaling, high contrast and screen reader labels ([#52](https://github.com/kdg1992/keyrook/issues/52)) ([565364f](https://github.com/kdg1992/keyrook/commit/565364f9099417d57f80529c09a46574ec223e2b))
+* **generator:** add presets, ambiguous character exclusion and remembered choices ([#48](https://github.com/kdg1992/keyrook/issues/48)) ([863731d](https://github.com/kdg1992/keyrook/commit/863731ded6f069173e4e09c44c7b4307a9117261))
+* **health:** report old passwords and possible duplicate entries ([#49](https://github.com/kdg1992/keyrook/issues/49)) ([aa1d440](https://github.com/kdg1992/keyrook/commit/aa1d4405a744248eb509d29a328f6eea8f1516bc))
+* **list:** add bulk actions, favorites and recently used entries ([#51](https://github.com/kdg1992/keyrook/issues/51)) ([785b456](https://github.com/kdg1992/keyrook/commit/785b4567150f8a83edafd58e1b607c963d1d7765))
+* **reports:** add customer overview, handover sheet and expiry export ([#50](https://github.com/kdg1992/keyrook/issues/50)) ([e806040](https://github.com/kdg1992/keyrook/commit/e806040d03b5c7b695d93fca82a8ec704aff20b6))
+
+
+### Bug Fixes
+
+* **app:** harden unlock, saving, closing, trash, key files and CSV errors ([#45](https://github.com/kdg1992/keyrook/issues/45)) ([881ced0](https://github.com/kdg1992/keyrook/commit/881ced0ea6ac4cd18072d825140c30584df60b78))
+
 ## [0.6.1](https://github.com/kdg1992/keyrook/compare/v0.6.0...v0.6.1) (2026-09-24)
 
 
