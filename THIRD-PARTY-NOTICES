@@ -16,7 +16,7 @@ Kotlin standard library 2.4.20 — Apache-2.0
 kotlinx.serialization JSON and Core 1.11.0 — Apache-2.0
   Copyright JetBrains s.r.o. and contributors.
   https://github.com/Kotlin/kotlinx.serialization
-JetBrains annotations 13.0 — Apache-2.0
+JetBrains annotations 23.0.0 (desktop application) / 13.0 (core library) — Apache-2.0
   Copyright JetBrains s.r.o.
   https://github.com/JetBrains/java-annotations
 Bouncy Castle bcprov/bcpkix/bcutil-jdk18on 1.86 — MIT (Bouncy Castle license)
@@ -49,7 +49,6 @@ JUnit Jupiter and JUnit Platform 6.1.3 — EPL-2.0
   Separate test tooling only; not included in the application or core JAR.
 Kotest Assertions Core/Shared and Common 6.2.5 — Apache-2.0
   https://github.com/kotest/kotest
-JetBrains annotations 23.0.0 (test runtime) — Apache-2.0
 OpenTest4J 1.3.0 — Apache-2.0
   https://github.com/ota4j-team/opentest4j
 API Guardian 1.1.2 — Apache-2.0
