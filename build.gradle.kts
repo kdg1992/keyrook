@@ -1,5 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Kim Daniel Geisthardt
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Locks the plugin classpath shared by all projects; scripts/relock.sh regenerates buildscript-gradle.lockfile.
+buildscript { configurations.classpath { resolutionStrategy.activateDependencyLocking() } }
 plugins {
     base
     alias(libs.plugins.kotlin.jvm) apply false
