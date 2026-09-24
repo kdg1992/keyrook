@@ -22,7 +22,9 @@ in the **Info** dialog.
 | Ctrl/⌘ + B | Copy the selected entry's username. |
 | Ctrl/⌘ + T | Copy the current TOTP code of the selected web login (see [TOTP codes](#totp-codes)). |
 | Ctrl/⌘ + U | Open the selected entry's URL. |
-| Delete (Entf); on macOS also ⌫ | Move the selected entry to the trash after the usual **In den Papierkorb verschieben?** confirmation. |
+| Delete (Entf); on macOS also ⌫ | Move the marked entries, or without marks the selected entry, to the trash after the usual **In den Papierkorb verschieben?** confirmation. |
+| Space (Leertaste) | Mark or unmark the selected entry for a bulk action (see [Bulk actions](#bulk-actions)); also in the trash. |
+| Ctrl/⌘ + A | Mark every listed entry; pressed again while all are marked, it clears the marks. |
 | Ctrl/⌘ + S | Validate and save the current editor through the same action as **Speichern**. |
 | Escape | Request cancellation in an idle editor. Unsaved changes require **Verwerfen** confirmation. |
 | Tab / Shift+Tab | Move between focusable controls. |
@@ -45,8 +47,8 @@ next remaining entry, otherwise to the previous one. The list scrolls to keep
 the selection visible. A typical flow: Ctrl/⌘ + F, type part of the title,
 ↓, then Ctrl/⌘ + C.
 
-**Text-field rule:** entry shortcuts (arrows, Home/End, Enter, Delete/⌫ and
-Ctrl/⌘ + C/B/T/U/E) act only while the keyboard focus is in the entry list, that
+**Text-field rule:** entry shortcuts (arrows, Home/End, Enter, Delete/⌫, Space and
+Ctrl/⌘ + C/B/T/U/E/A) act only while the keyboard focus is in the entry list, that
 is on the list itself or on a button of one of its cards. While any text field
 has the focus, including the search field, every key keeps its normal editing
 meaning; Ctrl/⌘ + C copies selected text as usual. The only exception is ↓ in
@@ -54,7 +56,7 @@ the single-line search field, which has no editing meaning there and moves into
 the list. With the focus on a card button, Enter activates that button. Entry
 shortcuts are ignored while work is running, a dialog is open or an editor is
 shown, and edit/copy/open/trash are not available in the trash view (only
-selection moves are). Global shortcuts (Ctrl/⌘ + L/N/F/S, Escape) behave as
+selection moves and marking are). Global shortcuts (Ctrl/⌘ + L/N/F/S, Escape) behave as
 before, regardless of the list focus.
 
 The search text, the filters, the hidden-field search option and the selection
@@ -263,6 +265,38 @@ checks and the configured expiry. Links pass the same validation as in the
 editor before the system browser receives them. Secret values are never shown in the
 list. The copy and open shortcuts above use exactly these actions; when the
 selected entry has no such field, a notice says so and nothing is copied.
+
+### Bulk actions
+
+Every card has a checkbox that marks the entry for a bulk action, independently
+of the selected entry. Space marks or unmarks the selected entry and Ctrl/⌘ + A
+marks every listed entry. While the list shows entries, a row above it offers
+**Alle auswählen** (**Select all**) or **Auswahl aufheben** (**Clear
+selection**), and with marks the number of marked entries and these actions:
+
+- **Ausgewählte in Papierkorb** (**Move selected to trash**), in the active list:
+  the **In den Papierkorb verschieben?** confirmation names the number of
+  entries. Delete (⌫ on macOS) does the same while entries are marked.
+- **Ausgewählte wiederherstellen** (**Restore selected**), in the trash.
+- **Tag hinzufügen** (**Add tag**) asks for one tag and adds it to every marked
+  entry that does not have it yet. The tag is trimmed; it must not be empty,
+  longer than 256 characters or contain a comma, which separates tags in the
+  editor.
+- **Tag entfernen** (**Remove tag**) offers the tags of the marked entries and
+  removes the chosen one from each of them.
+
+Each bulk action is saved as one change of the vault (one revision) and
+applies to all marked entries or, if any of them cannot be changed (for
+example because an entry would exceed 100 tags), to none. When no entry
+changes, for example because every marked entry already has the tag, nothing
+is saved. Changed entries record the current time as their change time, never
+earlier than their last change, as for a single entry. Tag changes do not add
+history versions, which hold field values only.
+
+Marks belong to the current search and filters: a new search or filter clears
+them, and entries that leave the list (for example after moving to the trash)
+lose their mark, so an action never reaches an entry that is not shown. Locking
+discards them. Values are never read for marking.
 
 Cards help to tell same-named entries apart: besides title, type and tags they
 show the customer (direct or inherited from the project) and project, the

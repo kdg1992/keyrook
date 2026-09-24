@@ -82,4 +82,31 @@ class EntrySelectionTest {
             assertEquals("b", next.update(ListQuery("", trashView, false), trashView.select(after, all, today).map { it.id }).selectedId)
         }
     }
+
+    @Test fun `marks toggle listed entries only and mark all toggles every listed entry`() {
+        val start = EntrySelection().update(query, ids)
+        assertTrue(start.marked.isEmpty())
+        val marked = start.toggleMark("c").toggleMark("a").toggleMark("unknown")
+        assertEquals(setOf("a", "c"), marked.marked)
+        assertEquals(listOf("a", "c"), marked.markedIds)
+        assertEquals(setOf("c"), marked.toggleMark("a").marked)
+        assertEquals("a", marked.selectedId)
+        val all = marked.markAll()
+        assertEquals(ids, all.markedIds)
+        assertTrue(all.markAll().marked.isEmpty())
+        assertTrue(all.clearMarks().marked.isEmpty())
+        assertTrue(EntrySelection().update(query, emptyList()).markAll().marked.isEmpty())
+    }
+
+    @Test fun `marks keep listed entries across vault changes and are cleared by a new query`() {
+        val marked = EntrySelection().update(query, ids).toggleMark("b").toggleMark("c")
+        assertEquals(marked, marked.update(query, null))
+        val trashed = marked.update(query, listOf("a", "c", "d"))
+        assertEquals(setOf("c"), trashed.marked)
+        assertEquals(setOf("c"), trashed.update(query, listOf("a", "b", "c", "d")).marked)
+        assertTrue(marked.update(query.copy(search = "x"), ids).marked.isEmpty())
+        val jumped = marked.jump("z").update(query, ids + "z")
+        assertEquals("z", jumped.selectedId)
+        assertEquals(setOf("b", "c"), jumped.marked)
+    }
 }

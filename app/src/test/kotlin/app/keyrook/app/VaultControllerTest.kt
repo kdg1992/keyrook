@@ -183,4 +183,44 @@ class VaultControllerTest {
             }
         }
     }
+
+    @Test fun `bulk trash restore and tag changes are saved as one revision each and fail atomically`() {
+        VaultController().use { controller ->
+            controller.unlock(directory.resolve("bulk.keyrook"), "synthetic-master-passphrase".toCharArray(), null, true,
+                app.keyrook.core.crypto.KdfParameters(iterations = 1)).close()
+            val ids = listOf("First", "Second", "Third").map { title ->
+                val data = blankData(EntryType.CUSTOM)
+                val entry = editedEntry(null, data, title, "", "", "", listOf("synthetic-$title"), listOf(true))
+                data.fields().forEach { it.value.close() }
+                Vault(entries = listOf(entry)).use { controller.save(entry).close() }
+                entry.id
+            }
+            val marked = setOf(ids[0], ids[1])
+            fun revision() = controller.session.snapshot().use { it.revision }
+            val start = revision()
+            controller.trashAll(marked, restore = false).use { snapshot ->
+                assertEquals(start + 1, snapshot.revision)
+                assertEquals(listOf(true, true, false), snapshot.entries.map { it.deletedAt != null })
+            }
+            // A selection that is partly in the wrong list changes nothing and saves nothing.
+            assertThrows(IllegalArgumentException::class.java) { controller.trashAll(setOf(ids[0], ids[2]), restore = true) }
+            assertEquals(start + 1, revision())
+            controller.trashAll(marked, restore = true).use { snapshot ->
+                assertEquals(start + 2, snapshot.revision)
+                assertTrue(snapshot.entries.all { it.deletedAt == null })
+            }
+            controller.tagAll(ids.toSet(), " ops ", add = true).use { snapshot ->
+                assertEquals(start + 3, snapshot.revision)
+                assertTrue(snapshot.entries.all { it.tags == listOf("ops") })
+            }
+            // Nothing to change: no save.
+            controller.tagAll(ids.toSet(), "ops", add = true).use { assertEquals(start + 3, it.revision) }
+            controller.tagAll(setOf(ids[2]), "ops", add = false).use { snapshot ->
+                assertEquals(start + 4, snapshot.revision)
+                assertEquals(listOf(listOf("ops"), listOf("ops"), emptyList()), snapshot.entries.map { it.tags })
+            }
+            assertThrows(IllegalArgumentException::class.java) { controller.tagAll(marked, "a,b", add = true) }
+            assertEquals(start + 4, revision())
+        }
+    }
 }

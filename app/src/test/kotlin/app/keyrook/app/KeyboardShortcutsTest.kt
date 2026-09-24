@@ -151,4 +151,26 @@ class KeyboardShortcutsTest {
             assertEquals("⌘C", ShortcutHelp.COPY_PASSWORD.keys(mac = true))
         } finally { UiText.select(AppLanguage.GERMAN) }
     }
+
+    @Test fun `space marks the selected entry and primary A marks all only with list focus`() {
+        listOf(false, true).forEach { mac ->
+            assertEquals(ShortcutAction.TOGGLE_MARK, resolve(ShortcutKey.SPACE, list, mac, control = false, meta = false))
+            assertEquals(ShortcutAction.TOGGLE_MARK,
+                resolve(ShortcutKey.SPACE, list.copy(trash = true), mac, control = false, meta = false))
+            assertNull(resolve(ShortcutKey.SPACE, list.copy(selection = false), mac, control = false, meta = false))
+            assertNull(resolve(ShortcutKey.SPACE, list, mac))
+            assertEquals(ShortcutAction.MARK_ALL, resolve(ShortcutKey.A, list, mac))
+            assertEquals(ShortcutAction.MARK_ALL, resolve(ShortcutKey.A, list.copy(selection = false, trash = true), mac))
+            assertNull(resolve(ShortcutKey.A, list, mac, control = false, meta = false))
+            assertNull(resolve(ShortcutKey.A, list, mac, shift = true))
+            listOf(ShortcutFocus.TEXT, ShortcutFocus.SEARCH, ShortcutFocus.OTHER).forEach { focus ->
+                assertNull(resolve(ShortcutKey.A, list.copy(focus = focus), mac), "$focus")
+                assertNull(resolve(ShortcutKey.SPACE, list.copy(focus = focus), mac, control = false, meta = false), "$focus")
+            }
+            listOf(list.copy(busy = true), list.copy(modal = true), list.copy(editing = true)).forEach { state ->
+                assertNull(resolve(ShortcutKey.A, state, mac))
+                assertNull(resolve(ShortcutKey.SPACE, state, mac, control = false, meta = false))
+            }
+        }
+    }
 }

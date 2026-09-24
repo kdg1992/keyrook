@@ -18,6 +18,8 @@ internal enum class InputProblem(val key: String) {
     INVALID_PORT("validation.port"),
     TAG_TOO_LONG("validation.tagTooLong"),
     TOO_MANY_TAGS("validation.tagCount"),
+    TAG_REQUIRED("validation.tagRequired"),
+    TAG_COMMA("validation.tagComma"),
     FIELD_EXISTS("validation.fieldExists"),
     INVALID_TOTP("validation.totp"),
 }
@@ -123,6 +125,14 @@ internal fun tagsError(text: String): InputError? {
         tags.any { it.length > MAX_TAG_CHARS } -> InputError(InputProblem.TAG_TOO_LONG, MAX_TAG_CHARS)
         else -> null
     }
+}
+
+/** One tag for a bulk action, already trimmed; mirrors the checks of the core tag change. */
+internal fun bulkTagError(tag: String): InputError? = when {
+    tag.isBlank() -> InputError(InputProblem.TAG_REQUIRED)
+    tag.length > MAX_TAG_CHARS -> InputError(InputProblem.TAG_TOO_LONG, MAX_TAG_CHARS)
+    ',' in tag -> InputError(InputProblem.TAG_COMMA)
+    else -> null
 }
 
 internal fun lengthError(text: String, maximum: Int = Vault.MAX_FIELD_CHARS): InputError? =

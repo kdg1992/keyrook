@@ -96,13 +96,14 @@ internal fun ExpiryBadge(date: LocalDate, state: ExpiryState) {
 /**
  * A list row. Selection is shown by border, tint and elevation and exposed to accessibility services. [markers] are
  * password warnings by reason only. [compact] cards, used next to the detail view, put their entry actions below the
- * text instead of beside it.
+ * text instead of beside it. With [onMark], a checkbox shows and toggles whether the entry is [marked] for a bulk action.
  */
 @Composable
 internal fun EntryCardView(entry: Entry, info: EntryCardInfo, isSelected: Boolean, listFocused: Boolean, trash: Boolean,
                            busy: Boolean, onClick: () -> Unit, onFocusInside: () -> Unit, onQuick: (QuickField) -> Unit,
                            onEdit: () -> Unit, onDuplicate: () -> Unit, onRestore: () -> Unit, onPurge: () -> Unit,
-                           onTrash: () -> Unit, markers: List<HealthIssue> = emptyList(), compact: Boolean = false) {
+                           onTrash: () -> Unit, markers: List<HealthIssue> = emptyList(), compact: Boolean = false,
+                           marked: Boolean = false, onMark: (() -> Unit)? = null) {
     val colors = MaterialTheme.colors
     val latestClick by rememberUpdatedState(onClick)
     Card(
@@ -115,6 +116,7 @@ internal fun EntryCardView(entry: Entry, info: EntryCardInfo, isSelected: Boolea
         elevation = if (isSelected) 4.dp else 2.dp,
     ) {
         Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (onMark != null) Checkbox(marked, onCheckedChange = { onMark() })
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(entry.title, style = MaterialTheme.typography.h6)
                 Text(listOfNotNull(entry.data.type().label,

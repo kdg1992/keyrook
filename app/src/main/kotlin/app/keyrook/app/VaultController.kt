@@ -8,6 +8,8 @@ import app.keyrook.core.crypto.Secret
 import app.keyrook.core.crypto.KdfParameters
 import app.keyrook.core.model.Entry
 import app.keyrook.core.model.Vault
+import app.keyrook.core.model.tagEntries
+import app.keyrook.core.model.trashEntries
 import app.keyrook.core.service.VaultSession
 import java.nio.file.Path
 
@@ -78,6 +80,32 @@ class VaultController(internal val session: VaultSession = VaultSession(),
                     it.copy(deletedAt = if (restore) null else stamp, modifiedAt = stamp)
                 }
             }))
+        }
+        return session.snapshot()
+    }
+
+    /** Moves the entries [ids] to the trash, or restores them, as one save; on any failure nothing changes. */
+    fun trashAll(ids: Set<String>, restore: Boolean): Vault = bulkChange { current ->
+        current.trashEntries(ids, restore, java.time.Instant.now())
+    }
+
+    /**
+     * Adds [tag] to, or removes it from, the entries [ids] as one save; on any failure nothing changes. When no entry
+     * changes, nothing is saved.
+     */
+    fun tagAll(ids: Set<String>, tag: String, add: Boolean): Vault = bulkChange { current ->
+        current.tagEntries(ids, tag.trim(), add, java.time.Instant.now())
+    }
+
+    /** [change] returns its argument unchanged to skip the save, otherwise a candidate saved as one revision. */
+    private fun bulkChange(change: (Vault) -> Vault): Vault {
+        ensureOperationCurrent()
+        session.snapshot().use { current ->
+            val candidate = change(current)
+            if (candidate !== current) {
+                candidate.validate()
+                session.save(candidate)
+            }
         }
         return session.snapshot()
     }

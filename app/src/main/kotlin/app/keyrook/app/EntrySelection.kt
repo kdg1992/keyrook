@@ -27,15 +27,42 @@ internal data class ListView(val search: String = "", val filters: EntryListFilt
  * the selection stays on its entry or, if that entry left the list (for example moved to the trash), moves to
  * the next remaining entry, otherwise the previous one. A [jump] target is selected as soon as a result list contains
  * it and is dropped by the first result list without it, so it never takes over a later, unrelated list.
+ *
+ * [marked] holds the entries checked for a bulk action, independently of the keyboard selection. Marks survive
+ * vault changes under the same query for entries still listed, and are cleared by a new query, so a bulk action
+ * never reaches an entry the list no longer shows.
  */
 internal data class EntrySelection(val selectedId: String? = null, val visible: List<String> = emptyList(),
-                                   val query: Any? = null, val target: String? = null) {
+                                   val query: Any? = null, val target: String? = null,
+                                   val marked: Set<String> = emptySet()) {
     /** [ids] is null while results are pending; the previous list and a pending [target] are then kept unchanged. */
     fun update(query: Any, ids: List<String>?): EntrySelection = when {
         ids == null -> this
-        target != null && target in ids -> EntrySelection(target, ids, query)
+        target != null && target in ids -> EntrySelection(target, ids, query, marked = kept(query, ids))
         query != this.query -> EntrySelection(ids.firstOrNull(), ids, query)
-        else -> copy(selectedId = follow(ids), visible = ids, target = null)
+        else -> copy(selectedId = follow(ids), visible = ids, target = null, marked = kept(query, ids))
+    }
+
+    /** The marked entries in display order. */
+    val markedIds: List<String> get() = visible.filter { it in marked }
+
+    /** Marks or unmarks [id] when it is listed. */
+    fun toggleMark(id: String): EntrySelection = when {
+        id !in visible -> this
+        id in marked -> copy(marked = marked - id)
+        else -> copy(marked = marked + id)
+    }
+
+    /** Marks every listed entry, or clears the marks when all are already marked. */
+    fun markAll(): EntrySelection =
+        if (visible.isNotEmpty() && marked.containsAll(visible)) copy(marked = emptySet()) else copy(marked = visible.toSet())
+
+    fun clearMarks(): EntrySelection = copy(marked = emptySet())
+
+    private fun kept(query: Any, ids: List<String>): Set<String> {
+        if (query != this.query || marked.isEmpty()) return emptySet()
+        val present = ids.toHashSet()
+        return marked.filterTo(linkedSetOf()) { it in present }
     }
 
     /** Selects [id] now when it is listed, otherwise with the next result list that contains it. */
