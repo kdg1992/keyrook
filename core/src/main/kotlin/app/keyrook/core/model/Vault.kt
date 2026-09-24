@@ -158,6 +158,46 @@ data class Vault(
         return copy(entries = remaining)
     }
 
+    /**
+     * Returns a caller-owned copy in which every [Secret] is a new instance, filled through [Secret.copy] from a
+     * temporary character array that is erased afterwards. No immutable string of a secret value is created, unlike a
+     * serialization round trip. Non-secret values are immutable and shared. If copying fails, secrets copied so far
+     * are erased.
+     */
+    internal fun deepCopy(): Vault {
+        val copied = mutableListOf<Secret>()
+        fun secret(value: Secret): Secret = value.copy().also(copied::add)
+        fun field(value: Field): Field = value.copy(value = secret(value.value))
+        fun endpoint(value: MailEndpoint?): MailEndpoint? = value?.copy(host = field(value.host))
+        fun data(value: EntryData): EntryData = when (value) {
+            is EntryData.Web -> value.copy(url = field(value.url), username = field(value.username),
+                password = field(value.password), totp = value.totp?.let(::field))
+            is EntryData.Transfer -> value.copy(host = field(value.host), username = field(value.username),
+                password = field(value.password), directory = field(value.directory))
+            is EntryData.Email -> value.copy(address = field(value.address), username = field(value.username),
+                password = field(value.password), imap = endpoint(value.imap), pop3 = endpoint(value.pop3),
+                smtp = endpoint(value.smtp))
+            is EntryData.Panel -> value.copy(url = field(value.url), username = field(value.username),
+                password = field(value.password), role = field(value.role))
+            is EntryData.Server -> value.copy(host = field(value.host), username = field(value.username),
+                password = field(value.password), operatingSystem = field(value.operatingSystem), role = field(value.role))
+            is EntryData.Ssh -> value.copy(privateKey = field(value.privateKey), publicKey = field(value.publicKey),
+                passphrase = field(value.passphrase), fingerprint = field(value.fingerprint))
+            is EntryData.Domain -> value.copy(name = field(value.name), registrar = field(value.registrar),
+                dnsNotes = field(value.dnsNotes))
+            is EntryData.Custom -> value.copy(values = value.values.mapValues { field(it.value) })
+        }
+        return try {
+            copy(entries = entries.map { entry ->
+                entry.copy(data = data(entry.data), notes = secret(entry.notes),
+                    history = entry.history.map { it.copy(data = data(it.data)) })
+            })
+        } catch (e: Throwable) {
+            copied.forEach(Secret::close)
+            throw e
+        }
+    }
+
     override fun close() {
         entries.forEach { entry -> secrets(entry).forEach(Secret::close) }
     }

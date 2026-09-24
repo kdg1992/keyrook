@@ -16,7 +16,9 @@ import java.time.Instant
 private const val CODE_MASK = "••••••"
 
 /** A shown code: its digits, the end of its period, the seconds left and the period length. */
-internal data class TotpDisplay(val code: String, val validUntil: Instant, val remaining: Long, val period: Long)
+internal data class TotpDisplay(val code: String, val validUntil: Instant, val remaining: Long, val period: Long) {
+    override fun toString(): String = "TotpDisplay(code=[redacted], validUntil=$validUntil, remaining=$remaining, period=$period)"
+}
 
 /**
  * The next state of a shown code at [now]: the current code is kept while its period lasts, otherwise a new one is

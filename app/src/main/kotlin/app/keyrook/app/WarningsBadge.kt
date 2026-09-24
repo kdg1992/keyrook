@@ -20,8 +20,8 @@ import javax.swing.SwingUtilities
 
 /**
  * Core health findings for the displayed vault revision, or null while locked or while the check runs. The check
- * runs once per vault revision and day on its own worker thread, never on the UI thread, with a separate session
- * snapshot that is closed afterwards. Results from an older revision or a previous session are discarded.
+ * runs once per vault revision and day on its own worker thread, never on the UI thread, on a session copy taken
+ * without serializing secrets and erased afterwards. Results from an older revision or a previous session are discarded.
  */
 @Composable
 internal fun vaultWarnings(vault: Vault?, controller: VaultController): List<EntryHealth>? {
@@ -38,8 +38,8 @@ internal fun vaultWarnings(vault: Vault?, controller: VaultController): List<Ent
         val token = controller.sessionEpoch.capture()
         val task = if (id == null) null else worker.submit {
             val findings = runCatching {
-                if (!active.get()) null else controller.session.snapshot().use { snapshot ->
-                    if (snapshot.id != id || snapshot.revision != revision) null else VaultHealth().inspect(snapshot)
+                if (!active.get()) null else controller.read { current ->
+                    if (current.id != id || current.revision != revision) null else VaultHealth().inspect(current)
                 }
             }.getOrNull()
             SwingUtilities.invokeLater {

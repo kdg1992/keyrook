@@ -48,6 +48,9 @@ class Secret(chars: CharArray) : AutoCloseable {
 /** JSON requires a temporary immutable String. See SECURITY.md for the JVM limitation. */
 object SecretSerializer : KSerializer<Secret> {
     private val decoding = ThreadLocal<MutableList<Secret>?>()
+    private val conversions = ThreadLocal.withInitial { 0L }
+    /** Secrets converted to or from a string on the calling thread; lets tests prove a path never serializes. */
+    internal fun conversionsOnThisThread(): Long = conversions.get()
     internal fun <T> trackDecoding(block: () -> T): T {
         check(decoding.get() == null)
         val secrets = mutableListOf<Secret>()
@@ -58,9 +61,11 @@ object SecretSerializer : KSerializer<Secret> {
     }
     override val descriptor = PrimitiveSerialDescriptor("Secret", PrimitiveKind.STRING)
     override fun serialize(encoder: Encoder, value: Secret) = value.useChars {
+        conversions.set(conversions.get() + 1)
         encoder.encodeString(String(it))
     }
     override fun deserialize(decoder: Decoder): Secret {
+        conversions.set(conversions.get() + 1)
         val chars = decoder.decodeString().toCharArray()
         return try { Secret(chars).also { decoding.get()?.add(it) } } finally { chars.fill('\u0000') }
     }

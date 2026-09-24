@@ -10,13 +10,19 @@ import app.keyrook.core.model.Vault
 import app.keyrook.core.service.VaultSession
 import java.nio.file.Path
 
-/** Called exclusively on one worker. Returned snapshots belong to the presentation layer. */
+/** Called exclusively on one worker, except [read]. Returned snapshots belong to the presentation layer. */
 class VaultController(internal val session: VaultSession = VaultSession(),
                       private val backoff: UnlockBackoff = UnlockBackoff()) : AutoCloseable {
     internal val sessionEpoch = SessionEpoch()
     /** Normalized path of the unlocked vault file; keys remembered per-vault settings. */
     internal var vaultPath: Path? = null
         private set
+    /**
+     * Read-only scans for background threads other than the worker: touches no controller state, only the
+     * synchronized session, and hands [block] an erased-afterwards copy (see [VaultSession.read]). It may wait while
+     * the worker holds the session, for example during an integrity check, so it must never run on the UI thread.
+     */
+    internal fun <R> read(block: (Vault) -> R): R = session.read(block)
     fun unlockDelayMillis(): Long = backoff.remainingMillis()
     fun unlock(path: Path, password: CharArray, keyFile: Path?, create: Boolean,
                parameters: KdfParameters = KdfParameters()): Vault {

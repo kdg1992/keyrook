@@ -156,7 +156,10 @@ internal fun totpError(text: String): InputError? {
  * invalid value the user has not changed in this edit is only a warning, so entries imported with such a value stay
  * editable; a changed value must be empty or valid.
  */
-internal data class TotpSlot(val index: Int, val stored: String?)
+internal data class TotpSlot(val index: Int, val stored: String?) {
+    /** The stored value is a TOTP seed; debug output only says whether one exists. */
+    override fun toString(): String = "TotpSlot(index=$index, stored=${if (stored == null) "null" else "[redacted]"})"
+}
 
 /** The TOTP slot of the edited [EntryData] given the entry's data and values when the editor opened. */
 internal fun EntryData.totpSlot(initial: EntryData, initialValues: List<String>): TotpSlot? =
