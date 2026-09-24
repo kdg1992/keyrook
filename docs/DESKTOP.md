@@ -313,9 +313,13 @@ the deletion still contain the entry and remain the only way to recover it;
 backup retention can eventually remove those older backups.
 
 Active list rows offer quick actions without opening the editor: copy the
-username, copy the password (the passphrase for SSH keys, the first hidden field
-for custom records) and open the URL of web and hosting-panel records (the first
-URL field for custom records). Buttons appear only when the field has a value.
+username, copy the password (the passphrase for SSH keys) and open the URL of
+web and hosting-panel records. Custom records, including Bitwarden and KeePass
+imports, use fields by their label, ignoring case: *username*, *user* or
+*Benutzername* for the username; *password*, *Passwort* or *passphrase* for the
+password, otherwise the first hidden field not labelled as a username, URL or
+*totp*; *url*, *url1*, *uri* or *host* for the URL, otherwise the first URL
+field. Buttons appear only when the field has a value.
 Copies use the same clipboard handling as the editor, including ownership
 checks and the configured expiry. Links pass the same validation as in the
 editor before the system browser receives them. Secret values are never shown in the
@@ -477,8 +481,8 @@ Import parses and validates first, then asks for confirmation showing the entry 
   | Comments | Notes | Notes |
 
   The KeePass CSV 1.x format quotes every field and escapes quotes as `\"` and backslashes as `\\`; these escapes are decoded, and any other backslash sequence is refused. The field-name variant uses ordinary CSV quoting (doubled quotes). Additional columns such as groups, TOTP or timestamps are refused rather than silently dropped; use **CSV mit Feldzuordnung** for such files. Each row becomes a web login entry.
-- Bitwarden unencrypted JSON: login and secure-note items, custom fields, folders, multiple URLs, dates and password history. Cards, identities, organization records, attachments, passkeys and password-reprompt restrictions are not imported.
-- KeePass XML: exported plaintext strings, group paths, tags, ISO timestamps, expiry and history. Entries in the identified recycle bin, including nested groups, remain deleted; their last-modified time supplies the deletion timestamp because the export has no separate deletion date. KDBX, binary/attached data, protected values, custom plugin data and binary timestamps are not supported. DTDs, external entities and ambiguous recycle-bin/expiry metadata are refused.
+- Bitwarden unencrypted JSON: login and secure-note items, custom fields, folders, multiple URLs, dates and password history. The username and URLs are visible fields; the password, TOTP secret and hidden custom fields are hidden. Cards, identities, organization records, attachments, passkeys and password-reprompt restrictions are not imported.
+- KeePass XML: exported plaintext strings, group paths, tags, ISO timestamps, expiry and history. `UserName` and `URL` are visible fields, all other strings hidden ones. Entries in the identified recycle bin, including nested groups, remain deleted; their last-modified time supplies the deletion timestamp because the export has no separate deletion date. KDBX, binary/attached data, protected values, custom plugin data and binary timestamps are not supported. DTDs, external entities and ambiguous recycle-bin/expiry metadata are refused.
 
 The source export's immutable parser strings cannot be reliably wiped from JVM memory. Imported Bitwarden/KeePass fields are stored as custom records to preserve additional values. Unsupported structures produce a generic failure instead of exposing data in errors.
 

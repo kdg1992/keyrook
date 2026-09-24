@@ -11,7 +11,10 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.*
 import app.keyrook.core.model.EntryData
 import app.keyrook.core.model.Field
-import app.keyrook.core.model.FieldKind
+import app.keyrook.core.model.PrimaryFieldNames
+import app.keyrook.core.model.primarySecret
+import app.keyrook.core.model.primaryUrl
+import app.keyrook.core.model.primaryUsername
 import app.keyrook.core.otp.Totp
 import java.awt.Desktop
 import java.net.URI
@@ -19,35 +22,16 @@ import java.time.Instant
 
 internal enum class QuickField { USERNAME, SECRET, TOTP, URL }
 
-/** Selection follows field semantics, never translated or custom labels. */
+/**
+ * Selection follows field semantics and the core's field labels for custom entries (see [PrimaryFieldNames]), never
+ * translated labels. SSH offers the passphrase; the private key itself is only copied from the editor.
+ */
 internal fun EntryData.quickField(kind: QuickField): Field? = when (kind) {
-    QuickField.USERNAME -> when (this) {
-        is EntryData.Web -> username
-        is EntryData.Transfer -> username
-        is EntryData.Email -> username
-        is EntryData.Panel -> username
-        is EntryData.Server -> username
-        is EntryData.Ssh, is EntryData.Domain, is EntryData.Custom -> null
-    }
-    // SSH offers the passphrase; the private key itself is only copied from the editor.
-    QuickField.SECRET -> when (this) {
-        is EntryData.Web -> password
-        is EntryData.Transfer -> password
-        is EntryData.Email -> password
-        is EntryData.Panel -> password
-        is EntryData.Server -> password
-        is EntryData.Ssh -> passphrase
-        is EntryData.Domain -> null
-        is EntryData.Custom -> values.values.firstOrNull { it.hidden }
-    }
+    QuickField.USERNAME -> primaryUsername()
+    QuickField.SECRET -> primarySecret()
     // Copies the current one-time code computed from the stored secret, never the secret itself.
     QuickField.TOTP -> (this as? EntryData.Web)?.totp
-    QuickField.URL -> when (this) {
-        is EntryData.Web -> url
-        is EntryData.Panel -> url
-        is EntryData.Custom -> values.values.firstOrNull { it.kind == FieldKind.URL }
-        else -> null
-    }
+    QuickField.URL -> primaryUrl()
 }
 
 internal fun EntryData.quickLabel(field: Field): String = labels()[fields().indexOfFirst { it === field }]
