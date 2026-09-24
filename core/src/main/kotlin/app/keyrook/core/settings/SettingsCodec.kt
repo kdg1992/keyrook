@@ -12,7 +12,7 @@ import java.nio.charset.CharacterCodingException
  *
  * Compatibility: a new preference is added as an optional field with a default, so files written before it existed still decode
  * within the same [SettingsCodec.VERSION]. Unknown keys stay rejected. A change that alters or removes an existing field needs a
- * version bump instead. [language], [windowLock] and [updateCheck] were added this way.
+ * version bump instead. [language], [windowLock], [updateCheck] and [window] were added this way.
  */
 @Serializable
 data class SettingsDocument(
@@ -26,6 +26,18 @@ data class SettingsDocument(
     val backups: Map<String, BackupSettingsDocument> = emptyMap(),
     /** Update-check mode chosen in the UI; absent or unknown values mean no automatic check. */
     val updateCheck: String? = null,
+    /** Last main-window size, position and maximized state; validated by [WindowGeometry.fromDocument] and again against the screens. */
+    val window: WindowSettingsDocument? = null,
+)
+
+/** Window geometry in window-system units. Every field is optional so partial or older entries decode and fall back to defaults. */
+@Serializable
+data class WindowSettingsDocument(
+    val x: Int? = null,
+    val y: Int? = null,
+    val width: Int? = null,
+    val height: Int? = null,
+    val maximized: Boolean? = null,
 )
 
 @Serializable

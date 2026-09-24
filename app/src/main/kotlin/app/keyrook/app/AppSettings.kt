@@ -6,6 +6,7 @@ import app.keyrook.core.backup.BackupPolicy
 import app.keyrook.core.settings.BackupSettingsDocument
 import app.keyrook.core.settings.SettingsCodec
 import app.keyrook.core.settings.SettingsDocument
+import app.keyrook.core.settings.WindowGeometry
 import java.nio.file.*
 import java.nio.file.attribute.PosixFileAttributeView
 import java.nio.file.attribute.PosixFilePermissions
@@ -35,6 +36,8 @@ internal data class AppSettings(
     val windowLock: WindowLockPolicy = WindowLockPolicy.MINIMIZE,
     /** Off unless the user enabled it; read once at start, so a change applies from the next start. */
     val checkUpdatesOnStart: Boolean = false,
+    /** Last main-window geometry; null until the window was first saved. Checked against the connected screens at start. */
+    val window: WindowGeometry? = null,
 ) {
     fun backupFor(vault: Path): StoredBackup? = backups[vaultKey(vault)]
 
@@ -51,6 +54,7 @@ internal data class AppSettings(
             BackupSettingsDocument(value.folder.toString(), value.policy.latest, value.policy.daily, value.enabled)
         },
         updateCheck = if (checkUpdatesOnStart) UPDATE_CHECK_ON_START else UPDATE_CHECK_MANUAL,
+        window = window?.toDocument(),
     )
 
     companion object {
@@ -78,6 +82,7 @@ internal data class AppSettings(
                 windowLock = WindowLockPolicy.entries.find { it.name == document.windowLock } ?: defaults.windowLock,
                 // Only the exact enabling value turns automatic checks on; missing and unknown values keep them off.
                 checkUpdatesOnStart = document.updateCheck == UPDATE_CHECK_ON_START,
+                window = WindowGeometry.fromDocument(document.window),
             )
         }
 

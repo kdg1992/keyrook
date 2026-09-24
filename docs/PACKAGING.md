@@ -136,6 +136,16 @@ copies of `LICENSE`, `THIRD-PARTY-NOTICES`, all repository license texts, and th
 packaging JDK's `legal/` directory through Compose application resources. A
 platform-specific archive of those files accompanies each release.
 
+The application icon is original project artwork under GPL-3.0-or-later, not
+third-party material. `scripts/generate-icons.py` (Python 3 standard library
+only) draws it from its geometry and writes `app/icons/keyrook.svg`, the
+installer icons `app/icons/keyrook.png` (Linux), `keyrook.ico` (Windows) and
+`keyrook.icns` (macOS), and the window icon resource
+`app/src/main/resources/app/keyrook/app/keyrook-icon.png`; `--check` verifies
+that the committed files match. These are project files packaged with the
+application, not resolved runtime artifacts, so they do not change the native
+inventory above.
+
 ## Workflow behavior
 
 A manual `workflow_dispatch` tests and packages all three platforms without

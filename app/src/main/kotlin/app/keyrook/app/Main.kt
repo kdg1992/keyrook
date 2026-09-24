@@ -35,8 +35,17 @@ fun main(args: Array<String>) {
     val settings = SettingsStore.platform()
     // Select the language before the first composition so no text is rendered in the wrong language.
     UiText.select(settings.current().language)
+    val icon = loadWindowIcon()
     application {
-        Window(onCloseRequest = ::exitApplication, title = "Keyrook") { KeyrookApp(window, settings) }
+        val windowState = rememberMainWindowState(settings)
+        Window(
+            onCloseRequest = { saveWindowGeometry(settings, windowState); exitApplication() },
+            state = windowState, title = "Keyrook", icon = icon,
+        ) {
+            LaunchedEffect(window) { window.minimumSize = minimumWindowSize() }
+            PersistWindowGeometry(windowState, settings)
+            KeyrookApp(window, settings)
+        }
     }
 }
 

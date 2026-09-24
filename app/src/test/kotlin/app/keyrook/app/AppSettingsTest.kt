@@ -5,6 +5,7 @@ package app.keyrook.app
 import app.keyrook.core.backup.BackupPolicy
 import app.keyrook.core.crypto.KdfParameters
 import app.keyrook.core.model.Vault
+import app.keyrook.core.settings.WindowGeometry
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -120,6 +121,27 @@ class AppSettingsTest {
             assertEquals(WindowLockPolicy.MINIMIZE, loaded.windowLock, value)
             assertEquals(ThemeMode.DARK, loaded.theme, value)
         }
+    }
+
+    @Test fun `window geometry survives a restart and older or invalid entries fall back to defaults`() {
+        val config = directory.toRealPath().resolve("config")
+        val file = config.resolve(SettingsStore.FILE_NAME)
+        val store = SettingsStore(config)
+        assertNull(store.current().window)
+        val geometry = WindowGeometry(-40, 25, 1200, 800, true)
+        assertTrue(store.update { it.copy(window = geometry, theme = ThemeMode.DARK) })
+        assertTrue(Files.readString(file).contains("\"maximized\": true"))
+        assertEquals(geometry, SettingsStore(config).current().window)
+        assertEquals(ThemeMode.DARK, SettingsStore(config).current().theme)
+        Files.writeString(file, """{"version":1,"theme":"DARK","windowLock":"NEVER"}""")
+        assertEquals(AppSettings(theme = ThemeMode.DARK, windowLock = WindowLockPolicy.NEVER), SettingsStore(config).current())
+        Files.writeString(file, """{"version":1,"theme":"DARK","window":{"x":5,"width":100,"height":999999}}""")
+        assertEquals(AppSettings(theme = ThemeMode.DARK,
+            window = WindowGeometry(null, null, WindowGeometry.MIN_WIDTH, WindowGeometry.MAX_SIZE, false)), SettingsStore(config).current())
+        Files.writeString(file, """{"version":1,"theme":"DARK","window":{"width":-1,"height":0,"maximized":true}}""")
+        assertEquals(WindowGeometry.DEFAULT.copy(maximized = true), SettingsStore(config).current().window)
+        Files.writeString(file, """{"version":1,"theme":"DARK","window":{"width":"wide"}}""")
+        assertEquals(AppSettings(), SettingsStore(config).current())
     }
 
     @Test fun `corrupt unknown and out of range files fall back to defaults`() {
