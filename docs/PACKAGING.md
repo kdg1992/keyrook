@@ -28,14 +28,17 @@ refuses an existing tag, release or replacement PR, removes the old PR's pending
 label, and invokes release-please to generate a replacement at the same version.
 It restores the old label if recovery fails and otherwise dispatches the
 [release PR checks](CI.md#release-process) for the replacement. No tag or release is created by
-this recovery workflow, and it uses only `GITHUB_TOKEN`.
+this recovery workflow, and it uses only `GITHUB_TOKEN`. An existing draft release
+for the version also blocks recovery; to replace a draft whose packaging failed,
+see [When packaging or installer tests fail](#when-packaging-or-installer-tests-fail).
 The single root package uses the default release branch
 `release-please--branches--main`; recovery also accepts the previous
 `release-please--branches--main--components--keyrook` branch.
 
 Review the replacement's generated changelog and version files, ensure all CI
 checks pass, then approve and squash-merge it directly into current `main`.
-The normal Release workflow creates the tag and release at that merge commit.
+The normal Release workflow creates the tag and draft release at that merge
+commit and publishes it after the installer tests pass.
 If recovery fails after creating a PR, inspect that PR and the restored pending
 label before retrying. Installer publication still requires the license review
 below; recovering a source release does not change the reviewed inventory.
@@ -225,8 +228,8 @@ renders offscreen, so no display server is needed.
 The upgrade source is the highest published, non-draft, non-prerelease release
 whose version is strictly lower than the package under test and which ships an
 installer for the same platform, architecture and format together with
-`SHA256SUMS.txt`. The newest published release is normally the one being built,
-so it is skipped by this rule. The old installer is downloaded with
+`SHA256SUMS.txt`. The release being built is still a draft at this point and
+is therefore never its own upgrade source. The old installer is downloaded with
 `gh release download` using the read-only `GITHUB_TOKEN` and checked against that
 release's `SHA256SUMS.txt`. When no such release exists, the upgrade scenario is
 skipped with a workflow notice; the fresh-install scenario still runs. Verbose
@@ -261,21 +264,55 @@ The Fedora image digest is not updated by Dependabot; review and update it
 manually alongside other workflow pins.
 
 On `main` pushes, release-please maintains the version/changelog pull request.
-When it creates a release, the same workflow builds the installers. Build and
-installer-test jobs have read-only permissions. Only after all builds and
-installer tests succeed does a separate job
-verify their checksums and upload the complete installer set, notice archives,
-`LICENSE`, `THIRD-PARTY-NOTICES`, and combined `SHA256SUMS.txt`. Temporary transfer
-artifacts expire after one day; permanent downloads are release assets. No code
-from an artifact is executed by the publishing job. Each native job has a
-40-minute limit. Linux installs `rpm` before packaging.
+When the release PR is merged, release-please creates the `vX.Y.Z` tag at the
+merge commit and a **draft** GitHub release (`"draft": true` and
+`"force-tag-creation": true` in `release-please-config.json`; without the second
+option GitHub would create the tag only on publication, and release-please would
+not find the previous release). A draft is invisible to the public, to
+`releases/latest` and therefore to the application's update check. The same
+workflow then builds the installers from the tag. Build and installer-test jobs
+have read-only permissions. Only after all builds and installer tests succeed
+does the separate `publish` job, the only one with `contents: write` besides
+release-please itself, verify their checksums, find the draft by its tag in the
+release list (the tag endpoint does not return drafts), check that it targets
+the tagged commit, upload the complete installer set, notice archives, `LICENSE`,
+`THIRD-PARTY-NOTICES` and combined `SHA256SUMS.txt`, and append the unsigned-installation
+instructions. Its last step publishes the draft and marks it as the latest
+release. Temporary transfer artifacts expire after one day; permanent downloads
+are release assets. No code from an artifact is executed by the publishing job.
+Each native job has a 40-minute limit. Linux installs `rpm` before packaging.
+The configured modules include desktop, XML and cryptography support; the
+installer tests verify them through the installed launcher's self-test.
 
-If a build fails after release-please creates a tag/release, the release may exist
-without installer assets. It must not be advertised as a complete download.
-Correct the cause and rerun the failed jobs for that workflow. No secondary tag
-workflow is required. The configured modules include desktop, XML and cryptography
-support; the installer tests verify them through the installed launcher's
-self-test.
+### When packaging or installer tests fail
+
+The release stays an unpublished draft; nothing is announced. Its tag already
+exists, and the release PR is labelled `autorelease: tagged`, so later `main`
+pushes neither recreate it nor include new commits in it.
+
+- **Transient failure** (runner, network, download): rerun the failed jobs of
+  that Release run. The publish job replaces assets left by an interrupted
+  upload and refuses to touch a release that is already published.
+- **Defect in the tagged code or workflow**: the tag cannot move, so replace the
+  draft with a new release PR at the same version. First merge the fix into
+  `main` while the draft and tag still exist. Then discard the draft and its tag,
+  change the old release PR's label from `autorelease: tagged` back to
+  `autorelease: pending`, and immediately run
+  [Recover release pull request](#recovering-an-unpublished-release) on `main`
+  with that PR number; do not push to `main` in between, because the next
+  Release run would otherwise recreate the draft at the old commit.
+
+To discard a broken draft (maintainer with write access):
+
+```bash
+gh release delete vX.Y.Z --cleanup-tag --yes   # deletes the draft and its tag
+git ls-remote --tags origin vX.Y.Z             # must print nothing
+gh pr edit <release PR> --remove-label 'autorelease: tagged' --add-label 'autorelease: pending'
+```
+
+Never publish a draft by hand: that bypasses the checksum and installer-test
+gate. A published release is never modified by the workflow; a defect found after
+publication requires a new version.
 
 Code signing/notarization is deliberately unconfigured. A future signing change
 must add protected credentials and a reviewed signing step before checksums and

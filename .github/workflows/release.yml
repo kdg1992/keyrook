@@ -28,6 +28,8 @@ jobs:
       prs_created: ${{ steps.release.outputs.prs_created }}
       pr: ${{ steps.release.outputs.pr }}
     steps:
+      # release-please-config.json makes this a draft release with its tag created immediately;
+      # the publish job makes it public after the installer tests pass.
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
         with:
@@ -599,15 +601,51 @@ jobs:
           const releaseFiles = fs.readdirSync('build/release').sort();
           fs.writeFileSync('build/release/SHA256SUMS.txt', releaseFiles.map(name => `${digest(`build/release/${name}`)}  ${name}\n`).join(''));
           NODE
-      - name: Upload installers and unsigned installation instructions
+      # Release Please creates the release as a draft (with its tag), so nothing is announced before
+      # this point. The tag endpoint omits drafts; the draft is found in the release list instead.
+      - name: Upload installers and unsigned installation instructions to the draft release
+        id: draft
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ needs.release-please.outputs.tag_name }}
         run: |
-          gh release upload "$RELEASE_TAG" build/release/* --clobber
-          gh release view "$RELEASE_TAG" --json body --jq .body > build/release-notes.md
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid release tag"; exit 1; }
+          matches="$(gh api --paginate "repos/$GH_REPO/releases?per_page=100" \
+            --jq '.[] | select(.tag_name == env.RELEASE_TAG) | [.id, .draft, .target_commitish] | @tsv')"
+          [ "$(printf '%s\n' "$matches" | grep -c .)" -eq 1 ] || { echo "Expected exactly one release for $RELEASE_TAG"; exit 1; }
+          IFS=$'\t' read -r release_id draft target <<< "$matches"
+          [[ "$release_id" =~ ^[0-9]+$ ]] || { echo "Invalid release id"; exit 1; }
+          [ "$draft" = true ] || { echo "$RELEASE_TAG is already published; refusing to modify it"; exit 1; }
+          [ "$target" = "$(git rev-parse HEAD)" ] || { echo "Draft release does not target the checked-out tag commit"; exit 1; }
+          echo "release-id=$release_id" >> "$GITHUB_OUTPUT"
+
+          upload_url="$(gh api "repos/$GH_REPO/releases/$release_id" --jq '.upload_url | sub("\\{.*$"; "")')"
+          [[ "$upload_url" =~ ^https://uploads\.github\.com/repos/[^?{}]+/releases/${release_id}/assets$ ]] || { echo "Unexpected upload URL"; exit 1; }
+          # A rerun replaces assets left by an earlier, interrupted attempt.
+          gh api --paginate "repos/$GH_REPO/releases/$release_id/assets?per_page=100" --jq '.[] | [.id, .name] | @tsv' |
+            while IFS=$'\t' read -r asset_id name; do
+              if [ -e "build/release/$name" ]; then gh api --method DELETE "repos/$GH_REPO/releases/assets/$asset_id"; fi
+            done
+          # The token is read from an owner-only file so it never appears in the process list.
+          auth_header="$(umask 077 && mktemp "$RUNNER_TEMP/upload-auth.XXXXXX")"
+          trap 'rm -f "$auth_header"' EXIT
+          printf 'Authorization: Bearer %s\n' "$GH_TOKEN" > "$auth_header"
+          for file in build/release/*; do
+            name="$(basename "$file")"
+            curl --fail-with-body --silent --show-error --retry 3 --output /dev/null \
+              --header "@$auth_header" --header 'Content-Type: application/octet-stream' \
+              --data-binary "@$file" "$upload_url?name=$name"
+            echo "Uploaded $name"
+          done
+          rm -f "$auth_header"
+          expected="$(ls build/release | sort)"
+          uploaded="$(gh api --paginate "repos/$GH_REPO/releases/$release_id/assets?per_page=100" --jq '.[] | select(.state == "uploaded") | .name' | sort)"
+          [ "$expected" = "$uploaded" ] || { echo "Draft release assets do not match the verified release set"; exit 1; }
+
+          gh api "repos/$GH_REPO/releases/$release_id" --jq .body > build/release-notes.md
           node <<'NODE'
           const fs = require('node:fs');
           const notes = fs.readFileSync('build/release-notes.md', 'utf8');
@@ -615,4 +653,20 @@ jobs:
           if (!instructions) throw Error('Unsigned installation instructions are missing');
           if (!notes.includes('## Unsigned installers')) fs.appendFileSync('build/release-notes.md', '\n' + instructions);
           NODE
-          gh release edit "$RELEASE_TAG" --notes-file build/release-notes.md
+          gh api --method PATCH "repos/$GH_REPO/releases/$release_id" -F body=@build/release-notes.md --silent
+      # Last step: only a complete, installer-tested asset set becomes public and the latest release.
+      - name: Publish the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.release-please.outputs.tag_name }}
+          RELEASE_ID: ${{ steps.draft.outputs.release-id }}
+        run: |
+          set -euo pipefail
+          gh api --method PATCH "repos/$GH_REPO/releases/$RELEASE_ID" -F draft=false -f make_latest=true --silent
+          published="$(gh api "repos/$GH_REPO/releases/tags/$RELEASE_TAG" --jq '[.id, .draft] | @tsv')"
+          [ "$published" = "$RELEASE_ID"$'\t'false ] || { echo "Release $RELEASE_TAG was not published"; exit 1; }
+          latest="$(gh api "repos/$GH_REPO/releases/latest" --jq .tag_name)"
+          [ "$latest" = "$RELEASE_TAG" ] || echo "::warning::$RELEASE_TAG is published but the latest release is $latest"
+          echo "Published $RELEASE_TAG"

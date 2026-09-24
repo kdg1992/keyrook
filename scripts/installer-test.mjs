@@ -51,8 +51,8 @@ function prepare(extension) {
     output('new-installer', posix(installer));
     output('new-version', version);
 
-    // The newest published release is usually the one this run is building, so the upgrade source is
-    // the highest published, non-prerelease version below it that ships an installer for this target.
+    // The release this run is building is still a draft, so the upgrade source is the highest published,
+    // non-prerelease version below it that ships an installer for this target.
     const repository = process.env.GH_REPO;
     if (!repository) throw Error('GH_REPO is required');
     const listing = execFileSync('gh', ['api', '--paginate', `repos/${repository}/releases?per_page=100`, '--jq',

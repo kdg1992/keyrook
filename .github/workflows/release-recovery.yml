@@ -69,7 +69,9 @@ jobs:
                 !['release-please--branches--main', 'release-please--branches--main--components--keyrook'].includes(pr.head.ref) ||
                 pr.title !== `chore(main): release ${version}` ||
                 !pr.labels.some(label => label.name === 'autorelease: pending')) throw Error('Not the pending release for this version');
-            if (await get(`git/ref/tags/v${version}`, true) || await get(`releases/tags/v${version}`, true)) {
+            // The tag endpoint omits drafts; recent releases, including drafts, are listed newest first.
+            if (await get(`git/ref/tags/v${version}`, true) || await get(`releases/tags/v${version}`, true) ||
+                (await get('releases?per_page=100')).some(release => release.tag_name === `v${version}`)) {
               throw Error('Version already tagged or released; recovery must not replace it');
             }
             for (const branch of ['release-please--branches--main', 'release-please--branches--main--components--keyrook']) {
