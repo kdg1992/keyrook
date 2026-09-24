@@ -37,7 +37,7 @@ data class BackupResult(val path: Path, val removed: Int)
 
 /** Copies authenticated ciphertext. Backup names disclose only a random vault ID, revision and time. */
 class BackupService internal constructor(
-    private val directory: Path,
+    internal val directory: Path,
     private val policy: BackupPolicy,
     private val clock: Clock,
     private val codec: VaultCodec,
@@ -103,7 +103,7 @@ class BackupService internal constructor(
     }
 
     private fun rotate(root: Path, vaultId: String, newest: Path): Int {
-        val pattern = Regex("${Regex.escape(vaultId)}_([0-9]{1,19})_([0-9]{1,19})_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\.keyrook\\.bak")
+        val pattern = backupNamePattern(vaultId)
         val candidates = Files.newDirectoryStream(root).use { stream ->
             stream.mapNotNull { path ->
                 val match = pattern.matchEntire(path.fileName.toString()) ?: return@mapNotNull null
@@ -127,29 +127,9 @@ class BackupService internal constructor(
         return removed
     }
 
-    private fun read(path: Path): ByteArray {
-        val resolved = safePath(path)
-        if (!Files.isRegularFile(resolved, LinkOption.NOFOLLOW_LINKS)) throw IOException("Backup input must be a regular file")
-        FileChannel.open(resolved, StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS).use { input ->
-            val size = input.size()
-            if (size !in 92..VaultCodec.MAX_FILE_BYTES.toLong()) throw InvalidVaultException()
-            val bytes = ByteArray(size.toInt())
-            val buffer = ByteBuffer.wrap(bytes)
-            while (buffer.hasRemaining()) if (input.read(buffer) < 0) throw InvalidVaultException()
-            if (input.read(ByteBuffer.allocate(1)) != -1) throw InvalidVaultException()
-            return bytes
-        }
-    }
+    private fun read(path: Path): ByteArray = readBackupFile(path)
 
-    private fun safePath(path: Path): Path {
-        val absolute = path.toAbsolutePath().normalize()
-        var current = absolute.root
-        for (part in absolute) {
-            current = current.resolve(part)
-            if (Files.isSymbolicLink(current)) throw IOException("Symbolic links are not accepted for backups")
-        }
-        return absolute
-    }
+    private fun safePath(path: Path): Path = rejectSymbolicLinks(path)
 
     /** Bad passwords and damaged ciphertext have the same content-free backup error. */
     private fun authenticate(bytes: ByteArray, credentials: Credentials, allowExpensive: Boolean) =
@@ -157,4 +137,33 @@ class BackupService internal constructor(
         catch (_: AuthenticationException) { throw InvalidVaultException() }
 
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes)
+}
+
+/** Group 1 is the file-system time in epoch milliseconds, group 2 the revision; neither is authenticated. */
+internal fun backupNamePattern(vaultId: String) =
+    Regex("${Regex.escape(vaultId)}_([0-9]{1,19})_([0-9]{1,19})_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\.keyrook\\.bak")
+
+/** Reads a bounded regular file without following symbolic links in any path component. */
+internal fun readBackupFile(path: Path): ByteArray {
+    val resolved = rejectSymbolicLinks(path)
+    if (!Files.isRegularFile(resolved, LinkOption.NOFOLLOW_LINKS)) throw IOException("Backup input must be a regular file")
+    FileChannel.open(resolved, StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS).use { input ->
+        val size = input.size()
+        if (size !in 92..VaultCodec.MAX_FILE_BYTES.toLong()) throw InvalidVaultException()
+        val bytes = ByteArray(size.toInt())
+        val buffer = ByteBuffer.wrap(bytes)
+        while (buffer.hasRemaining()) if (input.read(buffer) < 0) throw InvalidVaultException()
+        if (input.read(ByteBuffer.allocate(1)) != -1) throw InvalidVaultException()
+        return bytes
+    }
+}
+
+internal fun rejectSymbolicLinks(path: Path): Path {
+    val absolute = path.toAbsolutePath().normalize()
+    var current = absolute.root
+    for (part in absolute) {
+        current = current.resolve(part)
+        if (Files.isSymbolicLink(current)) throw IOException("Symbolic links are not accepted for backups")
+    }
+    return absolute
 }

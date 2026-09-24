@@ -60,6 +60,10 @@ internal fun DataTools(controller: VaultController, settings: SettingsStore, bus
             }
             controller.session.snapshot()
         } }) { Text(UiText.text("transfer.disable")) }
+        TextButton(enabled = !busy, onClick = { operation {
+            showReport(UiText.text("integrity.title"), integrityReportText(controller))
+            controller.session.snapshot()
+        } }) { Text(UiText.text("integrity.action")) }
         TextButton(enabled = !busy, onClick = { operation { restoreBackup(); controller.session.snapshot() } }) { Text(UiText.text("transfer.restore")) }
         TextButton(enabled = !busy, onClick = { operation {
             selectPath(save = true)?.let { target ->
@@ -287,6 +291,16 @@ private fun confirm(message: String): Boolean = onEdt {
     JOptionPane.showConfirmDialog(null, message, "Keyrook", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION
 }
 private fun inform(message: String) = onEdt { JOptionPane.showMessageDialog(null, message, "Keyrook", JOptionPane.INFORMATION_MESSAGE) }
+/** Plain, read-only text area: report lines are never interpreted as Swing HTML. */
+private fun showReport(title: String, text: String) = onEdt {
+    val area = JTextArea(text, 20, 80).apply {
+        isEditable = false
+        lineWrap = true
+        wrapStyleWord = true
+        caretPosition = 0
+    }
+    JOptionPane.showMessageDialog(null, JScrollPane(area), title, JOptionPane.INFORMATION_MESSAGE)
+}
 private fun choose(title: String, values: Array<String>): String? = onEdt {
     JOptionPane.showInputDialog(null, title, "Keyrook", JOptionPane.QUESTION_MESSAGE, null, values, values[0]) as? String
 }

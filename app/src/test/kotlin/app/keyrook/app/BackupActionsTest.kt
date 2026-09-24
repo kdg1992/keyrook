@@ -48,6 +48,23 @@ class BackupActionsTest {
         }
     }
 
+    @Test fun `integrity report lists vault and backups without folder paths or changes`() {
+        withConfiguredVault { controller, folder ->
+            assertEquals(0, createManualBackup(controller))
+            val before = Files.list(folder).use { paths -> paths.map { it.fileName.toString() }.toList().toSet() }
+            val text = integrityReportText(controller)
+            assertTrue(text.contains("2 von 2"))
+            assertTrue(text.contains("vault.keyrook"))
+            assertFalse(text.contains(folder.toString()))
+            assertEquals(before, Files.list(folder).use { paths -> paths.map { it.fileName.toString() }.toList().toSet() })
+            val token = controller.sessionEpoch.capture()
+            withOperationGuard(controller, token) {
+                controller.sessionEpoch.invalidate()
+                assertThrows(IllegalStateException::class.java) { integrityReportText(controller) }
+            }
+        }
+    }
+
     private fun withConfiguredVault(action: (VaultController, Path) -> Unit) {
         val root = directory.toRealPath()
         val folder = Files.createDirectory(root.resolve("backups"))
