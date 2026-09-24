@@ -151,6 +151,17 @@ internal fun totpError(text: String): InputError? {
     } finally { chars.fill('\u0000') }
 }
 
+/**
+ * The editor's TOTP field: its position and the value stored before this edit (null when the field is new). An
+ * invalid value the user has not changed in this edit is only a warning, so entries imported with such a value stay
+ * editable; a changed value must be empty or valid.
+ */
+internal data class TotpSlot(val index: Int, val stored: String?)
+
+/** The TOTP slot of the edited [EntryData] given the entry's data and values when the editor opened. */
+internal fun EntryData.totpSlot(initial: EntryData, initialValues: List<String>): TotpSlot? =
+    totpIndex()?.let { index -> TotpSlot(index, initial.totpIndex()?.let(initialValues::getOrNull)) }
+
 internal data class EditorValidation(
     val title: InputError? = null,
     val tags: InputError? = null,
@@ -158,21 +169,31 @@ internal data class EditorValidation(
     val expiry: InputError? = null,
     val values: Map<Int, InputError> = emptyMap(),
     val ports: Map<PortSlot, InputError> = emptyMap(),
+    /** Shown below their field like errors, but do not prevent saving. */
+    val warnings: Map<Int, InputError> = emptyMap(),
 ) {
     val valid: Boolean get() = title == null && tags == null && notes == null && expiry == null && values.isEmpty() && ports.isEmpty()
+
+    /** The message below value [index]: a blocking error first, otherwise a warning. */
+    fun valueMessage(index: Int): InputError? = values[index] ?: warnings[index]
 }
 
 internal fun validateEditor(title: String, tags: String, notes: String, expires: String, values: List<String>,
-                            ports: Map<PortSlot, String>, totpIndex: Int? = null): EditorValidation = EditorValidation(
-    title = titleError(title),
-    tags = tagsError(tags),
-    notes = lengthError(notes),
-    expiry = expiryError(expires),
-    values = values.withIndex().mapNotNull { (index, value) ->
-        (lengthError(value) ?: if (index == totpIndex) totpError(value) else null)?.let { index to it }
-    }.toMap(),
-    ports = ports.mapNotNull { (slot, text) -> portError(text)?.let { slot to it } }.toMap(),
-)
+                            ports: Map<PortSlot, String>, totp: TotpSlot? = null): EditorValidation {
+    val totpProblem = totp?.let { slot -> values.getOrNull(slot.index)?.let(::totpError) }
+    val untouched = totp != null && values.getOrNull(totp.index) == totp.stored
+    return EditorValidation(
+        title = titleError(title),
+        tags = tagsError(tags),
+        notes = lengthError(notes),
+        expiry = expiryError(expires),
+        values = values.withIndex().mapNotNull { (index, value) ->
+            (lengthError(value) ?: if (index == totp?.index && !untouched) totpProblem else null)?.let { index to it }
+        }.toMap(),
+        ports = ports.mapNotNull { (slot, text) -> portError(text)?.let { slot to it } }.toMap(),
+        warnings = if (totp != null && untouched && totpProblem != null) mapOf(totp.index to totpProblem) else emptyMap(),
+    )
+}
 
 internal const val MAX_TITLE_CHARS = 4096
 internal const val MAX_TAGS = 100

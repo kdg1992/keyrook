@@ -585,7 +585,7 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
     val titleFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { titleFocus.requestFocus() }
     val shownPorts = editorPorts(data, portDrafts)
-    val validation = validateEditor(title, tags, notes, expires, values, shownPorts, data.totpIndex())
+    val validation = validateEditor(title, tags, notes, expires, values, shownPorts, data.totpSlot(initialData, originalValues))
     val dirty = title != source?.title.orEmpty() || tags != source?.tags?.joinToString(", ").orEmpty() ||
         notes != originalNotes || expires != source?.expiresOn.orEmpty() || customerId != source?.customerId ||
         projectId != source?.projectId || values != originalValues || hidden != originalHidden ||
@@ -595,7 +595,7 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
         if (busy || confirmDiscard || confirmRemoveTotp) return
         attempted = true
         rejected = false
-        if (!validateEditor(title, tags, notes, expires, values, editorPorts(data, portDrafts), data.totpIndex()).valid) return
+        if (!validateEditor(title, tags, notes, expires, values, editorPorts(data, portDrafts), data.totpSlot(initialData, originalValues)).valid) return
         var candidate: Entry? = null
         try {
             candidate = editedEntry(source, data, title, tags, notes, expires, values, hidden).copy(customerId = customerId, projectId = projectId)
@@ -759,7 +759,7 @@ private fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcut
                     }.isFailure
                 }) { Text(UiText.text("common.open")) }
             }
-            FieldError(validation.values[index])
+            FieldError(validation.valueMessage(index))
             if (index == data.totpIndex()) TotpFormatHint()
             if (data is EntryData.Custom) {
                 val current = data as EntryData.Custom

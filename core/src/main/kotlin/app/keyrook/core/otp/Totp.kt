@@ -56,9 +56,10 @@ internal class TotpParameters(val key: ByteArray, val algorithm: TotpAlgorithm, 
  * Accepted stored values:
  * - a plain RFC 4648 Base32 secret: case-insensitive, spaces and hyphens ignored, padding optional but correct when
  *   present, unused trailing bits zero; SHA-1, 6 digits and 30 seconds apply;
- * - `otpauth://totp/<label>?secret=…` with the optional parameters `issuer`, `algorithm` (SHA1, SHA256, SHA512),
- *   `digits` (6–8) and `period` (15–120 seconds). Every parameter may occur once; other types, unknown parameters,
- *   fragments, whitespace and malformed escapes are refused. Label and issuer do not affect the code.
+ * - `otpauth://totp/<label>?secret=…` with the optional parameters `algorithm` (SHA1, SHA256, SHA512), `digits` (6–8)
+ *   and `period` (15–120 seconds), each at most once. Other parameters such as `issuer` or `image` are ignored but must
+ *   be well-formed `name=value` pairs. Other types, fragments, whitespace and malformed escapes are refused. Label and
+ *   ignored parameters do not affect the code.
  *
  * Decoded keys must hold 10 to 128 bytes. Every failure is an [InvalidTotpException] without details.
  */
@@ -127,24 +128,25 @@ object Totp {
         var algorithm: TotpAlgorithm? = null
         var digits: Int? = null
         var period: Int? = null
-        var issuer = false
-        while (true) {
+        while (position <= end) {
             val next = (position until end).firstOrNull { chars[it] == '&' } ?: end
-            val equals = (position until next).firstOrNull { chars[it] == '=' } ?: fail()
-            val value = equals + 1 until next
-            when (text(chars, position, equals)) {
-                "secret" -> { if (secret != null || value.isEmpty()) fail(); secret = value }
-                "issuer" -> { if (issuer) fail(); checkText(chars, value.first, next); issuer = true }
-                "algorithm" -> {
-                    if (algorithm != null) fail()
-                    val name = text(chars, value.first, next).uppercase()
-                    algorithm = TotpAlgorithm.entries.firstOrNull { it.name == name } ?: fail()
+            if (next > position) {
+                val equals = (position until next).firstOrNull { chars[it] == '=' } ?: fail()
+                if (equals == position) fail()
+                val value = equals + 1 until next
+                when (parameterName(chars, position, equals)) {
+                    "secret" -> { if (secret != null || value.isEmpty()) fail(); secret = value }
+                    "algorithm" -> {
+                        if (algorithm != null) fail()
+                        val name = text(chars, value.first, next).uppercase()
+                        algorithm = TotpAlgorithm.entries.firstOrNull { it.name == name } ?: fail()
+                    }
+                    "digits" -> { if (digits != null) fail(); digits = number(chars, value, 6..8) }
+                    "period" -> { if (period != null) fail(); period = number(chars, value, 15..120) }
+                    // issuer, image, color and provider-specific parameters do not affect the code.
+                    else -> { checkText(chars, position, equals); checkText(chars, value.first, next) }
                 }
-                "digits" -> { if (digits != null) fail(); digits = number(chars, value, 6..8) }
-                "period" -> { if (period != null) fail(); period = number(chars, value, 15..120) }
-                else -> fail()
             }
-            if (next == end) break
             position = next + 1
         }
         val range = secret ?: fail()
@@ -168,6 +170,10 @@ object Totp {
             } else index++
         }
     }
+
+    /** The name when it could be a computation parameter, otherwise an empty string for an ignored parameter. */
+    private fun parameterName(chars: CharArray, from: Int, to: Int): String =
+        if (to - from in 1..16) String(chars, from, to - from) else ""
 
     /** Parameter names and algorithm values are short public ASCII tokens, so an immutable copy is harmless. */
     private fun text(chars: CharArray, from: Int, to: Int): String {

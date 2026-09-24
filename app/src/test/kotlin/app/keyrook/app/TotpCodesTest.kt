@@ -89,6 +89,34 @@ class TotpCodesTest {
         }
     }
 
+    @Test fun `an untouched invalid stored secret warns without blocking the save`() {
+        val stored = web("imported, not base32")
+        try {
+            val initialValues = stored.fields().map { it.value.useChars(::String) }
+            val slot = stored.totpSlot(stored, initialValues)!!
+            assertEquals(TotpSlot(3, "imported, not base32"), slot)
+            val untouched = validateEditor("Title", "", "", "", initialValues, emptyMap(), slot)
+            assertTrue(untouched.valid, "unchanged value keeps the entry editable")
+            assertTrue(untouched.values.isEmpty())
+            assertEquals(InputError(InputProblem.INVALID_TOTP), untouched.warnings[3])
+            assertEquals(InputError(InputProblem.INVALID_TOTP), untouched.valueMessage(3))
+            val changed = validateEditor("Title", "", "", "", initialValues.dropLast(1) + "still not base32", emptyMap(), slot)
+            assertFalse(changed.valid, "a changed invalid value blocks the save")
+            assertEquals(InputError(InputProblem.INVALID_TOTP), changed.values[3])
+            assertTrue(changed.warnings.isEmpty())
+            val emptied = validateEditor("Title", "", "", "", initialValues.dropLast(1) + "", emptyMap(), slot)
+            assertTrue(emptied.valid)
+            assertNull(emptied.valueMessage(3))
+            val fixed = validateEditor("Title", "", "", "", initialValues.dropLast(1) + rfcSecret, emptyMap(), slot)
+            assertTrue(fixed.valid)
+            assertNull(fixed.valueMessage(3))
+            // The detail view and quick action still report the stored value as invalid.
+            assertFalse(EntryQuickActions.available(stored.totp!!, QuickField.TOTP))
+            UiText.select(AppLanguage.ENGLISH)
+            assertEquals(UiText.text("totp.invalid"), EntryQuickActions.copyTotpNotice(stored, at59) { fail("copied") })
+        } finally { close(stored) }
+    }
+
     @Test fun `the code position is masked like every other shown value`() {
         val key = RevealKey("vault", "a", "2026-01-01T00:00:00Z")
         val shown = RevealState().toggle(key, RevealState.TOTP_CODE)
@@ -114,10 +142,12 @@ class TotpCodesTest {
             assertEquals(3, data.totpIndex())
             assertNull(data.copy(totp = null).totpIndex())
             val values = listOf("https://example.invalid", "not a secret", "not a secret", "not a secret")
-            val validation = validateEditor("Title", "", "", "", values, emptyMap(), data.totpIndex())
+            val slot = data.totpSlot(data.copy(totp = null), values.dropLast(1))!!
+            assertEquals(TotpSlot(3, null), slot, "a TOTP field added in this edit has no stored value")
+            val validation = validateEditor("Title", "", "", "", values, emptyMap(), slot)
             assertEquals(setOf(3), validation.values.keys, "username and password stay free text")
             assertFalse(validation.valid)
-            assertTrue(validateEditor("Title", "", "", "", values.dropLast(1) + rfcSecret, emptyMap(), 3).valid)
+            assertTrue(validateEditor("Title", "", "", "", values.dropLast(1) + rfcSecret, emptyMap(), slot).valid)
             assertTrue(validateEditor("Title", "", "", "", values, emptyMap()).valid, "no TOTP field, no TOTP rule")
         } finally { close(data) }
         blankData(EntryType.PANEL).let { panel -> assertNull(panel.totpIndex()); close(panel) }

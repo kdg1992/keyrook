@@ -121,14 +121,27 @@ class TotpTest {
         Secret("otpauth://totp/x?secret=$secret&period=60".toCharArray()).use { value ->
             Totp.code(value, Instant.ofEpochSecond(59)).use { assertEquals(Instant.ofEpochSecond(60), it.validUntil) }
         }
+        // Parameters that do not affect the code are ignored, as stored by other managers' exports.
+        assertEquals("94287082", code("otpauth://totp/ACME:alice?secret=$secret&issuer=ACME&issuer=ACME%20Inc" +
+            "&image=https://example.invalid/logo.png&color=ff0000&x-provider-hint=1&counter=5&&digits=8&", at))
+        listOf(TotpAlgorithm.SHA256 to sha256Key, TotpAlgorithm.SHA512 to sha512Key).zip(listOf("68084774", "25091201"))
+            .forEach { (pair, expected) ->
+                val (algorithm, key) = pair
+                val uri = "otpauth://totp/x?image=a.png&secret=${base32(key)}&lock=false&algorithm=$algorithm&digits=8"
+                assertEquals(expected, code(uri, Instant.ofEpochSecond(1111111109)))
+            }
         val rejected = listOf(
+            "otpauth://totp/x?secret=$secret&digits=8&image=a.png&digits=8",
+            "otpauth://totp/x?secret=$secret&algorithm=SHA1&algorithm=SHA1",
+            "otpauth://totp/x?secret=$secret&image=a%zz",
+            "otpauth://totp/x?secret=$secret&=value",
+            "otpauth://totp/x?secret=$secret&image",
             "otpauth://hotp/x?secret=$secret&counter=1",
             "otpauth://totp/x",
             "otpauth://totp/x?",
             "otpauth://totp/x?issuer=Example",
             "otpauth://totp/x?secret=",
             "otpauth://totp/x?secret=$secret&secret=$secret",
-            "otpauth://totp/x?secret=$secret&issuer=a&issuer=b",
             "otpauth://totp/x?secret=$secret&algorithm=MD5",
             "otpauth://totp/x?secret=$secret&algorithm=",
             "otpauth://totp/x?secret=$secret&digits=5",
@@ -139,9 +152,6 @@ class TotpTest {
             "otpauth://totp/x?secret=$secret&period=121",
             "otpauth://totp/x?secret=$secret&period=30s",
             "otpauth://totp/x?secret=$secret&period=30&period=30",
-            "otpauth://totp/x?secret=$secret&image=https://example.com/a.png",
-            "otpauth://totp/x?secret=$secret&",
-            "otpauth://totp/x?secret=$secret&&digits=6",
             "otpauth://totp/x?secret=$secret&digits",
             "otpauth://totp/x?secret=$secret#fragment",
             "otpauth://totp/a b?secret=$secret",

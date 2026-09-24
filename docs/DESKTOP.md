@@ -113,12 +113,19 @@ Web logins with a TOTP secret produce time-based one-time codes (RFC 6238).
 The secret field accepts either a Base32 secret, as shown by most services
 under "enter the key manually" (upper or lower case, spaces and hyphens are
 ignored, `=` padding optional; SHA-1, 6 digits, 30 seconds), or an
-`otpauth://totp/…` URI from a QR code with `secret` and optionally `issuer`,
+`otpauth://totp/…` URI from a QR code with `secret` and optionally
 `algorithm` (SHA1, SHA256, SHA512), `digits` (6–8) and `period` (15–120
-seconds). Other URI types, unknown or repeated parameters and anything else are
-refused; the editor shows **Ungültiges TOTP-Secret** below the field together
-with a hint on these formats, and the entry cannot be saved until the value is
-corrected, emptied or the field is removed. Label and issuer are not used.
+seconds). Other parameters that do not affect the code, such as `issuer`,
+`image`, `color` or provider-specific ones kept by Bitwarden or KeePass
+imports, are ignored, as is the label. Other URI types, a missing or invalid
+secret, a repeated `secret`, `algorithm`, `digits` or `period`, unsupported
+values and anything else are refused; the editor shows **Ungültiges
+TOTP-Secret** below the field together with a hint on these formats. A value
+entered or changed in the current edit must be corrected, emptied or removed
+before the entry can be saved. A value that was already stored (for example
+from an import) and is left unchanged only shows the message: the entry stays
+saveable, and the detail view and quick action keep reporting the secret as
+invalid until it is fixed.
 
 - The detail view shows **TOTP-Code** masked. **Anzeigen** shows the current
   code with the remaining seconds and a bar; it is refreshed every second and
@@ -171,8 +178,9 @@ remain masked. Clipboard expiry applies to those copies too.
 The editor checks inputs while typing and marks each affected field with its
 own message: a missing or too long title (at most 4096 characters), more than
 100 tags or a tag longer than 256 characters, field values or notes above the
-field limit, an invalid expiry date, an empty or invalid port, a TOTP secret
-the code generator does not accept (see [TOTP codes](#totp-codes)), and a
+field limit, an invalid expiry date, an empty or invalid port, a changed TOTP
+secret the code generator does not accept (an unchanged stored one only warns;
+see [TOTP codes](#totp-codes)), and a
 duplicate or too long custom field name. **Speichern** with open problems saves nothing
 and shows one summary line above the buttons.
 
