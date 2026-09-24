@@ -18,10 +18,13 @@ internal fun healthIssueText(issue: HealthIssue): String = when (issue) {
     HealthIssue.EXPIRING_SOON -> UiText.text("health.expiring")
     HealthIssue.SHORT_OR_REPETITIVE_PASSWORD -> UiText.text("health.weak")
     HealthIssue.REUSED_PASSWORD -> UiText.text("health.reused")
+    HealthIssue.OLD_PASSWORD -> UiText.text("health.old")
+    HealthIssue.DUPLICATE_ENTRY -> UiText.text("health.duplicate")
 }
 
 internal fun warningSummaryText(counts: WarningCounts): String =
-    UiText.text("health.summary", counts.entries, counts.expired, counts.expiringSoon, counts.weak, counts.reused)
+    UiText.text("health.summary", counts.entries, counts.expired, counts.expiringSoon, counts.weak, counts.reused,
+        counts.old, counts.duplicates)
 
 /**
  * The warning list. [findings] are the latest background results of core health checks (null while they run);

@@ -26,6 +26,11 @@ class VaultWarningsTest {
         assertEquals(2, counts.count(HealthIssue.REUSED_PASSWORD))
         assertEquals(1, counts.count(HealthIssue.EXPIRED))
         assertEquals(WarningCounts(), warningCounts(emptyList()))
+        val aged = warningCounts(listOf(EntryHealth("e", setOf(HealthIssue.OLD_PASSWORD, HealthIssue.DUPLICATE_ENTRY)),
+            EntryHealth("f", setOf(HealthIssue.DUPLICATE_ENTRY))))
+        assertEquals(WarningCounts(entries = 2, old = 1, duplicates = 2), aged)
+        assertEquals(2, aged.count(HealthIssue.DUPLICATE_ENTRY))
+        assertEquals(listOf(HealthIssue.OLD_PASSWORD), passwordMarkers(setOf(HealthIssue.DUPLICATE_ENTRY, HealthIssue.OLD_PASSWORD)))
     }
 
     @Test fun `repeated entries are merged and findings without issues ignored`() {
