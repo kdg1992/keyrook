@@ -54,7 +54,7 @@ provides independent snapshots, and exposes `create`, `open`, `save`,
 `changePassword` and `lock`. Close secrets, credentials and snapshots after use.
 Operations are synchronous; desktop callers should use a background thread.
 
-See [the file format](docs/FORMAT.md), [security and memory ownership](docs/SECURITY.md)
+See [the architecture](docs/ARCHITECTURE.md), [the file format](docs/FORMAT.md), [security and memory ownership](docs/SECURITY.md)
 and [third-party notices](THIRD-PARTY-NOTICES).
 
 Build checks, dependency review and release activation are described in

@@ -74,4 +74,4 @@ Before deserialization a guard rejects nesting beyond 32 levels, individual JSON
 
 Version 1 is the first supported envelope and schema. There is no predecessor migration to run. Unsupported versions fail without modifying the file. A frozen v1 test vector, independently encrypted using the JDK AES-GCM provider, protects compatibility alongside RFC and NIST primitive vectors.
 
-Any future incompatible schema or envelope change requires a new version and an explicit, tested migration. A migration must authenticate the source, preserve its original bytes and write the new version through the atomic storage path.
+Any future incompatible schema or envelope change requires a new version and an explicit, tested migration. A migration must authenticate the source, preserve its original bytes and write the new version through the atomic storage path. Planned extensions that would require such a change are listed in [ARCHITECTURE.md](ARCHITECTURE.md).
