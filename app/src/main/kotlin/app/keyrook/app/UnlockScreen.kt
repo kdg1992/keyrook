@@ -26,7 +26,7 @@ internal fun UnlockScreen(state: AppState, settings: SettingsStore, unlockDelay:
     val busy by state::busy
     var message by state::message
     var notice by state::notice
-    fun operation(action: () -> Vault?) = state.operation(action)
+    fun operation(action: () -> Vault?) = state.operation(action = action)
     if (unlockDelay > 0) Text(UiText.text("shell.delay", (unlockDelay + 999) / 1000))
     UnlockForm(busy || unlockDelay > 0, settings.current(), generateKey = { done ->
         operation {
@@ -107,7 +107,10 @@ private fun UnlockForm(busy: Boolean, remembered: AppSettings, generateKey: ((Pa
         OutlinedTextField(password, { if (it.length <= 1024) password = it }, label = { Text(UiText.text("credentials.password")) }, singleLine = true,
             enabled = !busy, visualTransformation = PasswordVisualTransformation(), modifier = submitting)
         if (create) OutlinedTextField(confirmation, { if (it.length <= 1024) confirmation = it }, label = { Text(UiText.text("credentials.repeatPassword")) },
-            singleLine = true, enabled = !busy, visualTransformation = PasswordVisualTransformation(), modifier = submitting)
+            singleLine = true, enabled = !busy, visualTransformation = PasswordVisualTransformation(), modifier = submitting,
+            isError = confirmation.isNotEmpty() && password != confirmation)
+        if (create && confirmation.isNotEmpty() && password != confirmation)
+            Text(UiText.text("dialog.passwordMismatch"), color = MaterialTheme.colors.error, style = MaterialTheme.typography.caption)
         if (create) {
             Text(UiText.text("credentials.kdfTitle"))
             OutlinedTextField(memory, { if (it.length <= 10) memory = it }, label = { Text(UiText.text("credentials.memory")) }, singleLine = true, enabled = !busy)

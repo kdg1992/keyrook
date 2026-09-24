@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import app.keyrook.core.model.Entry
 import app.keyrook.core.model.EntryTemplate
@@ -27,7 +28,7 @@ internal fun sortedTemplates(vault: Vault): List<EntryTemplate> =
 /** A template name as typed: trimmed, non-blank and at most [MAX_NAME_CHARS] characters, or null. */
 internal fun templateName(text: String): String? = text.trim().takeIf { it.isNotEmpty() && it.length <= MAX_NAME_CHARS }
 
-/** Lists the vault's templates; choosing one starts a new entry with its layout. */
+/** Lists the vault's templates; choosing one starts a new entry with its layout. The first template starts focused, so Enter chooses it. */
 @Composable
 internal fun TemplateChooserDialog(vault: Vault, busy: Boolean, onDismiss: () -> Unit, onChoose: (EntryTemplate) -> Unit) {
     AlertDialog(
@@ -37,8 +38,10 @@ internal fun TemplateChooserDialog(vault: Vault, busy: Boolean, onDismiss: () ->
             Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(UiText.text("template.chooseHint"))
-                sortedTemplates(vault).forEach { template ->
-                    TextButton(enabled = !busy, onClick = { onChoose(template) }) {
+                val first = rememberInitialFocus()
+                sortedTemplates(vault).forEachIndexed { index, template ->
+                    TextButton(enabled = !busy, onClick = { onChoose(template) },
+                        modifier = if (index == 0) Modifier.focusRequester(first) else Modifier) {
                         Text(UiText.text("template.option", template.name, template.type.entryType().label))
                     }
                 }
@@ -57,18 +60,20 @@ internal fun TemplateChooserDialog(vault: Vault, busy: Boolean, onDismiss: () ->
 internal fun SaveTemplateDialog(entry: Entry, busy: Boolean, onDismiss: () -> Unit, onSave: (String) -> Unit) {
     var name by remember(entry.id) { mutableStateOf(entry.title.take(MAX_NAME_CHARS)) }
     val valid = templateName(name) != null
+    fun save() { if (!busy) templateName(name)?.let(onSave) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(UiText.text("template.saveTitle")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(name, { if (it.length <= MAX_NAME_CHARS + 16) name = it }, enabled = !busy,
-                    label = { Text(UiText.text("common.name")) }, singleLine = true, isError = !valid)
+                    label = { Text(UiText.text("common.name")) }, singleLine = true, isError = !valid,
+                    modifier = Modifier.focusRequester(rememberInitialFocus()).submitOnEnter(::save))
                 Text(UiText.text("template.saveHint"))
             }
         },
         confirmButton = {
-            Button(enabled = !busy && valid, onClick = { templateName(name)?.let(onSave) }) { Text(UiText.text("common.save")) }
+            Button(enabled = !busy && valid, onClick = ::save) { Text(UiText.text("common.save")) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(UiText.text("common.cancel")) } },
     )

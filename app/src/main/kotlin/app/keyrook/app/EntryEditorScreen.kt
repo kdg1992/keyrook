@@ -302,18 +302,16 @@ internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcu
             }
         }
     }
-    if (confirmRemoveTotp) AlertDialog(onDismissRequest = { confirmRemoveTotp = false },
-        title = { Text(UiText.text("editor.removeTotpTitle")) },
-        text = { Text(UiText.text("editor.removeTotpBody")) },
-        confirmButton = { TextButton(enabled = !busy, onClick = {
+    // Removing the TOTP secret takes effect only when the entry is saved, so it is confirmed as reversible.
+    if (confirmRemoveTotp) ConfirmationDialog(UiText.text("editor.removeTotpTitle"), UiText.text("editor.removeTotpBody"),
+        UiText.text("editor.removeTotp"), busy, irreversible = false,
+        onConfirm = {
             val current = data as? EntryData.Web
             if (current != null) replaceData(current.copy(totp = null))
             confirmRemoveTotp = false
-        }) { Text(UiText.text("editor.removeTotp")) } },
-        dismissButton = { TextButton(onClick = { confirmRemoveTotp = false }) { Text(UiText.text("common.cancel")) } })
-    if (confirmDiscard) AlertDialog(onDismissRequest = { confirmDiscard = false },
-        title = { Text(UiText.text("editor.discardTitle")) },
-        text = { Text(UiText.text("editor.discardBody")) },
-        confirmButton = { TextButton(enabled = !busy, onClick = { confirmDiscard = false; onCancel() }) { Text(UiText.text("editor.discard")) } },
-        dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text(UiText.text("editor.keepEditing")) } })
+        }, onDismiss = { confirmRemoveTotp = false })
+    if (confirmDiscard) ConfirmationDialog(UiText.text("editor.discardTitle"), UiText.text("editor.discardBody"),
+        UiText.text("editor.discard"), busy, irreversible = true,
+        onConfirm = { confirmDiscard = false; onCancel() }, onDismiss = { confirmDiscard = false },
+        dismissLabel = UiText.text("editor.keepEditing"))
 }

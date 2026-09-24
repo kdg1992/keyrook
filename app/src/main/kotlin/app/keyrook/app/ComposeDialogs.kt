@@ -151,6 +151,7 @@ private fun CredentialDialog(request: CredentialRequest, onAnswer: (CredentialIn
     var key by remember { mutableStateOf("") }
     DisposableEffect(Unit) { onDispose { password = ""; repeat = ""; key = "" } }
     val focus = remember { FocusRequester() }
+    val mismatch = request.confirm && repeat.isNotEmpty() && password != repeat
     val valid = password.isNotEmpty() && (!request.confirm || password == repeat)
     fun clear() { password = ""; repeat = ""; key = "" }
     fun cancel() { clear(); onAnswer(null) }
@@ -168,9 +169,12 @@ private fun CredentialDialog(request: CredentialRequest, onAnswer: (CredentialIn
                 singleLine = true, visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth().focusRequester(focus).submitOnEnter { submit() })
             if (request.confirm) OutlinedTextField(repeat, { if (it.length <= 1024) repeat = it },
-                label = { Text(UiText.text("dialog.repeatPassword")) }, singleLine = true,
+                label = { Text(UiText.text("dialog.repeatPassword")) }, singleLine = true, isError = mismatch,
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth().submitOnEnter { submit() })
+            // Shown once the repetition is typed, so the disabled OK button is never unexplained.
+            if (mismatch) Text(UiText.text("dialog.passwordMismatch"), color = MaterialTheme.colors.error,
+                style = MaterialTheme.typography.caption)
             OutlinedTextField(key, { if (it.length <= 4096) key = it }, label = { Text(UiText.text("credentials.optionalKey")) },
                 singleLine = true, modifier = Modifier.fillMaxWidth().submitOnEnter { submit() })
             if (request.replacing) Text(UiText.text("credentials.replaceKeyHelp"), style = MaterialTheme.typography.caption)
