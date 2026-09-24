@@ -17,8 +17,11 @@ internal fun id(): String = UUID.randomUUID().toString()
 internal const val DATE = "2026-09-23T12:00:00Z"
 
 internal fun sampleVault(): Vault {
-    val customer = Customer(id(), "Customer-SENTINEL-4531")
-    val project = Project(id(), "Project-SENTINEL-8421", customer.id)
+    val customer = Customer(id(), "Customer-SENTINEL-4531", contactName = "Contact-SENTINEL-2291",
+        contactEmail = "contact@example.invalid", phone = "+49 30 1234567", website = "https://customer.example.invalid",
+        notes = Secret("Customer-Notes-SENTINEL-6612".toCharArray()))
+    val project = Project(id(), "Project-SENTINEL-8421", customer.id, description = "Description-SENTINEL-1182",
+        notes = Secret("Project-Notes-SENTINEL-7741".toCharArray()))
     val serverId = id()
     val webId = id()
     val data = listOf(
@@ -39,9 +42,11 @@ internal fun sampleVault(): Vault {
         Entry(if (index == 0) webId else if (index == 4) serverId else id(), "Title-SENTINEL-$index", value, DATE, DATE,
             customer.id, project.id, listOf("Tag-SENTINEL-9891"), Secret("Notes-SENTINEL-7123".toCharArray()),
             expiresOn = "2027-01-01", deletedAt = if (index == 7) DATE else null,
-            history = if (index == 0) listOf(HistoryItem(DATE, EntryData.Custom(mapOf("password" to field("old-password"))))) else emptyList())
+            history = if (index == 0) listOf(HistoryItem(DATE, EntryData.Custom(mapOf("password" to field("old-password"))))) else emptyList(),
+            pinned = index == 1)
     }
-    return Vault(customers = listOf(customer), projects = listOf(project), entries = entries)
+    val template = EntryTemplate.of(id(), "Template-SENTINEL-3310", entries[0])
+    return Vault(customers = listOf(customer), projects = listOf(project), entries = entries, templates = listOf(template))
 }
 
 /** Fixed format regression vector: sequential salt/nonce, one Argon2 iteration, JDK AES-GCM. Password `fixture-password`. */

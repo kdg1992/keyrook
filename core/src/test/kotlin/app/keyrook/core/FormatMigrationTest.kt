@@ -24,7 +24,8 @@ import java.time.Clock
 
 /**
  * Format migration test suite. Schema 0 is synthetic and exists only here: its root list was called `items`
- * and web fields were bare strings. Production registers no step because schema 1 is the first format.
+ * and web fields were bare strings. Its test step to schema 1 is chained with the production step to schema 2;
+ * production itself has no step from schema 0 because schema 1 was the first format.
  */
 class FormatMigrationTest {
     @TempDir lateinit var directory: Path
@@ -43,7 +44,7 @@ class FormatMigrationTest {
             }
         }
     }
-    private val testMigrations = SchemaMigrations(1, listOf(zeroToOne))
+    private val testMigrations = SchemaMigrations(Vault.SCHEMA_VERSION, listOf(zeroToOne, SchemaMigrations.V1_TO_V2))
     private val migratingCodec = VaultCodec(testMigrations)
     private val productionCodec = VaultCodec()
 
@@ -166,7 +167,7 @@ class FormatMigrationTest {
 
         credentials().use { c ->
             // Downgrades and unknown future schemas stay unsupported, also for a codec that knows older steps.
-            listOf(2, 99, -1).forEach { assertRejected { migratingCodec.decrypt(encryptPayload(schemaZero(it), c), c) } }
+            listOf(3, 99, -1).forEach { assertRejected { migratingCodec.decrypt(encryptPayload(schemaZero(it), c), c) } }
             // A step with no source is never applied, even if the document happens to claim schema 0.
             assertRejected { VaultCodec(SchemaMigrations(1, emptyList())).decrypt(encryptPayload(schemaZero(), c), c) }
         }
@@ -184,20 +185,23 @@ class FormatMigrationTest {
         }
     }
 
-    @Test fun `frozen v1 fixture decodes unchanged with and without registered migrations`() {
+    @Test fun `frozen v1 fixture migrates to the current schema with the production and the test registry`() {
         credentials("fixture-password").use { c ->
             listOf(productionCodec, migratingCodec).forEach { codec ->
                 codec.decrypt(frozenV1Fixture(), c).use {
-                    it.schemaVersion shouldBe 1
+                    it.schemaVersion shouldBe Vault.SCHEMA_VERSION
                     it.id shouldBe vaultId
                     it.revision shouldBe 7L
                     it.entries shouldBe emptyList()
+                    it.templates shouldBe emptyList()
                 }
             }
+            // Without the production step the v1 fixture is refused, as an application that knows only schema 2 would.
+            assertRejected { VaultCodec(SchemaMigrations(Vault.SCHEMA_VERSION, emptyList())).decrypt(frozenV1Fixture(), c) }
         }
     }
 
-    @Test fun `encoding after migration writes current v1 format that needs no migration`() {
+    @Test fun `encoding after migration writes the current format that needs no migration`() {
         credentials().use { c ->
             migratingCodec.decrypt(encryptPayload(schemaZero(), c), c).use { migrated ->
                 val rewritten = migratingCodec.encrypt(migrated, c, testKdf)
@@ -225,6 +229,8 @@ class FormatMigrationTest {
             }
             val backup = Files.list(backupFolder).use { files -> files.filter { it.toString().endsWith(".keyrook.bak") }.toList() }.single()
             assertArrayEquals(original, Files.readAllBytes(backup))
+            // Independent of the backup folder, the older file is also kept next to the vault and never rotated.
+            assertArrayEquals(original, Files.readAllBytes(root.resolve("legacy.keyrook.schema-v0-r4.keyrook.bak")))
             VaultStore().load(path, c).use { loaded ->
                 loaded.vault.revision shouldBe 5L
                 loaded.vault.schemaVersion shouldBe Vault.SCHEMA_VERSION

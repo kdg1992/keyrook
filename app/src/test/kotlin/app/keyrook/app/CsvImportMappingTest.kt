@@ -84,5 +84,6 @@ class CsvImportMappingTest {
         assertEquals(CsvMapping("titel", username = "LOGIN", password = "Passwort"),
             suggestedCsvMapping(listOf("titel", "LOGIN", "Passwort")))
         assertEquals(CsvMapping("custom, title"), suggestedCsvMapping(listOf("custom, title")))
+        assertEquals(CsvMapping("Name", tags = "tags", pinned = "Favorit"), suggestedCsvMapping(listOf("Name", "tags", "Favorit")))
     }
 }

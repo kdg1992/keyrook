@@ -12,10 +12,11 @@ Keyrook – Offline, encrypted credential vault for hosting providers and sysadm
 ## Features
 
 - Encrypted vault file: Argon2id key derivation, AES-256-GCM, authenticated
-  [format v1](docs/FORMAT.md), optional 32-byte key file, atomic writes with
+  [format](docs/FORMAT.md), optional 32-byte key file, atomic writes with
   conflict detection.
 - Eight entry types (web, transfer, email, hosting panel, server, SSH key,
-  domain, custom) with customers/projects, tags, full-text search, filters,
+  domain, custom) with customers/projects (contact details, descriptions and
+  encrypted notes), entry templates, tags, favorites, full-text search, filters,
   sorting, trash and field history.
 - List/detail layout with per-field reveal and copy; masked values are hidden
   again on selection change, focus loss, minimizing and lock.

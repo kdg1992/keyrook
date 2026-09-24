@@ -4,6 +4,7 @@ package app.keyrook.core.transfer
 
 import app.keyrook.core.crypto.Secret
 import app.keyrook.core.crypto.SecretSerializer
+import app.keyrook.core.format.SchemaMigrations
 import app.keyrook.core.format.VaultCodec
 import app.keyrook.core.model.*
 import kotlinx.serialization.json.*
@@ -24,8 +25,14 @@ class PlaintextConsent(acknowledgedExposure: Boolean, confirmedExport: Boolean) 
     init { require(acknowledgedExposure && confirmedExport) { "Plaintext export needs two confirmations" } }
 }
 
+/**
+ * Columns of a mapped CSV import. [tags] holds tags separated by commas or semicolons; the schema 1 favorite tag
+ * `keyrook:favorite` in it pins the entry instead. [pinned] holds `true`/`false`, `1`/`0`, `yes`/`no`, `ja`/`nein`
+ * or `x`/empty; any other value rejects the import.
+ */
 data class CsvMapping(val title: String, val url: String? = null, val username: String? = null,
-                      val password: String? = null, val notes: String? = null)
+                      val password: String? = null, val notes: String? = null, val tags: String? = null,
+                      val pinned: String? = null)
 
 /** Raised before any row is parsed when a file selected as KeePass CSV has other columns. */
 class KeePassCsvHeaderException : IllegalArgumentException("CSV header does not match a KeePass CSV export")
@@ -55,10 +62,19 @@ class VaultTransfer {
         }
     }
 
+    /**
+     * Reads a Keyrook JSON export of the current or an older schema; older ones pass the same migration steps as an
+     * opened vault file. Entries that still carry the schema 1 favorite tag are pinned instead, and templates drop it.
+     */
     fun importJson(bytes: ByteArray): Vault = guarded {
         VaultCodec.checkJsonLimits(bounded(bytes))
-        SecretSerializer.trackDecoding {
-            json.decodeFromString(Vault.serializer(), bytes.toString(Charsets.UTF_8)).also { it.validate() }
+        val tree = json.parseToJsonElement(bytes.toString(Charsets.UTF_8)).jsonObject
+        val version = SchemaMigrations.schemaVersion(tree)
+        val document = if (version != null && version < Vault.SCHEMA_VERSION) SchemaMigrations.PRODUCTION.migrate(tree) else tree
+        SecretSerializer.trackDecoding { json.decodeFromJsonElement(Vault.serializer(), document) }.let { decoded ->
+            val vault = decoded.copy(entries = decoded.entries.map(Entry::withLegacyFavorite),
+                templates = decoded.templates.map { it.copy(tags = ReservedTags.visible(it.tags)) })
+            try { vault.also { it.validate() } } catch (e: Exception) { vault.close(); throw e }
         }
     }
 
@@ -98,15 +114,20 @@ class VaultTransfer {
     private fun mappedCsv(rows: List<List<String>>, selected: CsvMapping): Vault {
         val header = rows[0]
         validateCsvHeader(header)
-        listOfNotNull(selected.title, selected.url, selected.username, selected.password, selected.notes).forEach {
-            require(it in header)
-        }
+        listOfNotNull(selected.title, selected.url, selected.username, selected.password, selected.notes,
+            selected.tags, selected.pinned).forEach { require(it in header) }
         return buildVault { entries ->
             for (row in rows.drop(1)) {
                 require(row.size == header.size)
                 fun value(column: String?) = if (column == null) "" else row[header.indexOf(column)]
+                val tags = value(selected.tags).split(',', ';').map(String::trim).filter(String::isNotEmpty).distinct()
+                val pinned = when (value(selected.pinned).trim().lowercase(java.util.Locale.ROOT)) {
+                    "true", "1", "yes", "ja", "x" -> true
+                    "false", "0", "no", "nein", "" -> false
+                    else -> throw InvalidImportException()
+                }
                 entries += web(value(selected.title), value(selected.url), value(selected.username),
-                    value(selected.password), value(selected.notes))
+                    value(selected.password), value(selected.notes)).copy(tags = tags, pinned = pinned)
             }
         }
     }
@@ -211,7 +232,7 @@ class VaultTransfer {
                     entries += Entry(UUID.randomUUID().toString(), item["name"].text(), EntryData.Custom(fields),
                         created.toString(), modified.toString(), projectId = projects[folderId]?.id,
                         notes = secret(item["notes"].text()), history = history,
-                        tags = if (item["favorite"]?.jsonPrimitive?.booleanOrNull == true) listOf("favorite") else emptyList(),
+                        pinned = item["favorite"]?.jsonPrimitive?.booleanOrNull == true,
                         deletedAt = deleted)
                 } catch (e: Exception) {
                     fields.values.forEach { it.value.close() }
@@ -366,7 +387,10 @@ class VaultTransfer {
 
     private fun buildVault(projects: List<Project> = emptyList(), populate: (MutableList<Entry>) -> Unit): Vault {
         val entries = mutableListOf<Entry>()
-        try { populate(entries); return Vault(projects = projects, entries = entries).also { it.validate() } }
+        try {
+            populate(entries)
+            return Vault(projects = projects, entries = entries.map(Entry::withLegacyFavorite)).also { it.validate() }
+        }
         catch (e: Exception) { Vault(entries = entries).close(); throw e }
     }
 

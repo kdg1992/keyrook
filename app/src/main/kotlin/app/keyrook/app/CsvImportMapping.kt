@@ -36,7 +36,8 @@ internal fun suggestedCsvMapping(columns: List<String>): CsvMapping {
     }
     return CsvMapping(find("Title", "Titel", "Name") ?: columns.first(),
         find("URL", "Website", "Webseite"), find("UserName", "Username", "Benutzername", "Login"),
-        find("Password", "Passwort"), find("Notes", "Notizen", "Comment"))
+        find("Password", "Passwort"), find("Notes", "Notizen", "Comment"), find("Tags", "Schlagwörter"),
+        find("Pinned", "Favorite", "Favorit", "Angeheftet"))
 }
 
 /** Numbered, single-line display of an untrusted header; control characters cannot forge additional lines. */

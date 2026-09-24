@@ -85,9 +85,9 @@ class EntryListFiltersTest {
         }
     }
 
-    @Test fun `favorites filter keeps only entries with the reserved tag in both lists`() {
-        Vault(entries = listOf(entry("plain", tags = listOf("favorite")), entry("star", tags = listOf(ReservedTags.FAVORITE)),
-            entry("both", tags = listOf("ops", ReservedTags.FAVORITE)), entry("gone", trash = true, tags = listOf(ReservedTags.FAVORITE))))
+    @Test fun `favorites filter keeps only pinned entries in both lists`() {
+        Vault(entries = listOf(entry("plain", tags = listOf("favorite")), entry("star").copy(pinned = true),
+            entry("both", tags = listOf("ops")).copy(pinned = true), entry("gone", trash = true).copy(pinned = true)))
             .use { vault ->
                 assertEquals(listOf("both", "star"), EntryListFilters(favorites = true).ids(vault))
                 assertEquals(listOf("both"), EntryListFilters(favorites = true, tag = "ops").ids(vault))

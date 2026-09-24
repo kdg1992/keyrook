@@ -37,6 +37,8 @@ internal fun Workspace(state: AppState, current: Vault, settings: SettingsStore,
     var selection by state::selection
     var reveal by state::reveal
     var organizer by state::organizer
+    // The entry whose layout the save-as-template dialog is naming; null while it is closed.
+    var templateSource by remember { mutableStateOf<Entry?>(null) }
     fun operation(action: () -> Vault?) = state.operation(action)
     AppToolbar(dataActions(controller, settings, dialogs, ::operation, settingsFailed = {
         SwingUtilities.invokeLater { if (live.get()) message = UiText.text("settings.saveFailed") }
@@ -46,7 +48,9 @@ internal fun Workspace(state: AppState, current: Vault, settings: SettingsStore,
         val entryList: @Composable (Boolean) -> Unit = { compact ->
             VaultList(current, controller, busy, shortcuts, mac, listView, { listView = it }, selection,
                 { selection = it }, warningsByEntry, compact, state.recent.of(current.id), onUsed = state::used,
-                onCreate = { creating = true },
+                onCreate = { state.template = null; creating = true },
+                onCreateFromTemplate = { template -> state.template = template; creating = true },
+                onSaveTemplate = { templateSource = it },
                 onEdit = { state.used(it.id); editing = it },
                 onDuplicate = { entry -> operation { controller.duplicate(entry.id) } },
                 onTrash = { id -> operation { controller.trash(id, false) } },
@@ -67,10 +71,17 @@ internal fun Workspace(state: AppState, current: Vault, settings: SettingsStore,
                 EntryDetailPane(current, selected, selected?.let { warningsByEntry[it.id] }.orEmpty(), reveal, busy,
                     onReveal = { reveal = it }, onEdit = { state.used(it.id); editing = it },
                     onUsed = { state.used(it.id) },
-                    onFavorite = { entry -> operation { controller.setFavorite(setOf(entry.id), !entry.favorite) } },
+                    onFavorite = { entry -> operation { controller.setFavorite(setOf(entry.id), !entry.pinned) } },
+                    onSaveTemplate = { templateSource = it },
                     modifier = Modifier.weight(0.55f).fillMaxHeight())
             }
         } else Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { entryList(false) }
+    }
+    templateSource?.let { entry ->
+        SaveTemplateDialog(entry, busy, onDismiss = { templateSource = null }) { name ->
+            templateSource = null
+            operation { controller.saveTemplate(entry.id, name) }
+        }
     }
 }
 
@@ -82,7 +93,8 @@ internal fun Workspace(state: AppState, current: Vault, settings: SettingsStore,
 private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, shortcuts: ShortcutActions, mac: Boolean,
                       view: ListView, onView: (ListView) -> Unit, selectionState: EntrySelection,
                       onSelection: (EntrySelection) -> Unit, issues: Map<String, Set<HealthIssue>>, compact: Boolean,
-                      recent: List<String>, onUsed: (String) -> Unit, onCreate: () -> Unit, onEdit: (Entry) -> Unit,
+                      recent: List<String>, onUsed: (String) -> Unit, onCreate: () -> Unit,
+                      onCreateFromTemplate: (EntryTemplate) -> Unit, onSaveTemplate: (Entry) -> Unit, onEdit: (Entry) -> Unit,
                       onDuplicate: (Entry) -> Unit, onTrash: (String) -> Unit, onRestore: (String) -> Unit,
                       onPurge: (String) -> Unit, onEmptyTrash: () -> Unit,
                       onBulkTrash: (Set<String>, Boolean) -> Unit, onBulkTag: (Set<String>, String, Boolean) -> Unit,
@@ -102,6 +114,7 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
     var notice by remember { mutableStateOf("") }
     // Open bulk tag dialog: true adds a tag to the marked entries, false removes one.
     var bulkTag by remember { mutableStateOf<Boolean?>(null) }
+    var choosingTemplate by remember { mutableStateOf(false) }
     val trashCount = vault.entries.count { it.deletedAt != null }
     val latestNew by rememberUpdatedState({ if (!busy && !trash && confirmation == null) onCreate() })
     DisposableEffect(shortcuts) {
@@ -110,7 +123,7 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         onDispose { shortcuts.newEntry = null; shortcuts.search = null }
     }
     // The list takes the focus when shown and again after its dialogs close, so arrow keys work immediately.
-    val listIdle = confirmation == null && !help && bulkTag == null
+    val listIdle = confirmation == null && !help && bulkTag == null && !choosingTemplate
     LaunchedEffect(listIdle) { if (listIdle) runCatching { listFocus.requestFocus() } }
     val today by produceState(java.time.LocalDate.now()) {
         while (true) { kotlinx.coroutines.delay(60_000); value = java.time.LocalDate.now() }
@@ -132,7 +145,7 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         }
     }
     fun shortcutContext(focus: ShortcutFocus) = ShortcutContext(unlocked = true, busy = busy, editing = false,
-        modal = confirmation != null || help || bulkTag != null, focus = focus, selection = selectedEntry != null, trash = trash)
+        modal = confirmation != null || help || bulkTag != null || choosingTemplate, focus = focus, selection = selectedEntry != null, trash = trash)
     fun handleListKey(event: KeyEvent): Boolean {
         val action = keyboardShortcut(event, mac, shortcutContext(ShortcutFocus.LIST)) ?: return false
         when (action) {
@@ -174,6 +187,9 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
     }
     val listButtons: @Composable () -> Unit = {
         Button(onClick = onCreate, enabled = !busy && !trash) { Text(UiText.text("shell.newEntry")) }
+        if (vault.templates.isNotEmpty()) TextButton(onClick = { choosingTemplate = true }, enabled = !busy && !trash) {
+            Text(UiText.text("template.new"))
+        }
         TextButton(onClick = { applyFilters(activeFilters.copy(trash = !trash)) }, enabled = !busy) { Text(if (trash) UiText.text("shell.active") else UiText.text("shell.trash")) }
         if (trash) TextButton(enabled = !busy && trashCount > 0, onClick = { confirmation = ListConfirmation.EmptyTrash(trashCount) }) {
             Text(UiText.text("list.emptyTrash"))
@@ -249,8 +265,13 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
                 onTrash = { confirmation = ListConfirmation.Trash(entry.id, entry.title) },
                 markers = passwordMarkers(issues[entry.id].orEmpty()), compact = compact,
                 marked = entry.id in selection.marked, onMark = { onSelection(selection.toggleMark(entry.id)) },
-                onFavorite = if (trash) null else ({ onFavorite(setOf(entry.id), !entry.favorite) }))
+                onFavorite = if (trash) null else ({ onFavorite(setOf(entry.id), !entry.pinned) }),
+                onSaveTemplate = if (trash) null else ({ onSaveTemplate(entry) }))
         }
+    }
+    if (choosingTemplate) TemplateChooserDialog(vault, busy, onDismiss = { choosingTemplate = false }) { template ->
+        choosingTemplate = false
+        onCreateFromTemplate(template)
     }
     if (help) AlertDialog(onDismissRequest = { help = false }, title = { Text(UiText.text("shortcuts.title")) },
         text = { ShortcutHelpTable(mac) },

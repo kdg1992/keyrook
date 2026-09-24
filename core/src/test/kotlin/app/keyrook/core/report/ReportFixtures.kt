@@ -18,13 +18,21 @@ internal val SECRET_SENTINELS = listOf("Password-SENTINEL", "Private-Key-SENTINE
 
 internal fun assertNoSentinel(text: String) = SECRET_SENTINELS.forEach { assertFalse(text.contains(it), "$it in $text") }
 
-/** Closes every hidden secret and the notes, so a report that reads one fails instead of passing silently. */
-internal fun closeHiddenSecrets(vault: Vault) = vault.entries.forEach { entry ->
-    entry.notes.close()
-    (entry.data.fields() + entry.history.flatMap { it.data.fields() }).filter { it.hidden }.forEach { it.value.close() }
+/**
+ * Closes every hidden secret and all notes, including those of customers and projects, so a report that reads one
+ * fails instead of passing silently.
+ */
+internal fun closeHiddenSecrets(vault: Vault) {
+    vault.customers.forEach { it.notes.close() }
+    vault.projects.forEach { it.notes.close() }
+    vault.entries.forEach { entry ->
+        entry.notes.close()
+        (entry.data.fields() + entry.history.flatMap { it.data.fields() }).filter { it.hidden }.forEach { it.value.close() }
+    }
 }
 
-internal val SENTINEL_CUSTOMER = Customer("4f7b8c1e-2d3a-4b5c-9d6e-7f8091a2b3c4", "Kunde & <Co> \"Test\"")
+internal val SENTINEL_CUSTOMER = Customer("4f7b8c1e-2d3a-4b5c-9d6e-7f8091a2b3c4", "Kunde & <Co> \"Test\"",
+    contactName = "Erika <Kontakt>", contactEmail = "kontakt@kunde.invalid", phone = "+49 30 555", website = "https://kunde.invalid")
 
 /**
  * Every entry type twice for [SENTINEL_CUSTOMER]: once with all secret fields wrongly marked visible, once with every
@@ -60,5 +68,9 @@ internal fun sentinelVault(): Vault {
             history = listOf(HistoryItem(DATE, EntryData.Web(f("History-SENTINEL-url", false),
                 f("History-SENTINEL-user", false), f("History-SENTINEL-password", false)))))
     }
-    return Vault(customers = listOf(SENTINEL_CUSTOMER), entries = entries).also { it.validate() }
+    // Fresh notes per vault: closing one vault must not erase the notes of the shared customer constant.
+    val customer = SENTINEL_CUSTOMER.copy(notes = Secret("Customer-Notes-SENTINEL".toCharArray()))
+    val project = Project(id(), "Projekt <P>", customer.id, description = "Beschreibung <D>",
+        notes = Secret("Project-Notes-SENTINEL".toCharArray()))
+    return Vault(customers = listOf(customer), projects = listOf(project), entries = entries).also { it.validate() }
 }

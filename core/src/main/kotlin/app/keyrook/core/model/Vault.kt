@@ -64,8 +64,31 @@ sealed class EntryData {
 }
 
 @Serializable data class MailEndpoint(val host: Field, val port: Int, val encryption: MailEncryption)
-@Serializable data class Customer(val id: String, val name: String)
-@Serializable data class Project(val id: String, val name: String, val customerId: String? = null)
+
+/**
+ * A customer with optional contact details (schema 2). The contact fields are plain metadata that reports may show;
+ * [notes] may be sensitive and is a [Secret] like entry notes, never shown in reports.
+ */
+@Serializable
+data class Customer(
+    val id: String,
+    val name: String,
+    val contactName: String? = null,
+    val contactEmail: String? = null,
+    val phone: String? = null,
+    val website: String? = null,
+    val notes: Secret = Secret(charArrayOf()),
+)
+
+/** A project, optionally of a customer, with an optional plain [description] and secret [notes] (schema 2). */
+@Serializable
+data class Project(
+    val id: String,
+    val name: String,
+    val customerId: String? = null,
+    val description: String? = null,
+    val notes: Secret = Secret(charArrayOf()),
+)
 @Serializable data class HistoryItem(val changedAt: String, val data: EntryData)
 
 @Serializable
@@ -82,6 +105,8 @@ data class Entry(
     val expiresOn: String? = null,
     val deletedAt: String? = null,
     val history: List<HistoryItem> = emptyList(),
+    /** Pinned (favorite) entries; schema 1 marked them with the tag [ReservedTags.LEGACY_FAVORITE] instead. */
+    val pinned: Boolean = false,
 )
 
 @Serializable
@@ -92,29 +117,51 @@ data class Vault(
     @Required val customers: List<Customer> = emptyList(),
     @Required val projects: List<Project> = emptyList(),
     @Required val entries: List<Entry> = emptyList(),
+    @Required val templates: List<EntryTemplate> = emptyList(),
 ) : AutoCloseable {
     fun validate() {
         require(schemaVersion == SCHEMA_VERSION && revision >= 0) { "Invalid vault version or revision" }
         uuid(id)
         require(customers.size <= 10_000 && projects.size <= 10_000 && entries.size <= 10_000)
+        require(templates.size <= MAX_TEMPLATES)
         val customerIds = uniqueIds(customers.map { it.id })
         val projectIds = uniqueIds(projects.map { it.id })
         val entryIds = uniqueIds(entries.map { it.id })
-        customers.forEach { text(it.name) }
-        projects.forEach { text(it.name); require(it.customerId == null || it.customerId in customerIds) }
+        uniqueIds(templates.map { it.id })
+        customers.forEach { customer ->
+            text(customer.name)
+            require(OrganizationMetadata.isValidContactName(customer.contactName))
+            require(OrganizationMetadata.isValidEmail(customer.contactEmail))
+            require(OrganizationMetadata.isValidPhone(customer.phone))
+            require(OrganizationMetadata.isValidWebsite(customer.website))
+            customer.notes.useChars { require(it.size <= MAX_FIELD_CHARS) }
+        }
+        projects.forEach { project ->
+            text(project.name)
+            require(project.customerId == null || project.customerId in customerIds)
+            require(OrganizationMetadata.isValidDescription(project.description))
+            project.notes.useChars { require(it.size <= MAX_FIELD_CHARS) }
+        }
         val projectById = projects.associateBy { it.id }
+        fun assignment(customerId: String?, projectId: String?) {
+            require(customerId == null || customerId in customerIds)
+            require(projectId == null || projectId in projectIds)
+            val projectCustomer = projectById[projectId]?.customerId
+            require(customerId == null || projectCustomer == null || customerId == projectCustomer)
+        }
+        templates.forEach { template ->
+            template.validate()
+            assignment(template.customerId, template.projectId)
+        }
         val serverIds = entries.filter { it.data is EntryData.Server }.map { it.id }.toSet()
         entries.forEach { entry ->
             text(entry.title)
             require(Instant.parse(entry.createdAt) <= Instant.parse(entry.modifiedAt))
             entry.expiresOn?.let { LocalDate.parse(it) }
             entry.deletedAt?.let { require(Instant.parse(it) >= Instant.parse(entry.createdAt)) }
-            require(entry.customerId == null || entry.customerId in customerIds)
-            require(entry.projectId == null || entry.projectId in projectIds)
-            val projectCustomer = projectById[entry.projectId]?.customerId
-            require(entry.customerId == null || projectCustomer == null || entry.customerId == projectCustomer)
+            assignment(entry.customerId, entry.projectId)
             require(entry.tags.size <= 100 && entry.history.size <= 100)
-            entry.tags.forEach { text(it, 256) }
+            entry.tags.forEach { text(it, 256); require(!ReservedTags.isReserved(it)) }
             entry.notes.useChars { require(it.size <= MAX_FIELD_CHARS) }
             validateData(entry.data, entryIds, serverIds)
             entry.history.forEach {
@@ -188,32 +235,38 @@ data class Vault(
             is EntryData.Custom -> value.copy(values = value.values.mapValues { field(it.value) })
         }
         return try {
-            copy(entries = entries.map { entry ->
-                entry.copy(data = data(entry.data), notes = secret(entry.notes),
-                    history = entry.history.map { it.copy(data = data(it.data)) })
-            })
+            copy(customers = customers.map { it.copy(notes = secret(it.notes)) },
+                projects = projects.map { it.copy(notes = secret(it.notes)) },
+                entries = entries.map { entry ->
+                    entry.copy(data = data(entry.data), notes = secret(entry.notes),
+                        history = entry.history.map { it.copy(data = data(it.data)) })
+                })
         } catch (e: Throwable) {
             copied.forEach(Secret::close)
             throw e
         }
     }
 
+    /** Erases every secret: entry fields, notes and history, and the notes of customers and projects. */
     override fun close() {
+        customers.forEach { it.notes.close() }
+        projects.forEach { it.notes.close() }
         entries.forEach { entry -> secrets(entry).forEach(Secret::close) }
     }
 
     companion object {
         /** Current decrypted document schema; older schemas are only accepted through registered migrations. */
-        const val SCHEMA_VERSION = 1
+        const val SCHEMA_VERSION = 2
         const val MAX_FIELD_CHARS = 262_144
+        const val MAX_TEMPLATES = 1_000
         private fun secrets(entry: Entry): List<Secret> = listOf(entry.notes) + entry.data.fields().map { it.value } +
             entry.history.flatMap { item -> item.data.fields().map { it.value } }
-        private fun uuid(value: String) { require(UUID.fromString(value).toString() == value) }
         private fun uniqueIds(ids: List<String>): Set<String> {
             ids.forEach { uuid(it) }
             return ids.toSet().also { require(it.size == ids.size) }
         }
-        private fun text(value: String, max: Int = 4096) { require(value.length <= max) }
+        internal fun uuid(value: String) { require(UUID.fromString(value).toString() == value) }
+        internal fun text(value: String, max: Int = 4096) { require(value.length <= max) }
         private fun port(value: Int) { require(value in 1..65535) }
         private fun validateData(data: EntryData, ids: Set<String>, servers: Set<String>, checkReferences: Boolean = true) {
             data.fields().forEach { field -> field.value.useChars { require(it.size <= MAX_FIELD_CHARS) } }

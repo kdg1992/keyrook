@@ -41,9 +41,12 @@ internal fun UnlockScreen(state: AppState, settings: SettingsStore, unlockDelay:
                 val token = controller.sessionEpoch.capture()
                 // Restored settings are unauthenticated: always show them, confirm destructive retention.
                 val restored = restoreRememberedBackups(controller, settings) { text -> dialogs.confirm(text) }
-                if (restored != null) SwingUtilities.invokeLater {
+                // An older file format is upgraded by the next save, which first keeps a copy of the old file.
+                val migration = controller.pendingMigration()?.let { UiText.text("migration.pending", it, Vault.SCHEMA_VERSION) }
+                if (restored != null || migration != null) SwingUtilities.invokeLater {
                     if (live.get() && controller.sessionEpoch.accepts(token)) {
-                        if (restored.warning) message = restored.text else notice = restored.text
+                        if (restored?.warning == true) message = restored.text
+                        notice = listOfNotNull(restored?.takeUnless { it.warning }?.text, migration).joinToString("\n")
                     }
                 }
             } catch (failure: Exception) {

@@ -103,38 +103,65 @@ class EntryChangesTest {
         }
     }
 
-    @Test fun `the favorite tag is reserved hidden from visible tags and set like any other tag`() {
-        assertTrue(ReservedTags.isReserved(ReservedTags.FAVORITE))
-        assertFalse(ReservedTags.isReserved("favorite"))
-        assertFalse(ReservedTags.isReserved("Keyrook:Favorite"))
-        assertEquals(listOf("a", "b"), ReservedTags.visible(listOf("a", ReservedTags.FAVORITE, "b")))
+    @Test fun `pinning several entries stamps only changed ones and an unchanged pin is no change`() {
         vault().use { vault ->
-            val ids = setOf(vault.entries[0].id, vault.entries[7].id)
-            val favorites = vault.tagEntries(ids, ReservedTags.FAVORITE, add = true, now)
-            favorites.validate()
-            assertEquals(listOf(true, false, false, false, false, false, false, true), favorites.entries.map { it.favorite })
-            assertEquals(listOf("Tag-SENTINEL-9891"), ReservedTags.visible(favorites.entries[0].tags))
-            val cleared = favorites.tagEntries(setOf(vault.entries[0].id), ReservedTags.FAVORITE, add = false, now)
-            assertFalse(cleared.entries[0].favorite)
-            assertEquals(listOf("Tag-SENTINEL-9891"), cleared.entries[0].tags)
+            val ids = setOf(vault.entries[0].id, vault.entries[1].id, vault.entries[7].id)
+            val pinned = vault.pinEntries(ids, pinned = true, now)
+            pinned.validate()
+            assertEquals(listOf(true, true, false, false, false, false, false, true), pinned.entries.map { it.pinned })
+            assertEquals(now.toString(), pinned.entries[0].modifiedAt)
+            // Entry 1 was already pinned: same object, same change time.
+            assertSame(vault.entries[1], pinned.entries[1])
+            assertEquals(listOf("Tag-SENTINEL-9891"), pinned.entries[0].tags)
+            val cleared = pinned.pinEntries(setOf(vault.entries[0].id), pinned = false, now)
+            assertFalse(cleared.entries[0].pinned)
+            assertSame(vault, vault.pinEntries(setOf(vault.entries[1].id), pinned = true, now))
+            assertThrows(IllegalArgumentException::class.java) { vault.pinEntries(setOf(id()), pinned = true, now) }
         }
     }
 
-    @Test fun `the favorite tag survives JSON and Keyrook CSV export and import`() {
+    @Test fun `the schema 1 favorite tag is reserved, refused as a tag and converted into a pin`() {
+        assertTrue(ReservedTags.isReserved(ReservedTags.LEGACY_FAVORITE))
+        assertFalse(ReservedTags.isReserved("favorite"))
+        assertFalse(ReservedTags.isReserved("Keyrook:Favorite"))
+        assertEquals(listOf("a", "b"), ReservedTags.visible(listOf("a", ReservedTags.LEGACY_FAVORITE, "b")))
+        vault().use { vault ->
+            assertThrows(IllegalArgumentException::class.java) {
+                vault.tagEntries(setOf(vault.entries[0].id), ReservedTags.LEGACY_FAVORITE, add = true, now)
+            }
+            val tagged = vault.entries[0].copy(tags = listOf("a", ReservedTags.LEGACY_FAVORITE))
+            assertThrows(IllegalArgumentException::class.java) { vault.copy(entries = listOf(tagged)).validate() }
+            val converted = tagged.withLegacyFavorite()
+            assertEquals(listOf("a"), converted.tags)
+            assertTrue(converted.pinned)
+            assertSame(vault.entries[2], vault.entries[2].withLegacyFavorite())
+        }
+    }
+
+    @Test fun `pins survive JSON and Keyrook CSV export and import and a legacy tag in an import pins the entry`() {
         val transfer = VaultTransfer()
         val consent = PlaintextConsent(true, true)
         vault().use { vault ->
-            val favorites = vault.tagEntries(setOf(vault.entries[0].id), ReservedTags.FAVORITE, add = true, now)
-            val json = transfer.exportJson(favorites, consent)
-            val csv = transfer.exportCsv(favorites, consent)
+            val pinned = vault.pinEntries(setOf(vault.entries[0].id), pinned = true, now)
+            val json = transfer.exportJson(pinned, consent)
+            val csv = transfer.exportCsv(pinned, consent)
             try {
+                assertTrue(json.toString(Charsets.UTF_8).contains("\"pinned\":true"))
                 listOf(transfer.importJson(json), transfer.importCsv(csv)).forEach { imported ->
                     imported.use {
-                        assertEquals(listOf("Tag-SENTINEL-9891", ReservedTags.FAVORITE), it.entries[0].tags)
-                        assertEquals(1, it.entries.count { entry -> entry.favorite })
+                        assertEquals(listOf("Tag-SENTINEL-9891"), it.entries[0].tags)
+                        assertEquals(listOf(true, true), it.entries.take(2).map { entry -> entry.pinned })
+                        assertEquals(2, it.entries.count { entry -> entry.pinned })
+                        assertEquals(pinned.templates, it.templates)
                     }
                 }
             } finally { json.fill(0); csv.fill(0) }
+            // A current-schema export edited by hand to carry the old tag is still read as a pin.
+            val legacy = transfer.exportJson(vault, consent).toString(Charsets.UTF_8)
+                .replace("\"tags\":[\"Tag-SENTINEL-9891\"]", "\"tags\":[\"Tag-SENTINEL-9891\",\"${ReservedTags.LEGACY_FAVORITE}\"]")
+            transfer.importJson(legacy.toByteArray()).use { imported ->
+                assertTrue(imported.entries.all { it.pinned && it.tags == listOf("Tag-SENTINEL-9891") })
+            }
         }
     }
 }

@@ -150,7 +150,7 @@ class InputValidationTest {
     }
 
     @Test fun `bulk tags cannot name the reserved favorite tag`() {
-        assertEquals(InputProblem.TAG_RESERVED, bulkTagError(ReservedTags.FAVORITE)?.problem)
+        assertEquals(InputProblem.TAG_RESERVED, bulkTagError(ReservedTags.LEGACY_FAVORITE)?.problem)
         assertNull(bulkTagError("favorite"))
     }
 }

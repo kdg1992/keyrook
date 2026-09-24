@@ -43,6 +43,24 @@ class TransferTest {
         }
     }
 
+    @Test fun `generic CSV maps tags and a pinned column and the legacy favorite tag pins the entry`() {
+        val bytes = ("name,tags,pinned\r\nA,\"ops; web ,keyrook:favorite\",\r\nB,,ja\r\nC,web,false\r\n").toByteArray()
+        transfer.importCsv(bytes, CsvMapping("name", tags = "tags", pinned = "pinned")).use { vault ->
+            assertEquals(listOf(listOf("ops", "web"), emptyList(), listOf("web")), vault.entries.map { it.tags })
+            assertEquals(listOf(true, true, false), vault.entries.map { it.pinned })
+        }
+        assertThrows(InvalidImportException::class.java) {
+            transfer.importCsv("name,pinned\r\nA,maybe\r\n".toByteArray(), CsvMapping("name", pinned = "pinned"))
+        }
+        val xml = """<KeePassFile><Root><Group><Name>Root</Name><Entry>
+            <String><Key>Title</Key><Value>Starred</Value></String><Tags>keyrook:favorite;one</Tags>
+            </Entry></Group></Root></KeePassFile>""".toByteArray()
+        transfer.importKeePassXml(xml).use { vault ->
+            assertEquals(listOf("one"), vault.entries.single().tags)
+            assertTrue(vault.entries.single().pinned)
+        }
+    }
+
     @Test fun `invalid imports give no secret-bearing diagnostic`() {
         for (content in listOf("\"unterminated secret-SENTINEL", "name,name\na,b", "name\n\"a\"bad")) {
             val failure = assertThrows(InvalidImportException::class.java) {
@@ -103,7 +121,8 @@ class TransferTest {
             assertEquals("2026-01-01T00:00:00Z", entry.createdAt)
             assertEquals("2026-03-01T00:00:00Z", entry.modifiedAt)
             assertEquals("2026-03-02T00:00:00Z", entry.deletedAt)
-            assertEquals(listOf("favorite"), entry.tags)
+            assertEquals(emptyList<String>(), entry.tags)
+            assertTrue(entry.pinned)
             val history = entry.history.single()
             assertEquals("2026-02-01T00:00:00Z", history.changedAt)
             (history.data as EntryData.Custom).values.getValue("password").value.useChars {

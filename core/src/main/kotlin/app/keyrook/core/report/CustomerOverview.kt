@@ -6,6 +6,7 @@ import app.keyrook.core.model.Customer
 import app.keyrook.core.model.Entry
 import app.keyrook.core.model.EntryData
 import app.keyrook.core.model.Field
+import app.keyrook.core.model.Project
 import app.keyrook.core.model.Vault
 import java.util.Locale
 
@@ -61,19 +62,31 @@ data class DomainLine(val title: String, val name: String?, val expiresOn: Strin
 /** A server or file-transfer entry of an overview; [host] is null when the host field is hidden. */
 data class HostLine(val title: String, val typeKey: String, val host: String?, val port: Int)
 
+/** The plain contact details of a customer; customer notes are secret and never part of a report. */
+data class ContactLine(val contactName: String?, val email: String?, val phone: String?, val website: String?) {
+    val isEmpty: Boolean get() = contactName == null && email == null && phone == null && website == null
+}
+
+/** A project of an overview with its plain description; project notes are secret and never part of a report. */
+data class ProjectLine(val name: String, val description: String?)
+
 /**
- * Metadata of one customer's active entries: counts per type key (only types that occur), domains and hosts.
- * [customerId] and [name] are null for the entries without a customer. No secret and no hidden field is included.
+ * Metadata of one customer's active entries: counts per type key (only types that occur), domains and hosts, and the
+ * customer's plain contact details and projects. [customerId] and [name] are null for the entries without a
+ * customer, whose [contact] is null and whose [projects] are the projects without a customer. No secret, no notes
+ * and no hidden field is included.
  */
 data class CustomerOverview(val customerId: String?, val name: String?, val counts: Map<String, Int>,
-                            val domains: List<DomainLine>, val hosts: List<HostLine>)
+                            val domains: List<DomainLine>, val hosts: List<HostLine>,
+                            val contact: ContactLine? = null, val projects: List<ProjectLine> = emptyList())
 
 /**
  * One overview per customer, sorted by name, followed by the entries without a customer if there are any.
  * Trashed entries are left out. The result holds immutable strings of visible fields only.
  */
 fun customerOverviews(vault: Vault): List<CustomerOverview> {
-    fun overview(customerId: String?, name: String?): CustomerOverview {
+    fun overview(customer: Customer?): CustomerOverview {
+        val customerId = customer?.id
         val entries = vault.activeEntriesOf(customerId).sortedWith(titleOrder)
         val counts = entries.groupingBy { it.data.typeKey() }.eachCount()
         val domains = entries.mapNotNull { entry ->
@@ -86,12 +99,16 @@ fun customerOverviews(vault: Vault): List<CustomerOverview> {
                 else -> null
             }
         }
-        return CustomerOverview(customerId, name, REPORT_TYPE_KEYS.filter { it in counts }.associateWith { counts.getValue(it) },
-            domains, hosts)
+        val projects = vault.projects.filter { it.customerId == customerId }
+            .sortedWith(compareBy<Project> { it.name.lowercase(Locale.ROOT) }.thenBy { it.name }.thenBy { it.id })
+            .map { ProjectLine(it.name, it.description) }
+        val contact = customer?.let { ContactLine(it.contactName, it.contactEmail, it.phone, it.website) }
+        return CustomerOverview(customerId, customer?.name,
+            REPORT_TYPE_KEYS.filter { it in counts }.associateWith { counts.getValue(it) }, domains, hosts, contact, projects)
     }
     val customers = vault.customers.sortedWith(compareBy<Customer> { it.name.lowercase(Locale.ROOT) }
-        .thenBy { it.name }.thenBy { it.id }).map { overview(it.id, it.name) }
-    val unassigned = overview(null, null)
+        .thenBy { it.name }.thenBy { it.id }).map { overview(it) }
+    val unassigned = overview(null)
     return if (unassigned.counts.isEmpty()) customers else customers + unassigned
 }
 
@@ -104,6 +121,20 @@ fun customerOverviewText(overviews: List<CustomerOverview>, text: ReportText): S
     overviews.forEachIndexed { index, overview ->
         if (index > 0) append('\n')
         append(overview.name ?: text.text("report.noCustomer")).append('\n')
+        overview.contact?.takeUnless { it.isEmpty }?.let { contact ->
+            listOf("report.contactName" to contact.contactName, "report.contactEmail" to contact.email,
+                "report.phone" to contact.phone, "report.website" to contact.website).forEach { (key, value) ->
+                if (value != null) append("  ").append(text.text(key)).append(": ").append(value).append('\n')
+            }
+        }
+        if (overview.projects.isNotEmpty()) {
+            append("  ").append(text.text("report.projects")).append(':')
+            overview.projects.forEach { project ->
+                append("\n    ").append(project.name)
+                project.description?.let { append(" – ").append(it.lines().joinToString(" ")) }
+            }
+            append('\n')
+        }
         append("  ").append(text.text("report.entries")).append(": ")
         append(if (overview.counts.isEmpty()) text.text("report.none")
             else overview.counts.entries.joinToString(", ") { "${text.text("entry.type.${it.key}")} ${it.value}" })
