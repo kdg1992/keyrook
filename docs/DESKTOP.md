@@ -145,7 +145,8 @@ invalid until it is fixed.
 Choose an existing `.keyrook` file to open, or a new file to create. Creation requires the master password twice. The optional key file must contain exactly 32 bytes and must be available again when unlocking. Existing files are never replaced during creation.
 
 **Schlüsseldatei erzeugen** writes 32 cryptographically random bytes to a new
-file with private permissions. Keep a separate safe copy; losing this factor
+file with private permissions. Like a vault file, it may be placed in a folder reached
+through a symbolic link, but the chosen file name must not be a link itself. Keep a separate safe copy; losing this factor
 makes the vault unrecoverable. Generating a file does not change an existing
 vault. **Passwort / Schlüsseldatei ändern** explicitly confirms replacement of
 the selected factors: select the existing key file to retain it, another file
@@ -182,7 +183,8 @@ field limit, an invalid expiry date, an empty or invalid port, a changed TOTP
 secret the code generator does not accept (an unchanged stored one only warns;
 see [TOTP codes](#totp-codes)), and a
 duplicate or too long custom field name. **Speichern** with open problems saves nothing
-and shows one summary line above the buttons.
+and shows one summary line above the buttons. A second **Speichern** while a save is
+still running is ignored, and the values of that second attempt are erased at once.
 
 The expiry date accepts `2026-12-31`, `31.12.2026`, `1.2.2026` and `31.12.26`.
 Two-digit years mean 2000–2099. Impossible dates such as `29.02.2027` are
@@ -237,7 +239,9 @@ resolve or fetch the address while validating it.
 
 **In Papierkorb** asks for confirmation first. In that dialog, Enter confirms
 and Escape cancels; with the focus on **Abbrechen**, Enter cancels. Trashed
-entries can be restored at any time.
+entries can be restored at any time. Moving to the trash and restoring record the
+current time as the entry's change time, but never an earlier time than its last
+change, so a computer clock that was set back cannot make a change appear older.
 
 In the trash, **Endgültig löschen** removes a single entry and **Papierkorb
 leeren** removes every trashed entry, including those hidden by the current
@@ -301,7 +305,7 @@ Without a configured backup folder only the vault file is checked. The report sh
 Import parses and validates first, then asks for confirmation showing the entry count. It adds records to the current vault; duplicate IDs fail rather than overwrite records. Enable backups before importing into a valuable vault. Supported inputs:
 
 - Keyrook JSON: all entry types, references, metadata and history.
-- CSV: select the actual header names from dropdowns for title, URL, username, password and notes. The title column is required; optional fields can remain unassigned. Common German and English column names are suggested. Quoted commas, escaped quotes and multiline values are supported. Headers must be unique and nonblank, with at most 100 columns and 512 characters per name. A UTF-8 BOM is accepted. Keyrook's own CSV format is recognized automatically without a mapping dialog.
+- CSV: select the actual header names from dropdowns for title, URL, username, password and notes. The title column is required; optional fields can remain unassigned. Common German and English column names are suggested. Quoted commas, escaped quotes and multiline values are supported. Headers must be unique and nonblank, with at most 100 columns and 512 characters per name; otherwise nothing is imported and a message states these rules. A UTF-8 BOM is accepted. Keyrook's own CSV format is recognized automatically without a mapping dialog.
 - KeePass CSV: a fixed mapping without a dialog, using the same CSV parser and limits. The header is checked before any row is read and must contain exactly one of these column sets, in any order; otherwise nothing is imported and a message names the expected columns:
 
   | KeePass CSV 1.x (KeePass 2.x *Export → KeePass CSV (1.x)*) | KeePass 2.x field names | Keyrook field |
@@ -365,7 +369,9 @@ Under every choice, supported operating-system session/sleep notifications (scre
 
 **Sperren** remains available during vault operations. Locking discards unsaved edits, clears the displayed snapshot and owned clipboard, and closes open application dialogs; an open question or password prompt counts as canceled. Already-started atomic writes finish before the worker clears session credentials. Results from before the lock cannot reopen the display. Reopen the vault to check the saved state if locking happened during a save.
 
-Failed unlock attempts produce increasing waiting periods, capped at 60 seconds. A countdown shows when the next attempt is available. Locking does not reset that delay; a successful unlock or application restart does. This is not protection against attacks on a copied vault file.
+Closing the window while an operation such as a save, backup, integrity check or export is still running asks first, because quitting stops that operation; **Trotzdem beenden** quits anyway and **Abbrechen** keeps Keyrook open. If the operation ends before you answer, the question closes and the window stays open so its result can be read. Closing without a running operation quits immediately.
+
+Failed unlock attempts produce increasing waiting periods, capped at 60 seconds. Only a rejected password or key file counts as a failed attempt; a missing, unreadable, damaged or busy vault file, or a key file of the wrong size, is reported without a delay. A countdown shows when the next attempt is available. Locking does not reset that delay; a successful unlock or application restart does. This is not protection against attacks on a copied vault file.
 
 Do not treat the clipboard timer as protection against OS clipboard history. Native packaging and platform-specific end-to-end verification are separate from the local offscreen UI test.
 

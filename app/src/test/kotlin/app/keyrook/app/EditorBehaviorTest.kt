@@ -77,4 +77,23 @@ class EditorBehaviorTest {
         val cleared = editedEntry(null, data, "Title", "", "", "  ", emptyList(), emptyList())
         Vault(entries = listOf(cleared)).use { assertNull(cleared.expiresOn) }
     }
+
+    @Test fun `a candidate submitted while an operation runs is erased instead of saved`() {
+        val data = blankData(EntryType.WEB)
+        fun candidate() = editedEntry(null, data, "Synthetic", "", "synthetic-notes", "",
+            listOf("https://example.invalid", "sample", "synthetic-secret", ""), listOf(false, false, true, true))
+        val refused = candidate()
+        val accepted = candidate()
+        data.fields().forEach { it.value.close() }
+        val saved = mutableListOf<Entry>()
+        assertFalse(submitEditedEntry(true, refused) { saved += it })
+        assertTrue(saved.isEmpty())
+        assertThrows(IllegalStateException::class.java) { refused.data.fields()[2].value.useChars(::String) }
+        assertThrows(IllegalStateException::class.java) { refused.notes.useChars(::String) }
+        Vault(entries = listOf(accepted)).use {
+            assertTrue(submitEditedEntry(false, accepted) { saved += it })
+            assertSame(accepted, saved.single())
+            assertEquals("synthetic-secret", accepted.data.fields()[2].value.useChars(::String))
+        }
+    }
 }

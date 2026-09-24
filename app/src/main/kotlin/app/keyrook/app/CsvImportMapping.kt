@@ -7,6 +7,9 @@ import app.keyrook.core.transfer.CsvMapping
 import app.keyrook.core.transfer.InvalidImportException
 import app.keyrook.core.transfer.VaultTransfer
 
+/** The CSV header cannot be mapped; carries no column names, so the import shows the fixed `csv.invalid` text. */
+internal class CsvHeaderException : IllegalArgumentException("CSV header cannot be mapped")
+
 /** Takes ownership of the input buffer, including cancellation and expired-session paths. */
 internal fun importMappedCsv(
     bytes: ByteArray,
@@ -17,7 +20,7 @@ internal fun importMappedCsv(
         guard()
         val transfer = VaultTransfer()
         val columns = try { transfer.csvColumns(bytes) } catch (_: InvalidImportException) {
-            throw IllegalArgumentException(UiText.text("csv.invalid"))
+            throw CsvHeaderException()
         }
         val mapping = if (columns == listOf("keyrook-json")) null else selectMapping(columns) ?: return null
         guard()

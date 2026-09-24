@@ -172,6 +172,9 @@ private fun importData(controller: VaultController, dialogs: Dialogs) {
     } catch (_: KeePassCsvHeaderException) {
         dialogs.inform(UiText.text("csv.keepassMismatch"))
         return
+    } catch (_: CsvHeaderException) {
+        dialogs.inform(UiText.text("csv.invalid"))
+        return
     } finally { bytes.fill(0) }
     imported.use {
         if (!dialogs.confirm(UiText.text("transfer.importConfirm", it.entries.size))) return

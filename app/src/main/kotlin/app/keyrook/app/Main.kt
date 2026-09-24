@@ -38,13 +38,17 @@ fun main(args: Array<String>) {
     val icon = loadWindowIcon()
     application {
         val windowState = rememberMainWindowState(settings)
+        var closeRequested by remember { mutableStateOf(false) }
         Window(
-            onCloseRequest = { saveWindowGeometry(settings, windowState); exitApplication() },
+            onCloseRequest = { closeRequested = true },
             state = windowState, title = "Keyrook", icon = icon,
         ) {
             LaunchedEffect(window) { window.minimumSize = minimumWindowSize() }
             PersistWindowGeometry(windowState, settings)
-            KeyrookApp(window, settings)
+            KeyrookApp(window, settings, closeRequested) { quit ->
+                closeRequested = false
+                if (quit) { saveWindowGeometry(settings, windowState); exitApplication() }
+            }
         }
     }
 }
@@ -53,7 +57,8 @@ private fun chooseFile(save: Boolean): Path? =
     if (save) chooseNewFile(DialogFile.VAULT, "vault.keyrook") else chooseOpenFile(DialogFile.VAULT)
 
 @Composable
-internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore = remember { SettingsStore.platform() }) {
+internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore = remember { SettingsStore.platform() },
+                        closeRequested: Boolean = false, onCloseAnswered: (quit: Boolean) -> Unit = {}) {
     val controller = remember { VaultController() }
     val worker = remember { Executors.newSingleThreadExecutor { task -> Thread(task, "vault-worker").apply { isDaemon = true } } }
     val dialogs = remember { DialogHost() }
@@ -76,6 +81,7 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
     var reveal by remember { mutableStateOf(RevealState()) }
     var organizer by remember { mutableStateOf(false) }
     var warningsOpen by remember { mutableStateOf(false) }
+    var confirmClose by remember { mutableStateOf(false) }
     val warnings = vaultWarnings(vault, controller)
     val warningsByEntry = remember(warnings) { warningIssues(warnings.orEmpty()) }
     val updates = rememberUpdateChecks(settings)
@@ -102,6 +108,7 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
         dialogs.cancelAll()
         java.awt.Window.getWindows().filterIsInstance<java.awt.Dialog>().filter { it.isVisible }.forEach { it.dispose() }
         editing = null; creating = false; about = false; showSettings = false
+        if (confirmClose) { confirmClose = false; onCloseAnswered(false) }
         reveal = RevealState(); listView = ListView(); selection = EntrySelection(); organizer = false; warningsOpen = false
         vault?.close(); vault = null
         runCatching { SecretClipboard.clear() }
@@ -183,6 +190,14 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
             window?.removeWindowStateListener(masking)
             lockKeys?.close(); monitor?.close(); countdown.stop()
         }
+    }
+    // Quitting stops the worker, so a close request during an operation asks first. When the operation ends before
+    // an answer, the question closes and the window stays open to show its result.
+    LaunchedEffect(closeRequested) {
+        if (closeRequested) { if (busy) confirmClose = true else onCloseAnswered(true) }
+    }
+    LaunchedEffect(busy) {
+        if (!busy && confirmClose) { confirmClose = false; onCloseAnswered(false) }
     }
     DisposableEffect(Unit) {
         onDispose {
@@ -267,7 +282,10 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
                     }
                 } else if (creating || editing != null) {
                     Editor(vault!!, editing, busy, shortcuts, onCancel = { editing = null; creating = false }) { entry ->
-                        operation { Vault(entries = listOf(entry)).use { controller.save(entry) } }
+                        // The editor's busy flag lags one composition behind; a second Save in that window is refused here.
+                        submitEditedEntry(busy, entry) { candidate ->
+                            operation { Vault(entries = listOf(candidate)).use { controller.save(candidate) } }
+                        }
                     }
                 } else {
                     val current = vault!!
@@ -322,6 +340,10 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
                 runCatching { Desktop.getDesktop().browse(URI("https://github.com/kdg1992/keyrook")) }
             }) { Text(UiText.text("shell.source")) } })
         DialogHostView(dialogs)
+        if (confirmClose) ConfirmationDialog(UiText.text("shell.closeBusyTitle"), UiText.text("shell.closeBusyBody"),
+            UiText.text("shell.closeBusyConfirm"), busy = false, irreversible = true,
+            onConfirm = { confirmClose = false; onCloseAnswered(true) },
+            onDismiss = { confirmClose = false; onCloseAnswered(false) })
     }
 }
 

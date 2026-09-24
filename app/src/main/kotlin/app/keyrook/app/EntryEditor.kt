@@ -75,6 +75,19 @@ fun EntryData.mapFields(transform: (Field) -> Field): EntryData = when (this) {
     is EntryData.Custom -> copy(values = values.mapValues { transform(it.value) })
 }
 
+/**
+ * Hands an editor candidate to [save] unless an operation is already running, for example after a second click on
+ * Save before the editor noticed the first one. A refused candidate is erased at once; an accepted one belongs to [save].
+ */
+internal fun submitEditedEntry(busy: Boolean, candidate: Entry, save: (Entry) -> Unit): Boolean {
+    if (busy) {
+        Vault(entries = listOf(candidate)).close()
+        return false
+    }
+    save(candidate)
+    return true
+}
+
 /** The editor's immutable text values are discarded on cancel/lock; JVM copies cannot be erased. */
 fun editedEntry(source: Entry?, data: EntryData, title: String, tags: String, notes: String, expires: String,
                 values: List<String>, hidden: List<Boolean>): Entry {

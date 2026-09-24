@@ -39,9 +39,11 @@ Use a trusted local directory. The code refuses a symbolic-link vault leaf and c
 Desktop Argon2 settings use the core's automatic resource limits. Changing them
 uses the same atomic save and pre-save backup path, preserving the factors.
 Generating a key file uses `SecureRandom`, exclusive creation and private file
-permissions; the owned 32-byte buffer is erased on every exit path. Replacing or
-removing the key-file factor requires explicit confirmation alongside password
-replacement. No operation rewrites old backups with new factors or KDF settings.
+permissions; the owned 32-byte buffer is erased on every exit path. Its path is
+resolved like a vault file: a symbolic link among the parent directories is
+accepted, while a key file path that is itself a symbolic link is refused and never
+followed. Replacing or removing the key-file factor requires explicit confirmation
+alongside password replacement. No operation rewrites old backups with new factors or KDF settings.
 
 The desktop controller runs vault operations on a serial worker, keeping Argon2 and storage off the event thread. UI snapshots are independent and closed on replacement/lock. Locking immediately removes the document and unsaved editors from presentation state, closes its snapshot and clears the owned clipboard, even while work is running. It invalidates the operation generation and closes open application dialogs. Messages, questions and password prompts are drawn inside the main window; a worker waiting for an answer is released as if the user had canceled, and its generation is checked before a question is shown and again after it is answered, so an answer from before the lock is never used. A password confirmed too late is erased instead of delivered. Late results are closed instead of reopening the vault or changing the locked screen. Session cleanup is queued behind outstanding work; an atomic write already started is allowed to finish rather than being interrupted. Consequently locking can complete presentation cleanup before the worker has erased its credentials. Process termination, sleep suspension and power loss can still stop a worker at any point.
 
@@ -64,7 +66,7 @@ half-second timer tick after resume and on the first input event, before that
 input can reset the deadline. A forward wall-clock step of 30 seconds or more
 while the machine is awake therefore also locks.
 
-Failed unlock attempts impose delays of 1, 2, 4, 8, 16, 32 and then at most 60 seconds. Delays use monotonic time, remain in force when locking or retrying, and reset after a successful unlock. Rejected retries do not derive a key and their submitted password arrays are still erased. This state is process-local and resets when the application restarts. It cannot defend against a modified application or offline password guessing.
+Failed unlock attempts impose delays of 1, 2, 4, 8, 16, 32 and then at most 60 seconds. Only an authentication failure of the vault, that is a wrong password or key file, counts; I/O errors, invalid or unsupported files, conflicts and malformed key files do not. Delays use monotonic time, remain in force when locking or retrying, and reset after a successful unlock. Rejected retries do not derive a key and their submitted password arrays are still erased. This state is process-local and resets when the application restarts. It cannot defend against a modified application or offline password guessing.
 
 The read-only detail view renders masked fields and the notes as dots. A value is converted to text only while its **Anzeigen** toggle is on; the shown positions are held without values and are reset when another entry, vault or saved version is displayed, when the view leaves the screen (editor, narrow window, lock) and on every window deactivation or minimization, regardless of the window lock choice. The displayed text is not selectable, so copying goes through the owned, expiring clipboard. Shown text is still an immutable JVM string that cannot be erased, and it is visible to anyone who can see the screen or capture it. Background health checks read a session copy through `VaultSession.read` on a separate thread, which erases it afterwards, and publish only entry IDs and reasons; results from an older revision or session are discarded.
 

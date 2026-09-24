@@ -43,6 +43,18 @@ class CredentialSettingsTest {
         before.fill(0)
     }
 
+    @Test fun `key file is generated below a linked parent directory but never through a final link`() {
+        val real = Files.createDirectory(directory.toRealPath().resolve("real"))
+        val parent = directory.toRealPath().resolve("parent-link")
+        try { Files.createSymbolicLink(parent, real) } catch (_: Exception) { return }
+        generateKeyFile(parent.resolve("linked.key"))
+        assertEquals(32, Files.size(real.resolve("linked.key")))
+        val finalLink = directory.toRealPath().resolve("final-link.key")
+        Files.createSymbolicLink(finalLink, real.resolve("absent.key"))
+        assertThrows(java.io.IOException::class.java) { generateKeyFile(finalLink) }
+        assertFalse(Files.exists(real.resolve("absent.key")))
+    }
+
     @Test fun `selected creation parameters and generated factor survive authenticated reopen`() {
         val root = directory.toRealPath()
         val key = root.resolve("factor.key")

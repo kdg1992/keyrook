@@ -120,6 +120,9 @@ class DataToolsTest {
                     importTransfer(ImportFormat.KEEPASS_CSV, "Name,Secret\na,b\n".toByteArray(), selectMapping = { null }, guard = {})
                 }
                 assertNull(importTransfer(ImportFormat.MAPPED_CSV, "Name,Secret\na,b\n".toByteArray(), selectMapping = { null }, guard = {}))
+                assertThrows(CsvHeaderException::class.java) {
+                    importTransfer(ImportFormat.MAPPED_CSV, "Name,Name\na,b\n".toByteArray(), selectMapping = { null }, guard = {})
+                }
                 ImportFormat.MAPPED_CSV.label
             }
             assertNotEquals(mappedLabels[0], mappedLabels[1])

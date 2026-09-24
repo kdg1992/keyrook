@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package app.keyrook.app
 
+import app.keyrook.core.crypto.AuthenticationException
 import app.keyrook.core.crypto.Credentials
 import app.keyrook.core.crypto.Secret
 import app.keyrook.core.crypto.KdfParameters
@@ -48,7 +49,8 @@ class VaultController(internal val session: VaultSession = VaultSession(),
                     backoff.succeeded()
                     vaultPath = path.toAbsolutePath().normalize()
                 }
-            } catch (failure: Exception) {
+            } catch (failure: AuthenticationException) {
+                // Only rejected credentials count; missing, unreadable, corrupt or busy files never delay a retry.
                 backoff.failed()
                 throw failure
             }
@@ -68,9 +70,13 @@ class VaultController(internal val session: VaultSession = VaultSession(),
     fun trash(id: String, restore: Boolean): Vault {
         ensureOperationCurrent()
         session.snapshot().use { current ->
-            val now = java.time.Instant.now().toString()
+            val now = java.time.Instant.now()
             session.save(current.copy(entries = current.entries.map {
-                if (it.id == id) it.copy(deletedAt = if (restore) null else now, modifiedAt = now) else it
+                if (it.id != id) it else {
+                    // A clock set back never moves the entry's change time before its last change or its history.
+                    val stamp = maxOf(now, java.time.Instant.parse(it.modifiedAt)).toString()
+                    it.copy(deletedAt = if (restore) null else stamp, modifiedAt = stamp)
+                }
             }))
         }
         return session.snapshot()

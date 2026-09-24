@@ -60,7 +60,7 @@ class CsvImportMappingTest {
     @Test fun `invalid headers fail without exposing names or opening dialog`() {
         for (text in listOf("private-name,private-name\na,b", "Title,\na,b", " ,Password\na,b")) {
             val bytes = text.toByteArray()
-            val failure = assertThrows(IllegalArgumentException::class.java) {
+            val failure = assertThrows(CsvHeaderException::class.java) {
                 importMappedCsv(bytes, guard = {}, selectMapping = { fail("Dialog must not open") })
             }
             assertFalse(failure.message!!.contains("private-name"))
