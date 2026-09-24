@@ -8,6 +8,7 @@ import app.keyrook.core.crypto.InvalidVaultException
 import app.keyrook.core.format.VaultCodec
 import app.keyrook.core.format.VaultHeader
 import app.keyrook.core.storage.FileStamp
+import app.keyrook.core.storage.PrivateFiles
 import app.keyrook.core.storage.SaveResult
 import app.keyrook.core.storage.VaultConflictException
 import app.keyrook.core.storage.VaultStore
@@ -16,8 +17,6 @@ import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.channels.OverlappingFileLockException
 import java.nio.file.*
-import java.nio.file.attribute.PosixFileAttributeView
-import java.nio.file.attribute.PosixFilePermissions
 import java.security.MessageDigest
 import java.time.Clock
 import java.time.Instant
@@ -62,10 +61,8 @@ class BackupService internal constructor(
                 if (lock == null) throw VaultConflictException()
                 lock.use {
                     val target = root.resolve("${vault.id}_${clock.instant().toEpochMilli()}_${vault.revision}_${UUID.randomUUID()}.keyrook.bak")
-                    val attributes = if (Files.getFileAttributeView(root, PosixFileAttributeView::class.java) != null)
-                        arrayOf(PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"))) else emptyArray()
                     // CREATE_NEW never replaces a conflicting target, even when another process races us.
-                    FileChannel.open(target, setOf(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS), *attributes).use { output ->
+                    PrivateFiles.createNew(target).use { output ->
                         try {
                             val buffer = ByteBuffer.wrap(bytes)
                             while (buffer.hasRemaining()) output.write(buffer)
@@ -164,15 +161,8 @@ fun countManagedBackups(directory: Path, vaultId: String): Int {
 internal fun readBackupFile(path: Path): ByteArray {
     val resolved = resolveWithoutFinalLink(path)
     if (!Files.isRegularFile(resolved, LinkOption.NOFOLLOW_LINKS)) throw IOException("Backup input must be a regular file")
-    FileChannel.open(resolved, StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS).use { input ->
-        val size = input.size()
-        if (size !in 92..VaultCodec.MAX_FILE_BYTES.toLong()) throw InvalidVaultException()
-        val bytes = ByteArray(size.toInt())
-        val buffer = ByteBuffer.wrap(bytes)
-        while (buffer.hasRemaining()) if (input.read(buffer) < 0) throw InvalidVaultException()
-        if (input.read(ByteBuffer.allocate(1)) != -1) throw InvalidVaultException()
-        return bytes
-    }
+    return PrivateFiles.readBounded(resolved, 92..VaultCodec.MAX_FILE_BYTES.toLong(),
+        { InvalidVaultException() }, { InvalidVaultException() })
 }
 
 /**
