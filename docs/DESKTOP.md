@@ -460,7 +460,7 @@ large until entries are deleted permanently or large notes are shortened.
 
 ## Import and plaintext export
 
-Import parses and validates first, then asks for confirmation showing the entry count. It adds records to the current vault; duplicate IDs fail rather than overwrite records. Enable backups before importing into a valuable vault. An import that could not be saved because the vault would exceed the 64 MiB size limit of the file format is refused with a message that says so, and nothing changes. Supported inputs:
+Import parses and validates first, then asks for confirmation showing the entry count. It adds records to the current vault under new IDs, with the references between imported customers, projects, entries and templates updated, so importing a vault's own export or the same file twice adds copies and never overwrites records. Enable backups before importing into a valuable vault. An import that could not be saved because the vault would exceed the 64 MiB size limit of the file format is refused with a message that says so, and nothing changes. Supported inputs:
 
 - Keyrook JSON: all entry types, references, metadata and history.
 - CSV: select the actual header names from dropdowns for title, URL, username, password, notes, tags and favorite. Tags are separated by commas or semicolons. The title column is required; optional fields can remain unassigned. Common German and English column names are suggested. Quoted commas, escaped quotes and multiline values are supported. Headers must be unique and nonblank, with at most 100 columns and 512 characters per name; otherwise nothing is imported and a message states these rules. A UTF-8 BOM is accepted. Keyrook's own CSV format is recognized automatically without a mapping dialog.

@@ -2,6 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package app.keyrook.app
 
+import app.keyrook.core.model.Customer
+import app.keyrook.core.model.Entry
+import app.keyrook.core.model.EntryData
+import app.keyrook.core.model.Project
 import app.keyrook.core.model.Vault
 import app.keyrook.core.transfer.KeePassCsvHeaderException
 import app.keyrook.core.transfer.PlaintextConsent
@@ -17,6 +21,7 @@ import java.nio.file.attribute.AclEntryPermission
 import java.nio.file.attribute.AclFileAttributeView
 import java.nio.file.attribute.PosixFileAttributeView
 import java.nio.file.attribute.PosixFilePermissions
+import java.util.UUID
 
 class DataToolsTest {
     @TempDir lateinit var directory: Path
@@ -92,6 +97,27 @@ class DataToolsTest {
         }
         assertEquals(2, buffers.size)
         assertTrue(buffers.all { bytes -> bytes.all { it == 0.toByte() } })
+    }
+
+    @Test fun `importing a vault's own export twice adds copies with new IDs`() {
+        val source = Vault(customers = listOf(Customer(UUID.randomUUID().toString(), "ACME")))
+        val project = Project(UUID.randomUUID().toString(), "Relaunch", source.customers.single().id)
+        val entry = Entry(UUID.randomUUID().toString(), "Login", EntryData.Custom(emptyMap()), "2026-01-01T00:00:00Z",
+            "2026-01-01T00:00:00Z", project.customerId, project.id)
+        source.copy(projects = listOf(project), entries = listOf(entry)).use { vault ->
+            val export = exportTransfer(PlaintextFormat.JSON, vault, PlaintextConsent(true, true))
+            val first = importTransfer(ImportFormat.KEYROOK_JSON, export, selectMapping = { null }, guard = {})!!
+            val second = importTransfer(ImportFormat.KEYROOK_JSON, export, selectMapping = { null }, guard = {})!!
+            export.fill(0)
+            val merged = mergeImport(mergeImport(vault, first), second)
+            assertEquals(3, merged.entries.map { it.id }.toSet().size)
+            assertEquals(3, merged.customers.size)
+            merged.projects.forEach { copy -> assertTrue(merged.customers.any { it.id == copy.customerId }) }
+            merged.entries.forEach { copy ->
+                assertEquals(merged.projects.single { it.id == copy.projectId }.customerId, copy.customerId)
+            }
+            first.close(); second.close()
+        }
     }
 
     @Test fun `format choices select behavior by type in every label language`() {
