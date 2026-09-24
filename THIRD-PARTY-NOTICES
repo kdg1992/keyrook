@@ -23,7 +23,7 @@ Bouncy Castle bcprov/bcpkix/bcutil-jdk18on 1.86 — MIT (Bouncy Castle license)
   Copyright (c) 2000-2026 The Legion of the Bouncy Castle Inc.
   https://www.bouncycastle.org/
 
-Apache MINA SSHD Common 2.18.0 — Apache-2.0 (embedded BCrypt: ISC)
+Apache MINA SSHD Common 2.19.0 — Apache-2.0 (embedded BCrypt: ISC)
 SLF4J API 1.7.36 — MIT; JCL bridge 1.7.36 — Apache-2.0
   See licenses/SSH-Third-Party.md for copyright and license notices.
 Compose Multiplatform 1.12.1 and AndroidX runtime libraries — Apache-2.0

@@ -5,7 +5,7 @@ their respective components, independently of Keyrook's GPL-3.0-or-later license
 
 | Component | Version | License |
 | --- | --- | --- |
-| Apache MINA SSHD common utilities (`org.apache.sshd:sshd-common`) | 2.18.0 | Apache-2.0, with ISC-licensed BCrypt code |
+| Apache MINA SSHD common utilities (`org.apache.sshd:sshd-common`) | 2.19.0 | Apache-2.0, with ISC-licensed BCrypt code |
 | Bouncy Castle PKIX and utility modules (`bcpkix-jdk18on`, `bcutil-jdk18on`) | 1.86 | MIT |
 | SLF4J API (`org.slf4j:slf4j-api`) | 1.7.36 | MIT |
 | Commons Logging bridge (`org.slf4j:jcl-over-slf4j`) | 1.7.36 | Apache-2.0 |
@@ -18,7 +18,7 @@ API's MIT license does not replace it.
 ## Apache MINA SSHD notice
 
 From `META-INF/NOTICE` of the
-[2.18.0 source artifact](https://repo.maven.apache.org/maven2/org/apache/sshd/sshd-common/2.18.0/sshd-common-2.18.0-sources.jar):
+[2.19.0 source artifact](https://repo.maven.apache.org/maven2/org/apache/sshd/sshd-common/2.19.0/sshd-common-2.19.0-sources.jar):
 
 ```text
 Apache MINA SSHD
