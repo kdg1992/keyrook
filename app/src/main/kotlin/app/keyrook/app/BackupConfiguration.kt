@@ -132,6 +132,16 @@ internal fun createManualBackup(controller: VaultController): Int {
     return controller.session.backupNow().removed
 }
 
+/**
+ * Runs on the vault worker after an operation. Returns the non-blocking notice for the latest backup whose rotation
+ * left old backups in place, or null; the backup and any save after it succeeded. The text never contains paths.
+ */
+internal fun rotationNotice(controller: VaultController): String? {
+    val result = controller.session.takeIncompleteRotation() ?: return null
+    return if (result.notRemoved > 0) UiText.text("backup.rotationIncomplete", result.notRemoved)
+        else UiText.text("backup.rotationUnchecked")
+}
+
 internal fun backupStatusText(controller: VaultController): String {
     ensureOperationCurrent()
     val status = controller.session.backupStatus()

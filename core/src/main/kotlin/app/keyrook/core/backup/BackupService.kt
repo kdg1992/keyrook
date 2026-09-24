@@ -35,7 +35,13 @@ class BackupPreview internal constructor(
     val vaultId: String, val revision: Long, val entries: Int, val modifiedAt: Instant,
     internal val digest: ByteArray,
 )
-data class BackupResult(val path: Path, val removed: Int)
+/**
+ * [removed] old backups were deleted by rotation. Rotation is best effort after the new backup is verified:
+ * [notRemoved] backups selected for deletion could not be deleted, and [rotationComplete] is false when some could
+ * not be deleted or the folder could not be listed for rotation. The new backup at [path] is valid either way.
+ */
+data class BackupResult(val path: Path, val removed: Int, val notRemoved: Int = 0,
+                        val rotationComplete: Boolean = notRemoved == 0)
 
 /** Copies authenticated ciphertext. Backup names disclose only a random vault ID, revision and time. */
 class BackupService internal constructor(
@@ -43,6 +49,7 @@ class BackupService internal constructor(
     private val policy: BackupPolicy,
     private val clock: Clock,
     private val codec: VaultCodec,
+    private val remove: (Path) -> Unit = { Files.delete(it) },
 ) {
     constructor(directory: Path, policy: BackupPolicy = BackupPolicy(), clock: Clock = Clock.systemUTC()) :
         this(directory, policy, clock, VaultCodec())
@@ -76,7 +83,7 @@ class BackupService internal constructor(
                     try {
                         if (!MessageDigest.isEqual(bytes, read(target))) throw IOException("Backup verification failed")
                     } catch (failure: Exception) { Files.deleteIfExists(target); throw failure }
-                    return BackupResult(target, rotate(root, vault.id, target))
+                    return rotate(root, vault.id, target)
                 }
             }
         }
@@ -102,29 +109,42 @@ class BackupService internal constructor(
         }
     }
 
-    private fun rotate(root: Path, vaultId: String, newest: Path): Int {
+    /**
+     * Deletes managed backups outside the retention after [newest] was verified. Failures only reduce what is
+     * removed: they are counted in the result and never undo the new backup or fail the caller's save.
+     */
+    private fun rotate(root: Path, vaultId: String, newest: Path): BackupResult {
         val pattern = backupNamePattern(vaultId)
-        val candidates = Files.newDirectoryStream(root).use { stream ->
-            stream.mapNotNull { path ->
-                val match = pattern.matchEntire(path.fileName.toString()) ?: return@mapNotNull null
-                if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) return@mapNotNull null
-                val time = match.groupValues[1].toLongOrNull() ?: return@mapNotNull null
-                path to Instant.ofEpochMilli(time)
-            }.sortedWith(compareByDescending<Pair<Path, Instant>> { it.second }
-                .thenByDescending { it.first == newest }.thenByDescending { it.first.fileName.toString() })
-        }
+        val candidates = try {
+            Files.newDirectoryStream(root).use { stream ->
+                stream.mapNotNull { path ->
+                    val match = pattern.matchEntire(path.fileName.toString()) ?: return@mapNotNull null
+                    if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) return@mapNotNull null
+                    val time = match.groupValues[1].toLongOrNull() ?: return@mapNotNull null
+                    path to Instant.ofEpochMilli(time)
+                }.sortedWith(compareByDescending<Pair<Path, Instant>> { it.second }
+                    .thenByDescending { it.first == newest }.thenByDescending { it.first.fileName.toString() })
+            }
+        } catch (_: IOException) { return BackupResult(newest, 0, rotationComplete = false) }
+          catch (_: DirectoryIteratorException) { return BackupResult(newest, 0, rotationComplete = false) }
+          catch (_: SecurityException) { return BackupResult(newest, 0, rotationComplete = false) }
         val keep = candidates.take(policy.latest).map { it.first }.toMutableSet()
         keep.add(newest)
         candidates.groupBy { it.second.atZone(ZoneOffset.UTC).toLocalDate() }.values.take(policy.daily)
             .forEach { keep.add(it.first().first) }
         var removed = 0
+        var notRemoved = 0
         for ((path) in candidates) {
-            if (path !in keep && Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
-                Files.delete(path)
+            if (path in keep || !Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) continue
+            try {
+                remove(path)
                 removed++
-            }
+            } catch (_: NoSuchFileException) {
+                // Already gone, for example removed by hand: nothing is left to rotate.
+            } catch (_: IOException) { notRemoved++ }
+              catch (_: SecurityException) { notRemoved++ }
         }
-        return removed
+        return BackupResult(newest, removed, notRemoved)
     }
 
     private fun read(path: Path): ByteArray = readBackupFile(path)
