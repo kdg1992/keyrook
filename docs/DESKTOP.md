@@ -29,7 +29,12 @@ in the **Info** dialog.
 | Escape | Request cancellation in an idle editor. Unsaved changes require **Verwerfen** confirmation. |
 | Tab / Shift+Tab | Move between focusable controls. |
 
-Editors initially focus the title. Repeating Escape in the discard confirmation closes that confirmation and preserves the draft. Save/cancel shortcuts are unavailable during generation or storage operations; new/search shortcuts never replace an open editor. Security locking still discards unsaved input immediately, as described below.
+Editors initially focus the title. The discard confirmation starts with the focus on **Weiter bearbeiten**, so Enter alone keeps the draft; repeating Escape closes that confirmation and preserves the draft. Save/cancel shortcuts are unavailable during generation or storage operations; new/search shortcuts never replace an open editor. Security locking still discards unsaved input immediately, as described below.
+
+In the unlock form and in dialogs with text fields, Enter in a field submits the
+form through the same checks as its main button; a disabled button means Enter
+does nothing. Dialogs focus their first field, and a repeated password that does
+not match is pointed out below the field.
 
 ### Entry selection
 
@@ -69,14 +74,14 @@ above). Locking discards them together with the displayed vault.
 After unlocking, the header shows the warning summary (see
 [Warning list](#warning-list)). Above the entry list, **Daten** (**Data**)
 opens a menu with every backup, transfer and account action, grouped as
-backups (**Backup-Ordner**, **Backupstatus**, **Sicherung jetzt**, **Backups
+backups (**Backup-Ordner**, **Backup-Status**, **Jetzt sichern**, **Backups
 deaktivieren**, **Integrität prüfen**, **Backup wiederherstellen**), transfer
 (**Verschlüsselt exportieren**, **Importieren**, **Klartext exportieren**) and
 account (**Passwort / Schlüsseldatei ändern**, **Argon2-Einstellungen**,
 **Schlüsseldatei erzeugen**). The actions behave as described in the sections
 below. The menu is keyboard accessible: move the focus to **Daten** with Tab,
 open it with Enter, move between actions with ↑/↓, run one with Enter or close
-the menu with Escape. **Kunden und Projekte** next to it shows the customers,
+the menu with Escape. **Kunden, Projekte und Vorlagen** next to it shows the customers,
 projects and templates section above the list until it is closed again.
 
 When the content area is at least 900 dp wide, the entry list and the details
@@ -164,9 +169,11 @@ through the core API and cannot currently be opened in the desktop interface.
 
 Entries are saved immediately through authenticated, atomic vault storage. Fields can be masked independently. Web, transfer, email, hosting-panel, server, SSH, domain and custom records have their own editors. Customers/projects can be created and assigned. Entries can be duplicated, moved to the trash, restored and permanently deleted (see below). Editing retains up to 100 historical field snapshots. Search and filters narrow the visible list; history displays hidden fields masked. Canceling an edit discards that edit.
 
-**Kunden und Projekte** above the entry list opens the section for adding
-customers and projects; **Kunden und Projekte ausblenden** or **Schließen**
-closes it. There, existing customers and projects can be edited:
+**Kunden, Projekte und Vorlagen** above the entry list opens the section for
+adding customers and projects; **Kunden, Projekte und Vorlagen ausblenden** or
+**Schließen** closes it. The new-customer field has the focus, and Enter in a
+name field adds the customer or project. Names are trimmed and have at most
+4,096 characters. There, existing customers and projects can be edited:
 
 - A customer has a name and optional **Ansprechpartner** (*Contact person*),
   **E-Mail**, **Telefon** (*Phone*) and **Website**. Values are trimmed and an
@@ -188,9 +195,13 @@ Contact details and project descriptions are plain metadata and appear in the
 Changing a project's customer moves all its entries, including trash, and the
 templates that preset that project, to that customer in one save. Clearing only
 the project's customer preserves the entries' individual customer assignments.
-Removal requires confirmation and is available only when no entries (including
-trash) or projects still reference the item; templates that preset the removed
-customer or project keep their other settings and lose only that preset.
+Deleting (**Löschen …**) asks in a confirmation that starts with the focus on
+**Abbrechen** and is available only when no entries (including trash) or
+projects still reference the item; templates that preset the deleted customer
+or project keep their other settings and lose only that preset. The edit and
+confirmation dialogs close only after the change was saved; when it is refused,
+they stay open with their input and the reason is shown (for example an empty
+name or an item that is still in use).
 
 Selecting a project with a customer also selects that customer for the entry.
 Web records can gain or remove a TOTP-secret field after import; removal asks
@@ -275,7 +286,7 @@ entry.
   empty; ports, protocol and key type take the usual defaults. Choosing another
   type in the editor starts that type blank. Canceling an unchanged new entry
   asks nothing.
-- Templates are listed at the end of the **Kunden und Projekte** section as
+- Templates are listed at the end of the **Kunden, Projekte und Vorlagen** section as
   **Vorlage löschen: …** (*Delete template: …*); deleting asks for confirmation
   and does not change entries created from the template.
 
@@ -284,7 +295,7 @@ included in encrypted and Keyrook JSON/CSV exports and imports.
 
 ## Trash and quick actions
 
-**In Papierkorb** asks for confirmation first. In that dialog, Enter confirms
+**In den Papierkorb** asks for confirmation first. In that dialog, Enter confirms
 and Escape cancels; with the focus on **Abbrechen**, Enter cancels. Trashed
 entries can be restored at any time. Moving to the trash and restoring record the
 current time as the entry's change time, but never an earlier time than its last
@@ -319,7 +330,7 @@ marks every listed entry. While the list shows entries, a row above it offers
 **Alle auswählen** (**Select all**) or **Auswahl aufheben** (**Clear
 selection**), and with marks the number of marked entries and these actions:
 
-- **Ausgewählte in Papierkorb** (**Move selected to trash**), in the active list:
+- **Ausgewählte in den Papierkorb** (**Move selected to trash**), in the active list:
   the **In den Papierkorb verschieben?** confirmation names the number of
   entries. Delete (⌫ on macOS) does the same while entries are marked.
 - **Ausgewählte wiederherstellen** (**Restore selected**), in the trash.
@@ -329,8 +340,8 @@ selection**), and with marks the number of marked entries and these actions:
   editor.
 - **Tag entfernen** (**Remove tag**) offers the tags of the marked entries and
   removes the chosen one from each of them.
-- **Als Favoriten markieren** / **Favoriten entfernen** (**Mark as favorites** /
-  **Remove from favorites**), in the active list, set or clear the
+- **Als Favoriten markieren** / **Favoritenmarkierung aufheben** (**Mark as
+  favorites** / **Unmark as favorites**), in the active list, set or clear the
   [favorite](#favorites) mark of every marked entry.
 
 Each bulk action is saved as one change of the vault (one revision) and
@@ -410,7 +421,7 @@ erzeugen** after unlocking, are in the **Daten** menu above the entry list.
 
 Select an existing **Backup-Ordner** after unlocking, then confirm how many recent versions (1–1000) and additional daily representatives (0–3660) to retain. The dialog starts with 30 versions and 30 daily representatives; zero disables daily retention. Both retention rules apply together. Canceling leaves the current backup configuration unchanged. The confirmed settings enable automatic backups and are remembered for this vault file; future backups can remove older managed backups outside those limits. Each backup preserves the previous saved revision before it is replaced. Locking clears the active configuration; after the same vault file is unlocked again, including after a restart, the remembered folder and retention are reapplied with the same folder checks. A notice then shows the restored folder and retention. If that retention would keep fewer backups than this vault already has in the folder, Keyrook asks before applying it; declining keeps backups off for the session. If backups are stored as disabled although backups of this vault exist in the folder, a notice says so. If the folder is no longer usable, the vault still opens without backups and a notice asks you to configure them again. Disabling backups stops this restoration for that vault file. A failed backup prevents the update; fix the folder access before retrying. Removing old backups is different: it happens only after the new backup was written and checked, and if some old backups cannot be deleted (for example because of folder permissions or another program holding them open), the save still succeeds and a notice says how many were left in place. The next backup tries again. Backup files are readable only by your user account: mode 0600 on macOS and Linux and an owner-only ACL on Windows, as for vault files and exports.
 
-**Sicherung jetzt** authenticates and copies the currently saved vault to the configured backup folder, applying the same retention rules without changing the vault revision. **Backupstatus** shows whether backups are enabled and the last successfully backed-up revision for the current configuration. **Backups deaktivieren** requires confirmation and clears the session configuration without deleting existing backup files. Canceling preserves the configuration; locking clears it and its status.
+**Jetzt sichern** authenticates and copies the currently saved vault to the configured backup folder, applying the same retention rules without changing the vault revision. **Backup-Status** shows whether backups are enabled and the last successfully backed-up revision for the current configuration. **Backups deaktivieren** requires confirmation and clears the session configuration without deleting existing backup files. Canceling preserves the configuration; locking clears it and its status.
 
 **Backup wiederherstellen** requests the backup's own credentials and previews its authenticated entry count and revision. After confirmation, choose a new destination. The open vault is not overwritten; lock and open the restored file separately. The restored file is a separate vault with its own new vault ID and revision zero, so its backups have their own names even in the same backup folder: retention for the copy never removes the original's backups, and **Integrität prüfen** lists only the open vault's own backups. Older backups retain older credentials after password changes.
 
@@ -475,7 +486,7 @@ check the mapping before confirming the import.
 ## Customer reports
 
 The reports in the **Daten** menu group entries by the customer assignment that
-**Kunden und Projekte** already manages: an entry belongs to its own customer or,
+**Kunden, Projekte und Vorlagen** already manages: an entry belongs to its own customer or,
 without one, to the customer of its project (the same rule as the customer filter
 of the entry list). Tags play no role. Trashed entries are never included. Reports
 never show passwords, private keys, passphrases, TOTP secrets, notes (of entries,

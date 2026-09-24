@@ -44,7 +44,7 @@ private fun exportHandoverSheet(controller: VaultController, dialogs: Dialogs) {
         vault.customers.sortedWith(compareBy<Customer> { it.name.lowercase(Locale.ROOT) }.thenBy { it.name })
     }
     if (customers.isEmpty()) {
-        dialogs.inform(UiText.text("report.noCustomers"))
+        dialogs.inform(UiText.text("report.noCustomers", UiText.text("organization.title")))
         return
     }
     val customer = dialogs.choose(UiText.text("report.chooseCustomer"), customers, Customer::name) ?: return

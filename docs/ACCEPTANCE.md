@@ -377,8 +377,9 @@ Keyrook cannot remove copies held there.
 Do not touch the mouse during steps 1–9.
 
 1. Start Keyrook. Use Tab/Shift+Tab to reach the password field of the unlock
-   form, type the master password, Tab to **Unlock** and press Enter.
-   Expected: the vault opens and the entry list has the focus.
+   form, type the master password and press Enter.
+   Expected: the vault opens and the entry list has the focus. (Tab to
+   **Unlock** and Enter work the same.)
 2. Press Ctrl+F, type `server`, press ↓. Expected: `Acceptance server` is
    selected with a visible selection border.
 3. Press Ctrl+B, then Ctrl+F, Ctrl+A and Ctrl+V. Expected: the search field
