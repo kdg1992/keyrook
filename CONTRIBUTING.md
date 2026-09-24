@@ -43,6 +43,12 @@ what the CI workflows check in addition.
   `feat` raises the minor version, `fix` raises the patch version, and both
   appear in the changelog. Types such as `docs`, `ci` or `chore` do not start a
   release on their own. Choose the type that describes the effect for users.
+- Dependency updates follow the same rule: an update that changes what ships
+  in the app (a runtime library) is `fix(deps)`, so it is released; an update
+  that only touches build or test tooling is `build(deps)`, and GitHub Actions
+  updates are `ci(deps)`. Gradle updates must regenerate every lockfile with
+  `scripts/relock.sh` and, for runtime libraries, update the reviewed native
+  inventories in `licenses/native/` (see `docs/PACKAGING.md`).
 - Describe what changed, why, how it was tested and any risks, using the pull
   request template. Keep each pull request focused on one change.
 
