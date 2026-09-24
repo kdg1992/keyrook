@@ -41,6 +41,65 @@ class VaultControllerTest {
         }
     }
 
+    @Test fun `permanent deletion removes trashed entry with history and leaves others untouched`() {
+        val file = directory.resolve("purge.keyrook")
+        VaultController().use { controller ->
+            controller.unlock(file, "synthetic-master-passphrase".toCharArray(), null, true).close()
+            fun create(title: String, password: String): Entry {
+                val data = blankData(EntryType.WEB)
+                val entry = editedEntry(null, data, title, "", "", "", listOf("https://example.invalid", "sample", password, ""),
+                    listOf(false, false, true, true))
+                data.fields().forEach { it.value.close() }
+                Vault(entries = listOf(entry)).use { controller.save(entry).close() }
+                return entry
+            }
+            val removed = create("Removed", "old-removed-secret")
+            val kept = create("Kept", "kept-secret")
+            controller.session.snapshot().use { current ->
+                val source = current.entries.single { it.id == removed.id }
+                val edited = editedEntry(source, source.data, "Removed", "", "", "", listOf("https://example.invalid", "sample", "new-removed-secret", ""),
+                    listOf(false, false, true, true))
+                Vault(entries = listOf(edited)).use { controller.save(edited).close() }
+            }
+            assertThrows(IllegalArgumentException::class.java) { controller.purge(setOf(removed.id)) }
+            controller.trash(removed.id, false).close()
+            controller.purge(setOf(removed.id)).use { snapshot ->
+                assertEquals(listOf(kept.id), snapshot.entries.map { it.id })
+                assertEquals("kept-secret", snapshot.entries.single().data.fields()[2].value.useChars { String(it) })
+                assertTrue(snapshot.entries.single().history.isEmpty())
+            }
+            controller.lock()
+            controller.unlock(file, "synthetic-master-passphrase".toCharArray(), null, false).use { reopened ->
+                assertEquals(listOf("Kept"), reopened.entries.map { it.title })
+                val values = reopened.entries.flatMap { entry ->
+                    (entry.data.fields() + entry.history.flatMap { it.data.fields() }).map { field -> field.value.useChars { String(it) } }
+                }
+                assertFalse(values.any { "removed-secret" in it })
+            }
+        }
+    }
+
+    @Test fun `emptying trash purges every trashed entry only`() {
+        VaultController().use { controller ->
+            controller.unlock(directory.resolve("empty.keyrook"), "synthetic-master-passphrase".toCharArray(), null, true).close()
+            val ids = listOf("First", "Second", "Active").map { title ->
+                val data = blankData(EntryType.CUSTOM)
+                val entry = editedEntry(null, data, title, "", "", "", listOf("synthetic-$title"), listOf(true))
+                data.fields().forEach { it.value.close() }
+                Vault(entries = listOf(entry)).use { controller.save(entry).close() }
+                entry.id
+            }
+            controller.trash(ids[0], false).close()
+            controller.trash(ids[1], false).close()
+            controller.emptyTrash().use { snapshot ->
+                assertEquals(listOf(ids[2]), snapshot.entries.map { it.id })
+                assertNull(snapshot.entries.single().deletedAt)
+                assertEquals("synthetic-Active", snapshot.entries.single().data.fields().single().value.useChars { String(it) })
+            }
+            assertThrows(IllegalArgumentException::class.java) { controller.emptyTrash() }
+        }
+    }
+
     @Test fun `editor duplicates history so closing draft never erases original`() {
         val data = blankData(EntryType.WEB)
         val first = editedEntry(null, data, "Login", "", "", "", listOf("", "", "first", ""), listOf(false, false, true, true))

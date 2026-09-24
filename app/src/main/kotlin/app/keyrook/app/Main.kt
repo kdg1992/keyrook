@@ -192,7 +192,10 @@ fun KeyrookApp(window: java.awt.Window? = null) {
                     OrganizationTools(vault!!, controller, busy, ::operation)
                     VaultList(vault!!, controller, busy, shortcuts, onCreate = { creating = true }, onEdit = { editing = it },
                         onDuplicate = { entry -> operation { controller.duplicate(entry.id) } },
-                        onTrash = { entry -> operation { controller.trash(entry.id, entry.deletedAt != null) } })
+                        onTrash = { id -> operation { controller.trash(id, false) } },
+                        onRestore = { id -> operation { controller.trash(id, true) } },
+                        onPurge = { id -> operation { controller.purge(setOf(id)) } },
+                        onEmptyTrash = { operation { controller.emptyTrash() } })
                 }
             }
         }
@@ -262,7 +265,8 @@ private fun UnlockForm(busy: Boolean, generateKey: (Path, () -> Unit) -> Unit,
 @Composable
 private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, shortcuts: ShortcutActions,
                       onCreate: () -> Unit, onEdit: (Entry) -> Unit,
-                      onDuplicate: (Entry) -> Unit, onTrash: (Entry) -> Unit) {
+                      onDuplicate: (Entry) -> Unit, onTrash: (String) -> Unit, onRestore: (String) -> Unit,
+                      onPurge: (String) -> Unit, onEmptyTrash: () -> Unit) {
     var search by remember { mutableStateOf("") }
     var filters by remember { mutableStateOf(EntryListFilters()) }
     val activeFilters = filters.normalized(vault)
@@ -271,7 +275,10 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
     var includeHidden by remember { mutableStateOf(false) }
     val matches = searchResults(vault, controller, search, includeHidden)
     val searchFocus = remember { FocusRequester() }
-    val latestNew by rememberUpdatedState({ if (!busy && !trash) onCreate() })
+    var confirmation by remember { mutableStateOf<ListConfirmation?>(null) }
+    var notice by remember { mutableStateOf("") }
+    val trashCount = vault.entries.count { it.deletedAt != null }
+    val latestNew by rememberUpdatedState({ if (!busy && !trash && confirmation == null) onCreate() })
     DisposableEffect(shortcuts) {
         shortcuts.newEntry = { latestNew() }
         shortcuts.search = { searchFocus.requestFocus() }
@@ -281,6 +288,9 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         OutlinedTextField(search, { if (it.length <= 256) search = it }, label = { Text(UiText.text("shell.search")) }, modifier = Modifier.weight(1f).focusRequester(searchFocus), singleLine = true)
         Button(onClick = onCreate, enabled = !busy && !trash) { Text(UiText.text("shell.newEntry")) }
         TextButton(onClick = { filters = activeFilters.copy(trash = !trash) }, enabled = !busy) { Text(if (trash) UiText.text("shell.active") else UiText.text("shell.trash")) }
+        if (trash) TextButton(enabled = !busy && trashCount > 0, onClick = { confirmation = ListConfirmation.EmptyTrash(trashCount) }) {
+            Text(UiText.text("list.emptyTrash"))
+        }
     }
     Row {
         Checkbox(includeHidden, onCheckedChange = { includeHidden = it })
@@ -313,6 +323,7 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         while (true) { kotlinx.coroutines.delay(60_000); value = java.time.LocalDate.now() }
     }
     val entries = activeFilters.select(vault, matches.orEmpty(), today)
+    if (notice.isNotEmpty()) Text(notice)
     if (matches == null) Text(UiText.text("shell.searching"))
     else if (entries.isEmpty()) Text(UiText.text("shell.noEntries"))
     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -323,13 +334,48 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
                         Text(entry.title, style = MaterialTheme.typography.h6)
                         Text(entry.data.type().label)
                         if (entry.tags.isNotEmpty()) Text(entry.tags.joinToString(", "))
+                        if (!trash) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            QuickField.entries.forEach { kind ->
+                                val field = entry.data.quickField(kind)
+                                val present = remember(field) { field != null && EntryQuickActions.available(field) }
+                                if (field != null && present) {
+                                    val label = entry.data.quickLabel(field)
+                                    TextButton(enabled = !busy, onClick = {
+                                        notice = if (kind == QuickField.URL) {
+                                            if (runCatching { EntryQuickActions.open(field) }.isSuccess) "" else UiText.text("list.openFailed")
+                                        } else if (runCatching { EntryQuickActions.copy(field) }.isSuccess) UiText.text("list.copied", label)
+                                        else UiText.text("list.copyFailed")
+                                    }) { Text(UiText.text(if (kind == QuickField.URL) "list.openField" else "list.copyField", label)) }
+                                }
+                            }
+                        }
                     }
                     if (!trash) TextButton(enabled = !busy, onClick = { onEdit(entry) }) { Text(UiText.text("shell.edit")) }
                     if (!trash) TextButton(enabled = !busy, onClick = { onDuplicate(entry) }) { Text(UiText.text("shell.duplicate")) }
-                    TextButton(enabled = !busy, onClick = { onTrash(entry) }) { Text(if (trash) UiText.text("shell.restore") else "In Papierkorb") }
+                    if (trash) {
+                        TextButton(enabled = !busy, onClick = { onRestore(entry.id) }) { Text(UiText.text("shell.restore")) }
+                        TextButton(enabled = !busy, onClick = { confirmation = ListConfirmation.Purge(entry.id, entry.title) }) {
+                            Text(UiText.text("list.purge"), color = MaterialTheme.colors.error)
+                        }
+                    } else TextButton(enabled = !busy, onClick = { confirmation = ListConfirmation.Trash(entry.id, entry.title) }) {
+                        Text(UiText.text("list.moveToTrash"))
+                    }
                 }
             }
         }
+    }
+    fun dismiss() { confirmation = null }
+    when (val pending = confirmation) {
+        is ListConfirmation.Trash -> ConfirmationDialog(UiText.text("list.trashTitle"), UiText.text("list.trashBody", pending.title),
+            UiText.text("list.trashConfirm"), busy, irreversible = false,
+            onConfirm = { dismiss(); onTrash(pending.id) }, onDismiss = ::dismiss)
+        is ListConfirmation.Purge -> ConfirmationDialog(UiText.text("list.purgeTitle"), UiText.text("list.purgeBody", pending.title),
+            UiText.text("list.purgeConfirm"), busy, irreversible = true,
+            onConfirm = { dismiss(); onPurge(pending.id) }, onDismiss = ::dismiss)
+        is ListConfirmation.EmptyTrash -> ConfirmationDialog(UiText.text("list.emptyTrashTitle"),
+            UiText.text("list.emptyTrashBody", pending.count), UiText.text("list.emptyTrashConfirm"), busy, irreversible = true,
+            onConfirm = { dismiss(); onEmptyTrash() }, onDismiss = ::dismiss)
+        null -> Unit
     }
 }
 

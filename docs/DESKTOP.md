@@ -36,7 +36,7 @@ four times the lane count. Changes re-encrypt atomically and create the configur
 backup first. Vaults with higher derivation costs still require explicit approval
 through the core API and cannot currently be opened in the desktop interface.
 
-Entries are saved immediately through authenticated, atomic vault storage. Fields can be masked independently. Web, transfer, email, hosting-panel, server, SSH, domain and custom records have their own editors. Customers/projects can be created and assigned. Entries can be duplicated, moved to the trash and restored. Editing retains up to 100 historical field snapshots. Search and filters narrow the visible list; history displays hidden fields masked. Canceling an edit discards that edit.
+Entries are saved immediately through authenticated, atomic vault storage. Fields can be masked independently. Web, transfer, email, hosting-panel, server, SSH, domain and custom records have their own editors. Customers/projects can be created and assigned. Entries can be duplicated, moved to the trash, restored and permanently deleted (see below). Editing retains up to 100 historical field snapshots. Search and filters narrow the visible list; history displays hidden fields masked. Canceling an edit discards that edit.
 
 Under **Kunden und Projekte**, existing customers and projects can be renamed.
 Changing a project's customer moves all its entries, including trash, to that
@@ -74,6 +74,32 @@ host are accepted; embedded usernames/passwords, control characters and invalid
 ports are refused. Use ASCII/punycode hostnames. Opening a link hands it to the
 system browser and may cause network requests there; Keyrook itself does not
 resolve or fetch the address while validating it.
+
+## Trash and quick actions
+
+**In Papierkorb** asks for confirmation first. In that dialog, Enter confirms
+and Escape cancels; with the focus on **Abbrechen**, Enter cancels. Trashed
+entries can be restored at any time.
+
+In the trash, **Endgültig löschen** removes a single entry and **Papierkorb
+leeren** removes every trashed entry, including those hidden by the current
+filters. Both show a confirmation stating that this cannot be undone. These
+dialogs start with the focus on **Abbrechen**, so Enter alone never deletes;
+Escape cancels. Permanent deletion removes the entry together with its complete
+history from the vault document in one save, and erases the application-owned
+decrypted copies of its values (see [SECURITY.md](SECURITY.md) for JVM limits). SSH server assignments and registrar-login links of
+other entries that point to a deleted entry are cleared. Backups created before
+the deletion still contain the entry and remain the only way to recover it;
+backup retention can eventually remove those older backups.
+
+Active list rows offer quick actions without opening the editor: copy the
+username, copy the password (the passphrase for SSH keys, the first hidden field
+for custom records) and open the URL of web and hosting-panel records (the first
+URL field for custom records). Buttons appear only when the field has a value.
+Copies use the same clipboard handling as the editor, including ownership
+checks and the configured expiry. Links pass the same validation as in the
+editor before the system browser receives them. Values are never shown in the
+list.
 
 ## Backups and encrypted export
 
