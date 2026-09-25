@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0](https://github.com/kdg1992/keyrook/compare/v0.8.1...v1.0.0) (2026-09-25)
+
+
+### Documentation
+
+* describe the 1.0 release status, support policy and release notes ([#66](https://github.com/kdg1992/keyrook/issues/66)) ([14b9b03](https://github.com/kdg1992/keyrook/commit/14b9b034d96a3dc8f5333e50705c2fef8bfadd61))
+
 ## [0.8.1](https://github.com/kdg1992/keyrook/compare/v0.8.0...v0.8.1) (2026-09-25)
 
 
