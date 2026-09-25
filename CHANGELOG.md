@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.1](https://github.com/kdg1992/keyrook/compare/v0.8.0...v0.8.1) (2026-09-25)
+
+
+### Bug Fixes
+
+* **app:** improve unlock, list performance, errors, dialogs and wording ([#60](https://github.com/kdg1992/keyrook/issues/60)) ([bfa4978](https://github.com/kdg1992/keyrook/commit/bfa49785bd3bcfd5ae98aaf60d3f3346cb943089))
+* **packaging:** allow the desktop app half of physical memory ([#63](https://github.com/kdg1992/keyrook/issues/63)) ([129b1fb](https://github.com/kdg1992/keyrook/commit/129b1fb0bd5f9e9010c63a2eb636f645d0a860f5))
+* raise vault size limits, remap imported IDs and fix imported entry quick copy ([#62](https://github.com/kdg1992/keyrook/issues/62)) ([b153b20](https://github.com/kdg1992/keyrook/commit/b153b20b24310d9c1f92b066a6029149dc14d4f7))
+
 ## [0.8.0](https://github.com/kdg1992/keyrook/compare/v0.7.0...v0.8.0) (2026-09-24)
 
 
