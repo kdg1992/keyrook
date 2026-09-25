@@ -57,8 +57,20 @@ Keyrook – Offline, encrypted credential vault for hosting providers and sysadm
 
 Details are in [desktop usage](docs/DESKTOP.md); see also
 [security properties and limitations](docs/SECURITY.md) and the
-[readiness overview](docs/READINESS.md). Until release 1.0 passes the
-[manual acceptance protocol](docs/ACCEPTANCE.md), use it with test data.
+[readiness overview](docs/READINESS.md).
+
+### Status
+
+Keyrook 1.0 is a production release for the scope documented here and in
+[desktop usage](docs/DESKTOP.md). Before release, the installers passed the
+[manual acceptance protocol](docs/ACCEPTANCE.md) on Windows, macOS and Linux;
+the results are recorded in the 1.0.0 acceptance tracking issue. Keyrook has
+not been independently audited, and its installers are unsigned and not
+notarized; see the known limitations below. Security fixes are provided for the
+latest 1.x minor release (see the [security policy](.github/SECURITY.md)), and
+the [compatibility promise](docs/FORMAT.md#compatibility-promise-from-100)
+describes which vaults and exports each release reads. Release notes for 1.0.0
+are in [RELEASE-1.0.md](docs/RELEASE-1.0.md).
 
 ### Known limitations
 

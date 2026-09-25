@@ -1,6 +1,6 @@
 # Desktop usage
 
-Run `./gradlew :app:run` with JDK 25. The interface is available in German and English and supports light/dark themes; by default both follow the operating system (German for a German system language, English otherwise). Use test data while the application remains a development build.
+Run `./gradlew :app:run` with JDK 25. The interface is available in German and English and supports light/dark themes; by default both follow the operating system (German for a German system language, English otherwise). To install a release instead, see the [README](../README.md#install).
 
 ## Keyboard navigation
 

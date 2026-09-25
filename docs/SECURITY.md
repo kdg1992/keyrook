@@ -1,6 +1,6 @@
 # Security properties and limitations
 
-Keyrook provides a JVM core and a Compose desktop application. It remains a development build, not an independently audited password-manager release. Use synthetic data until platform-specific behavior and recovery tests have been reviewed.
+Keyrook provides a JVM core and a Compose desktop application. Keyrook 1.0 is a production release for its documented scope. It has not been independently audited; the properties below are established by tests, the [manual acceptance protocol](ACCEPTANCE.md) (results recorded in the 1.0.0 acceptance tracking issue) and review by the maintainer. Installers are unsigned and the macOS application is not notarized. The limits described in this document and the [known limitations](../README.md#known-limitations) apply.
 
 ## Cryptography and trust boundaries
 
