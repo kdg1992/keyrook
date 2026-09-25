@@ -92,20 +92,18 @@ class VaultHealth(private val clock: Clock = Clock.systemDefaultZone()) {
 
     private fun passwords(data: EntryData): List<Secret> = passwordSecrets(data)
 
-    /** Keyed digest of the type, normalized host or URL and user name; null if either is empty or the type has none. */
+    /**
+     * Keyed digest of the type, normalized host or URL and user name; null if either is empty or the type has none.
+     * Custom entries use their labelled address and user name fields ([primaryUrl], [primaryUsername]).
+     */
     private fun identity(mac: Mac, data: EntryData): Digest? {
-        fun custom(values: Map<String, Field>, keys: Set<String>): Secret? = values.entries
-            .filter { it.key.lowercase() in keys }.map { it.value.value }
-            .firstOrNull { secret -> secret.useChars { chars -> chars.any { !it.isWhitespace() } } }
-        val (host, user) = when (data) {
-            is EntryData.Web -> data.url.value to data.username.value
-            is EntryData.Transfer -> data.host.value to data.username.value
-            is EntryData.Email -> data.address.value to data.username.value
-            is EntryData.Panel -> data.url.value to data.username.value
-            is EntryData.Server -> data.host.value to data.username.value
-            is EntryData.Custom -> (custom(data.values, HOST_KEYS) ?: return null) to (custom(data.values, USER_KEYS) ?: return null)
-            is EntryData.Ssh, is EntryData.Domain -> return null
-        }
+        val host = when (data) {
+            is EntryData.Transfer -> data.host
+            is EntryData.Email -> data.address
+            is EntryData.Server -> data.host
+            else -> data.primaryUrl()
+        }?.value ?: return null
+        val user = data.primaryUsername()?.value ?: return null
         mac.update(data::class.java.simpleName.toByteArray(Charsets.UTF_8))
         for (part in listOf(host, user)) {
             val normalized = part.useChars { normalize(it) }
@@ -135,8 +133,6 @@ class VaultHealth(private val clock: Clock = Clock.systemDefaultZone()) {
         const val PASSWORD_MAX_AGE_DAYS = 365L
         /** History items the editor retains per entry; a full history may have lost its oldest items. */
         private const val MAX_HISTORY = 100
-        private val HOST_KEYS = setOf("url", "url1", "uri", "host")
-        private val USER_KEYS = setOf("username", "user", "benutzername")
     }
 
     private class Digest(private val bytes: ByteArray) {
@@ -146,19 +142,12 @@ class VaultHealth(private val clock: Clock = Clock.systemDefaultZone()) {
     }
 }
 
-private val PASSWORD_KEYS = setOf("password", "passwort", "passphrase")
-
 /**
- * Non-empty passwords of [data]: the password or SSH key passphrase field and custom fields named like a password. An
- * unset password is not a finding. The returned secrets belong to [data] and must not be closed by the caller.
+ * Non-empty passwords of [data]: the password or SSH key passphrase field ([primarySecret]) and every custom field
+ * labelled as a password ([PrimaryFieldNames.PASSWORD]); other hidden custom fields are not passwords here. An unset
+ * password is not a finding. The returned secrets belong to [data] and must not be closed by the caller.
  */
 internal fun passwordSecrets(data: EntryData): List<Secret> = when (data) {
-    is EntryData.Web -> listOf(data.password.value)
-    is EntryData.Transfer -> listOf(data.password.value)
-    is EntryData.Email -> listOf(data.password.value)
-    is EntryData.Panel -> listOf(data.password.value)
-    is EntryData.Server -> listOf(data.password.value)
-    is EntryData.Ssh -> listOf(data.passphrase.value)
-    is EntryData.Custom -> data.values.filterKeys { it.lowercase() in PASSWORD_KEYS }.values.map { it.value }
-    is EntryData.Domain -> emptyList()
+    is EntryData.Custom -> data.values.filterKeys(PrimaryFieldNames::isPassword).values.map { it.value }
+    else -> listOfNotNull(data.primarySecret()?.value)
 }.filter { secret -> secret.useChars { it.isNotEmpty() } }

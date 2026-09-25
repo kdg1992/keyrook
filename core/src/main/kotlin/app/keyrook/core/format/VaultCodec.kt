@@ -18,6 +18,12 @@ import java.nio.CharBuffer
 import java.nio.charset.CodingErrorAction
 
 /**
+ * A document does not fit the file format: its encoding exceeds [VaultCodec.MAX_FILE_BYTES] or another structural
+ * limit of the JSON guard. Raised on encoding only, when saving or exporting; the message never contains content.
+ */
+class VaultTooLargeException : Exception("Vault exceeds the size limits of the file format")
+
+/**
  * No plaintext leaves this codec except a validated, authenticated in-memory model.
  * Documents with an older schema are migrated through [migrations] in memory only; encryption always
  * writes the current envelope and schema.
@@ -82,6 +88,15 @@ class VaultCodec internal constructor(private val migrations: SchemaMigrations) 
         finally { bytes.fill(0) }
     }
 
+    /**
+     * Raises [VaultTooLargeException] when [vault] could not be saved because its encoding exceeds the file format's
+     * limits, and [InvalidVaultException] when it fails validation. Imports use it so that what they accept can be saved.
+     */
+    internal fun requireStorable(vault: Vault) {
+        validate(vault)
+        encode(vault).fill(0)
+    }
+
     private fun decodeCurrent(bytes: ByteArray): Vault = SecretSerializer.trackDecoding {
         val vault = json.decodeFromStream<Vault>(ByteArrayInputStream(bytes))
         validate(vault)
@@ -91,14 +106,16 @@ class VaultCodec internal constructor(private val migrations: SchemaMigrations) 
     /**
      * Only reached for an older schema with a registered contiguous chain; newer or unbridged versions are
      * rejected before a tree is built. The tree holds immutable strings until garbage collection, and the
-     * re-encoded bytes are wiped. The result passes the same guard, decoder and validation as a stored document.
+     * re-encoded bytes are wiped. The result passes the same guard, decoder and validation as a stored document,
+     * with room for [MIGRATION_GROWTH_BYTES] of added fields, so a file near the size limit still opens; saving it
+     * then raises [VaultTooLargeException] until entries are removed.
      */
     private fun migrate(plaintext: ByteArray, version: Int): Vault {
         if (migrations.chain(version) == null) throw InvalidVaultException()
         val document = migrations.migrate(json.decodeFromStream<JsonObject>(ByteArrayInputStream(plaintext)))
         val bytes = SecretSerializer.trackDecoding { json.decodeFromJsonElement<Vault>(document) }.use { migrated ->
             validate(migrated)
-            encode(migrated)
+            encode(migrated, MAX_DOCUMENT_BYTES + MIGRATION_GROWTH_BYTES)
         }
         return try { decodeCurrent(bytes) } finally { bytes.fill(0) }
     }
@@ -106,20 +123,54 @@ class VaultCodec internal constructor(private val migrations: SchemaMigrations) 
     private fun validate(vault: Vault) {
         try { vault.validate() } catch (_: Exception) { throw InvalidVaultException() }
     }
-    private fun encode(vault: Vault): ByteArray {
-        val stream = WipingOutput(MAX_FILE_BYTES - VaultHeader.SIZE - 16)
+    /** A validated model always passes the JSON guard unless it is too large, so any guard failure means size. */
+    private fun encode(vault: Vault, limit: Int = MAX_DOCUMENT_BYTES): ByteArray {
+        val stream = WipingOutput(limit)
         return try {
             json.encodeToStream(vault, stream)
             val bytes = stream.toByteArray()
-            try { checkJsonLimits(bytes); bytes } catch (e: Exception) { bytes.fill(0); throw e }
-        } catch (_: Exception) { throw InvalidVaultException() }
+            try { checkJsonLimits(bytes, limit); bytes } catch (_: Exception) { bytes.fill(0); throw VaultTooLargeException() }
+        } catch (e: VaultTooLargeException) { throw e }
+        catch (_: Exception) { throw InvalidVaultException() }
         finally { stream.close() }
     }
 
     companion object {
         const val MAX_FILE_BYTES = 64 * 1024 * 1024
-        /** Limits and duplicate-key checks precede deserialization; JSON syntax is checked by kotlinx. */
-        internal fun checkJsonLimits(bytes: ByteArray) {
+        /** Largest decrypted document: the file without header and authentication tag. */
+        private const val MAX_DOCUMENT_BYTES = MAX_FILE_BYTES - VaultHeader.SIZE - 16
+
+        /**
+         * Growth allowed when an older schema is re-encoded in memory. Schema 1 to 2 adds at most 75 bytes per
+         * customer (`,"contactName":null,"contactEmail":null,"phone":null,"website":null,"notes":""`), 32 per project,
+         * 15 per entry (`,"pinned":false`) and 15 for `,"templates":[]`: about 1.2 MB for 10,000 of each.
+         */
+        internal const val MIGRATION_GROWTH_BYTES = 4 * 1024 * 1024
+
+        /**
+         * Bytes per structural separator (`,` or `:`) that every document of the model needs at least, which bounds
+         * the separators of a document of `n` bytes to `n / 3`. In the compact encoding each object member
+         * `"key":value,` spends at least seven bytes on its two separators (field names have at least two
+         * characters; custom field labels may be empty, but then the value is a whole field object), and each further
+         * list element spends at least three bytes on its comma (`"",` for an empty tag). Model maximums allow far
+         * more separators than fit (10,000 entries of 100 history items with 100 fields each), so the file size is
+         * the binding limit: a valid vault never reaches the bound, and a hostile document still needs three bytes
+         * for each tree node the parser would create.
+         */
+        private const val MIN_BYTES_PER_SEPARATOR = 3
+
+        /**
+         * Encoded bytes of the longest JSON string, including its closing quote: [Vault.MAX_FIELD_CHARS] UTF-16 code
+         * units, each at most six bytes as a `\uXXXX` escape.
+         */
+        private const val MAX_STRING_BYTES = Vault.MAX_FIELD_CHARS * 6 + 1
+
+        /**
+         * Limits and duplicate-key checks precede deserialization; JSON syntax is checked by kotlinx. [limit] is the
+         * largest document size the caller accepts; it sets the separator bound (see [MIN_BYTES_PER_SEPARATOR]).
+         */
+        internal fun checkJsonLimits(bytes: ByteArray, limit: Int = MAX_FILE_BYTES) {
+            val maxSeparators = limit / MIN_BYTES_PER_SEPARATOR
             checkUtf8(bytes)
             data class Frame(val opener: Char, val keys: MutableSet<String> = mutableSetOf(), var commas: Int = 0)
             val stack = ArrayDeque<Frame>()
@@ -131,7 +182,7 @@ class VaultCodec internal constructor(private val migrations: SchemaMigrations) 
             for (index in bytes.indices) {
                 val c = bytes[index].toInt().toChar()
                 if (quoted) {
-                    if (++stringBytes > 1_572_864) throw InvalidVaultException()
+                    if (++stringBytes > MAX_STRING_BYTES) throw InvalidVaultException()
                     if (escape) escape = false
                     else when (c) {
                         '\\' -> escape = true
@@ -158,7 +209,7 @@ class VaultCodec internal constructor(private val migrations: SchemaMigrations) 
                         if ((c == '}' && frame.opener != '{') || (c == ']' && frame.opener != '[')) throw InvalidVaultException()
                     }
                     ',', ':' -> {
-                        if (++members > 500_000) throw InvalidVaultException()
+                        if (++members > maxSeparators) throw InvalidVaultException()
                         if (c == ',') {
                             val frame = stack.lastOrNull() ?: throw InvalidVaultException()
                             if (++frame.commas >= 10_000) throw InvalidVaultException()
@@ -197,7 +248,8 @@ private class WipingOutput(private val limit: Int) : OutputStream() {
     private var buffer = ByteArray(4096)
     private var count = 0
     private fun reserve(length: Int) {
-        if (length < 0 || length > limit - count) throw InvalidVaultException()
+        if (length < 0) throw InvalidVaultException()
+        if (length > limit - count) throw VaultTooLargeException()
         if (count + length > buffer.size) {
             val next = buffer.copyOf(maxOf(count + length, minOf(limit, buffer.size * 2)))
             buffer.fill(0)

@@ -117,6 +117,20 @@ class CodecTest {
         assertThrows(Exception::class.java) { VaultCodec.checkJsonLimits(byteArrayOf(34, 0xc0.toByte(), 0x80.toByte(), 34)) }
     }
 
+    @Test fun `JSON guard bounds separators by document size and strings by the longest escaped field`() {
+        // A third of the accepted size: ten separators for 30 bytes.
+        VaultCodec.checkJsonLimits(("[" + List(11) { "0" }.joinToString(",") + "]").toByteArray(), 30)
+        assertThrows(InvalidVaultException::class.java) {
+            VaultCodec.checkJsonLimits(("[" + List(12) { "0" }.joinToString(",") + "]").toByteArray(), 30)
+        }
+        assertThrows(InvalidVaultException::class.java) {
+            VaultCodec.checkJsonLimits(("{" + List(6) { "\"$it\":0" }.joinToString(",") + "}").toByteArray(), 30)
+        }
+        val escaped = "\\u0001".repeat(Vault.MAX_FIELD_CHARS)
+        VaultCodec.checkJsonLimits("[\"$escaped\"]".toByteArray())
+        assertThrows(InvalidVaultException::class.java) { VaultCodec.checkJsonLimits("[\"${escaped}x\"]".toByteArray()) }
+    }
+
     @Test fun `all entry types metadata history and trash survive encrypted roundtrip`() {
         credentials().use { credentials -> sampleVault().use { source ->
             codec.decrypt(codec.encrypt(source, credentials, testKdf), credentials).use { actual ->

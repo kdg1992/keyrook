@@ -6,6 +6,7 @@ import app.keyrook.core.crypto.Secret
 import app.keyrook.core.crypto.SecretSerializer
 import app.keyrook.core.format.SchemaMigrations
 import app.keyrook.core.format.VaultCodec
+import app.keyrook.core.format.VaultTooLargeException
 import app.keyrook.core.model.*
 import kotlinx.serialization.json.*
 import java.io.ByteArrayInputStream
@@ -53,6 +54,7 @@ enum class KeePassCsvLayout(val mapping: CsvMapping, internal val backslashEscap
 /** All returned models/buffers are caller-owned. Input bytes are never retained or logged. */
 class VaultTransfer {
     private val json = Json { encodeDefaults = true; classDiscriminator = "type" }
+    private val codec = VaultCodec()
 
     @Suppress("UNUSED_PARAMETER")
     fun exportJson(vault: Vault, consent: PlaintextConsent): ByteArray {
@@ -74,7 +76,7 @@ class VaultTransfer {
         SecretSerializer.trackDecoding { json.decodeFromJsonElement(Vault.serializer(), document) }.let { decoded ->
             val vault = decoded.copy(entries = decoded.entries.map(Entry::withLegacyFavorite),
                 templates = decoded.templates.map { it.copy(tags = ReservedTags.visible(it.tags)) })
-            try { vault.also { it.validate() } } catch (e: Exception) { vault.close(); throw e }
+            try { vault.also { it.validate(); codec.requireStorable(it) } } catch (e: Exception) { vault.close(); throw e }
         }
     }
 
@@ -166,7 +168,10 @@ class VaultTransfer {
         require(header.toSet().size == header.size)
     }
 
-    /** Imports unencrypted Bitwarden login/secure-note exports; rejects other types rather than dropping data. */
+    /**
+     * Imports unencrypted Bitwarden login/secure-note exports; rejects other types rather than dropping data. The
+     * user name and addresses are visible fields, the password, TOTP secret and hidden custom fields are hidden.
+     */
     fun importBitwarden(bytes: ByteArray): Vault = guarded {
         VaultCodec.checkJsonLimits(bounded(bytes))
         val root = json.parseToJsonElement(bytes.toString(Charsets.UTF_8)).jsonObject
@@ -203,7 +208,7 @@ class VaultTransfer {
                 try {
                     if (login != null) {
                         require(login["fido2Credentials"]?.let { it == JsonNull || it.jsonArray.isEmpty() } != false)
-                        add("username", login["username"].text()); add("password", login["password"].text())
+                        add("username", login["username"].text(), false); add("password", login["password"].text())
                         if (login["totp"].text().isNotEmpty()) add("totp", login["totp"].text())
                         login["uris"]?.takeUnless { it == JsonNull }?.jsonArray?.forEachIndexed { index, uri ->
                             add("url${index + 1}", uri.jsonObject["uri"].text(), false)
@@ -243,7 +248,10 @@ class VaultTransfer {
         }
     }
 
-    /** KeePass 2 XML, with external entities and DTDs disabled before parsing. */
+    /**
+     * KeePass 2 XML, with external entities and DTDs disabled before parsing. The standard `UserName` and `URL` strings
+     * become visible fields, all other strings hidden ones.
+     */
     fun importKeePassXml(bytes: ByteArray): Vault = guarded {
         val factory = DocumentBuilderFactory.newInstance()
         factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
@@ -317,7 +325,7 @@ class VaultTransfer {
                 val history = mutableListOf<HistoryItem>()
                 try {
                     values.filterKeys { it !in listOf("Title", "Notes") }.forEach { (key, value) ->
-                        fields[key] = field(value, key != "URL")
+                        fields[key] = field(value, key !in KEEPASS_VISIBLE)
                     }
                     val histories = node.children("History")
                     require(histories.size <= 1)
@@ -329,7 +337,7 @@ class VaultTransfer {
                         val changed = keepassTime(old, "LastModificationTime") ?: throw InvalidImportException()
                         val oldFields = linkedMapOf<String, Field>()
                         try {
-                            oldValues.forEach { (key, value) -> oldFields[key] = field(value, key != "URL") }
+                            oldValues.forEach { (key, value) -> oldFields[key] = field(value, key !in KEEPASS_VISIBLE) }
                             history += HistoryItem(changed.toString(), EntryData.Custom(oldFields))
                         } catch (e: Exception) { oldFields.values.forEach { it.value.close() }; throw e }
                     }
@@ -358,6 +366,11 @@ class VaultTransfer {
                 }
             }
         }
+    }
+
+    private companion object {
+        /** KeePass standard strings that are not secret. */
+        val KEEPASS_VISIBLE = setOf("UserName", "URL")
     }
 
     private fun Element.children(name: String): List<Element> = (0 until childNodes.length)
@@ -389,7 +402,8 @@ class VaultTransfer {
         val entries = mutableListOf<Entry>()
         try {
             populate(entries)
-            return Vault(projects = projects, entries = entries.map(Entry::withLegacyFavorite)).also { it.validate() }
+            return Vault(projects = projects, entries = entries.map(Entry::withLegacyFavorite))
+                .also { it.validate(); codec.requireStorable(it) }
         }
         catch (e: Exception) { Vault(entries = entries).close(); throw e }
     }
@@ -421,7 +435,10 @@ class VaultTransfer {
         } finally { characters.fill('\u0000') }
         return bytes
     }
-    private inline fun <T> guarded(block: () -> T): T = try { block() } catch (_: Exception) { throw InvalidImportException() }
+    /** Content-free errors; an import that would parse but could never be saved reports [VaultTooLargeException]. */
+    private inline fun <T> guarded(block: () -> T): T = try { block() }
+        catch (e: VaultTooLargeException) { throw e }
+        catch (_: Exception) { throw InvalidImportException() }
 
     private fun csv(text: String, headerOnly: Boolean = false): List<List<String>> {
         val rows = mutableListOf<List<String>>()

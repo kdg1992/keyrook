@@ -14,6 +14,32 @@ class EntryQuickActionsTest {
     private fun field(value: String, hidden: Boolean = false, kind: FieldKind = FieldKind.TEXT) =
         Field(Secret(value.toCharArray()), hidden, kind)
 
+    @Test fun `imported custom entries copy the password and user name by their labels`() {
+        val bitwarden = """{"items":[{"type":1,"name":"Shop","login":{"username":"shop-user","password":"shop-password",
+            "uris":[{"uri":"https://shop.invalid"}]}}]}""".toByteArray()
+        val keePass = """<KeePassFile><Root><Group><Entry><String><Key>Title</Key><Value>Mail</Value></String>
+            <String><Key>UserName</Key><Value>mail-user</Value></String>
+            <String><Key>Password</Key><Value>mail-password</Value></String>
+            <String><Key>URL</Key><Value>https://mail.invalid</Value></String></Entry></Group></Root></KeePassFile>""".toByteArray()
+        // Entries imported by earlier versions kept the user name hidden and before the password.
+        val earlier = EntryData.Custom(linkedMapOf("username" to field("old-user", true), "password" to field("old-password", true)))
+        val expected = listOf(Triple("shop-user", "shop-password", "https://shop.invalid"),
+            Triple("mail-user", "mail-password", "https://mail.invalid"), Triple("old-user", "old-password", null))
+        val imported = listOf(
+            importTransfer(ImportFormat.BITWARDEN_JSON, bitwarden, selectMapping = { null }, guard = {})!!,
+            importTransfer(ImportFormat.KEEPASS_XML, keePass, selectMapping = { null }, guard = {})!!)
+        try {
+            (imported.map { it.entries.single().data } + earlier).zip(expected).forEach { (data, values) ->
+                val copied = mutableListOf<String>()
+                listOf(QuickField.USERNAME, QuickField.SECRET).forEach { kind ->
+                    EntryQuickActions.copy(data.quickField(kind)!!) { copied += it }
+                }
+                assertEquals(listOf(values.first, values.second), copied)
+                assertEquals(values.third, data.quickField(QuickField.URL)?.value?.useChars { String(it) })
+            }
+        } finally { imported.forEach { it.close() }; earlier.fields().forEach { it.value.close() } }
+    }
+
     @Test fun `quick fields follow field semantics for every type`() {
         EntryType.entries.forEach { type ->
             val data = blankData(type)

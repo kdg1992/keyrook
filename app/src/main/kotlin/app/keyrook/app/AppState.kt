@@ -90,10 +90,12 @@ internal class AppState {
             val result = runCatching { withOperationGuard(controller, token) { action() } }
             // A save stays successful when old backups cannot be removed; that is only reported as a notice.
             val rotation = runCatching { rotationNotice(controller) }.getOrNull()
+            // The first save of a migrated vault names the kept copy of the old file once.
+            val migrated = runCatching { migrationCopyNotice(controller) }.getOrNull()
             SwingUtilities.invokeLater {
                 if (!live.get()) { result.getOrNull()?.close() }
                 else controller.sessionEpoch.deliver(token, result.getOrNull()) { snapshot ->
-                    rotation?.let { notice = it }
+                    listOfNotNull(rotation, migrated).takeIf { it.isNotEmpty() }?.let { notice = it.joinToString("\n") }
                     if (result.isSuccess) {
                         vault?.close()
                         vault = snapshot

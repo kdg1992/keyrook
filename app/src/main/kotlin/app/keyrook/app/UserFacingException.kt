@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package app.keyrook.app
 
+import app.keyrook.core.backup.MigrationBackupException
+import app.keyrook.core.format.VaultTooLargeException
 import java.nio.file.Path
 
 /**
@@ -22,11 +24,17 @@ internal fun requireUserFacing(condition: Boolean, messageKey: String, vararg ar
 }
 
 /**
- * The message shown for a failed operation: the specific reason of a [UserFacingException], otherwise the generic
- * text. Other exceptions can contain paths or decrypted input, so their messages are never displayed.
+ * The message shown for a failed operation: the specific reason of a [UserFacingException], fixed texts for a vault
+ * that would exceed the file format's size limit and for a migration copy that could not be written, otherwise the
+ * generic text. Other exceptions can contain paths or
+ * decrypted input, so their messages are never displayed.
  */
-internal fun failureMessage(failure: Throwable?): String =
-    (failure as? UserFacingException)?.text() ?: UiText.text("shell.failed")
+internal fun failureMessage(failure: Throwable?): String = when (failure) {
+    is UserFacingException -> failure.text()
+    is VaultTooLargeException -> UiText.text("shell.tooLarge")
+    is MigrationBackupException -> UiText.text("migration.copyFailed")
+    else -> UiText.text("shell.failed")
+}
 
 /** A customer, project or template name as stored: trimmed, not blank and at most [MAX_NAME_CHARS] characters. */
 internal fun organizationName(name: String): String {

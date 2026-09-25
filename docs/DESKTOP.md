@@ -313,9 +313,13 @@ the deletion still contain the entry and remain the only way to recover it;
 backup retention can eventually remove those older backups.
 
 Active list rows offer quick actions without opening the editor: copy the
-username, copy the password (the passphrase for SSH keys, the first hidden field
-for custom records) and open the URL of web and hosting-panel records (the first
-URL field for custom records). Buttons appear only when the field has a value.
+username, copy the password (the passphrase for SSH keys) and open the URL of
+web and hosting-panel records. Custom records, including Bitwarden and KeePass
+imports, use fields by their label, ignoring case: *username*, *user* or
+*Benutzername* for the username; *password*, *Passwort* or *passphrase* for the
+password, otherwise the first hidden field not labelled as a username, URL or
+*totp*; *url*, *url1*, *uri* or *host* for the URL, otherwise the first URL
+field. Buttons appear only when the field has a value.
 Copies use the same clipboard handling as the editor, including ownership
 checks and the configured expiry. Links pass the same validation as in the
 editor before the system browser receives them. Secret values are never shown in the
@@ -445,18 +449,24 @@ Keyrook up to 0.7.x writes document schema 1; 0.8.0 and later write schema 2
 favorites in memory, and a notice above the list says that the next save
 converts the vault. Opening changes nothing on disk. The first save afterwards
 keeps the unchanged old file next to the vault as
-`<vault file>.schema-v1-r<revision>.keyrook.bak`, whether or not a backup folder
-is configured, and then writes the new format; if that copy cannot be written,
-nothing is saved. The copy is encrypted with the same password and key file, is
+`<vault file>.schema-v1-r<revision>.keyrook.bak` (shortened for very long file
+names, see [FORMAT.md](FORMAT.md#compatibility-and-migrations)), whether or not a
+backup folder is configured, and then writes the new format; a notice names the
+copy once. If that copy cannot be written, nothing is saved and a message says
+so. The copy is encrypted with the same password and key file, is
 never rotated or deleted by Keyrook, and can be opened by the earlier release
 (rename it to `.keyrook` first) or restored with **Backup wiederherstellen**.
 Delete it once the converted vault works as expected. Earlier releases cannot
 open a converted vault; they report it as invalid or unsupported and leave it
 unchanged. See [FORMAT.md](FORMAT.md#compatibility-and-migrations).
 
+A vault of an earlier release close to the 64 MiB size limit still opens, but
+because the new format adds fields, saving may report that the vault is too
+large until entries are deleted permanently or large notes are shortened.
+
 ## Import and plaintext export
 
-Import parses and validates first, then asks for confirmation showing the entry count. It adds records to the current vault; duplicate IDs fail rather than overwrite records. Enable backups before importing into a valuable vault. Supported inputs:
+Import parses and validates first, then asks for confirmation showing the entry count. It adds records to the current vault under new IDs, with the references between imported customers, projects, entries and templates updated, so importing a vault's own export or the same file twice adds copies and never overwrites records. Enable backups before importing into a valuable vault. An import that could not be saved because the vault would exceed the 64 MiB size limit of the file format is refused with a message that says so, and nothing changes. Supported inputs:
 
 - Keyrook JSON: all entry types, references, metadata and history.
 - CSV: select the actual header names from dropdowns for title, URL, username, password, notes, tags and favorite. Tags are separated by commas or semicolons. The title column is required; optional fields can remain unassigned. Common German and English column names are suggested. Quoted commas, escaped quotes and multiline values are supported. Headers must be unique and nonblank, with at most 100 columns and 512 characters per name; otherwise nothing is imported and a message states these rules. A UTF-8 BOM is accepted. Keyrook's own CSV format is recognized automatically without a mapping dialog.
@@ -471,8 +481,8 @@ Import parses and validates first, then asks for confirmation showing the entry 
   | Comments | Notes | Notes |
 
   The KeePass CSV 1.x format quotes every field and escapes quotes as `\"` and backslashes as `\\`; these escapes are decoded, and any other backslash sequence is refused. The field-name variant uses ordinary CSV quoting (doubled quotes). Additional columns such as groups, TOTP or timestamps are refused rather than silently dropped; use **CSV mit Feldzuordnung** for such files. Each row becomes a web login entry.
-- Bitwarden unencrypted JSON: login and secure-note items, custom fields, folders, multiple URLs, dates and password history. Cards, identities, organization records, attachments, passkeys and password-reprompt restrictions are not imported.
-- KeePass XML: exported plaintext strings, group paths, tags, ISO timestamps, expiry and history. Entries in the identified recycle bin, including nested groups, remain deleted; their last-modified time supplies the deletion timestamp because the export has no separate deletion date. KDBX, binary/attached data, protected values, custom plugin data and binary timestamps are not supported. DTDs, external entities and ambiguous recycle-bin/expiry metadata are refused.
+- Bitwarden unencrypted JSON: login and secure-note items, custom fields, folders, multiple URLs, dates and password history. The username and URLs are visible fields; the password, TOTP secret and hidden custom fields are hidden. Cards, identities, organization records, attachments, passkeys and password-reprompt restrictions are not imported.
+- KeePass XML: exported plaintext strings, group paths, tags, ISO timestamps, expiry and history. `UserName` and `URL` are visible fields, all other strings hidden ones. Entries in the identified recycle bin, including nested groups, remain deleted; their last-modified time supplies the deletion timestamp because the export has no separate deletion date. KDBX, binary/attached data, protected values, custom plugin data and binary timestamps are not supported. DTDs, external entities and ambiguous recycle-bin/expiry metadata are refused.
 
 The source export's immutable parser strings cannot be reliably wiped from JVM memory. Imported Bitwarden/KeePass fields are stored as custom records to preserve additional values. Unsupported structures produce a generic failure instead of exposing data in errors.
 

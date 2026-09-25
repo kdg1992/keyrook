@@ -56,7 +56,8 @@ class VaultStore internal constructor(private val codec: VaultCodec, private val
     override fun save(path: Path, vault: Vault, credentials: Credentials, expected: FileStamp?,
                       parameters: KdfParameters, allowExpensive: Boolean): SaveResult {
         val target = resolve(path)
-        val lockPath = target.resolveSibling(".${target.fileName}.lock")
+        // Unchanged for every name that fits, so other writers still share the lock; longer names are shortened.
+        val lockPath = target.resolveSibling(boundedFileName(target.fileName.toString(), ".lock", "."))
         val attributes = PrivateFiles.attributes(target.parent)
         FileChannel.open(lockPath, setOf(StandardOpenOption.CREATE, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS), *attributes).use { channel ->
             val lock = try { channel.tryLock() } catch (_: OverlappingFileLockException) { null }

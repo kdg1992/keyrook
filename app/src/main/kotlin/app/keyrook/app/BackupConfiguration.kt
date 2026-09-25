@@ -10,6 +10,7 @@ import app.keyrook.core.backup.IntegrityFileKind
 import app.keyrook.core.backup.IntegrityReport
 import app.keyrook.core.backup.IntegrityState
 import app.keyrook.core.backup.countManagedBackups
+import app.keyrook.core.model.Vault
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.LinkOption
@@ -138,6 +139,15 @@ internal fun rotationNotice(controller: VaultController): String? {
     val result = controller.session.takeIncompleteRotation() ?: return null
     return if (result.notRemoved > 0) UiText.text("backup.rotationIncomplete", result.notRemoved)
         else UiText.text("backup.rotationUnchecked")
+}
+
+/**
+ * Runs on the vault worker after an operation. Returns the notice naming the copy of the old file that the first save
+ * of a migrated vault kept, once, or null. Only the file name is shown, with control characters replaced.
+ */
+internal fun migrationCopyNotice(controller: VaultController): String? {
+    val name = controller.takeMigrationCopy() ?: return null
+    return UiText.text("migration.copyKept", Vault.SCHEMA_VERSION, name.map { if (it.isISOControl()) ' ' else it }.joinToString(""))
 }
 
 internal fun backupStatusText(controller: VaultController): String {

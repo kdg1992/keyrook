@@ -7,6 +7,7 @@ import app.keyrook.core.crypto.Credentials
 import app.keyrook.core.crypto.Secret
 import app.keyrook.core.format.VaultCodec
 import app.keyrook.core.model.Vault
+import app.keyrook.core.model.withNewRecordIds
 import app.keyrook.core.storage.PrivateFiles
 import app.keyrook.core.storage.VaultStore
 import app.keyrook.core.transfer.*
@@ -180,14 +181,21 @@ private fun importData(controller: VaultController, dialogs: Dialogs) {
     imported.use {
         if (!dialogs.confirm(UiText.text("transfer.importConfirm", it.entries.size))) return
         controller.session.snapshot().use { current ->
-            val candidate = current.copy(customers = current.customers + it.customers,
-                projects = current.projects + it.projects, entries = current.entries + it.entries,
-                templates = current.templates + it.templates)
-            candidate.validate()
             ensureOperationCurrent()
-            controller.session.save(candidate)
+            controller.session.save(mergeImport(current, it))
         }
     }
+}
+
+/**
+ * The open vault [current] with the records of [imported] appended under new IDs, so importing a vault's own export
+ * or the same file twice adds copies instead of failing on duplicate IDs. Shares all secrets with both inputs.
+ */
+internal fun mergeImport(current: Vault, imported: Vault): Vault {
+    val renamed = imported.withNewRecordIds()
+    return current.copy(customers = current.customers + renamed.customers,
+        projects = current.projects + renamed.projects, entries = current.entries + renamed.entries,
+        templates = current.templates + renamed.templates).also { it.validate() }
 }
 
 /** Two separate confirmations: before choosing the format and again after choosing the new target file. */
