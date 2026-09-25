@@ -664,7 +664,12 @@ jobs:
           RELEASE_ID: ${{ steps.draft.outputs.release-id }}
         run: |
           set -euo pipefail
-          gh api --method PATCH "repos/$GH_REPO/releases/$RELEASE_ID" -F draft=false -f make_latest=true --silent
+          # Publishing a draft without tag_name can leave it on a generated "untagged-..." name even though
+          # the tag exists, so the tag is sent explicitly and checked on the release itself.
+          gh api --method PATCH "repos/$GH_REPO/releases/$RELEASE_ID" \
+            -f tag_name="$RELEASE_TAG" -F draft=false -f make_latest=true --silent
+          tagged="$(gh api "repos/$GH_REPO/releases/$RELEASE_ID" --jq '[.tag_name, .draft] | @tsv')"
+          [ "$tagged" = "$RELEASE_TAG"$'\t'false ] || { echo "Release $RELEASE_ID is not published as $RELEASE_TAG"; exit 1; }
           published="$(gh api "repos/$GH_REPO/releases/tags/$RELEASE_TAG" --jq '[.id, .draft] | @tsv')"
           [ "$published" = "$RELEASE_ID"$'\t'false ] || { echo "Release $RELEASE_TAG was not published"; exit 1; }
           latest="$(gh api "repos/$GH_REPO/releases/latest" --jq .tag_name)"

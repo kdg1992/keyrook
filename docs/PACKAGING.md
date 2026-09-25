@@ -365,6 +365,12 @@ Never publish a draft by hand: that bypasses the checksum and installer-test
 gate. A published release is never modified by the workflow; a defect found after
 publication requires a new version.
 
+If the publish step fails after the release became public but under a generated
+`untagged-…` name instead of its tag (as happened once with 0.8.1 before the
+workflow sent `tag_name` explicitly), all assets are already verified and
+uploaded: edit that release on GitHub, select the existing tag `vX.Y.Z`, and
+save. Do not rerun the publish job for it.
+
 Code signing/notarization is deliberately unconfigured. A future signing change
 must add protected credentials and a reviewed signing step before checksums and
 publication, without weakening the inventory or test checks.
