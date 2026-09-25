@@ -1,4 +1,4 @@
-# Manual acceptance protocol for release 1.0
+# Manual acceptance protocol
 
 This protocol covers what CI cannot verify: installing, upgrading and removing
 the unsigned installers interactively as a user would (CI only runs them
@@ -8,8 +8,11 @@ behavior of locking, clipboard handling, the update check and accessibility
 operating-system events, the conversion of real vaults written by an earlier
 release, and the files Keyrook hands to other programs (browsers, calendars,
 spreadsheets, authenticator apps). The
-maintainer runs it on physical or fully virtualized machines before release
-1.0 is approved. The coverage split between CI and this protocol is listed in
+maintainer runs it on physical or fully virtualized machines before each minor
+release (`MAJOR.MINOR.0`, starting with 1.0.0) is approved. The owner may
+adjust the scope of a run and decides which sections a patch release repeats.
+The results of each run are recorded in that release's acceptance tracking
+issue. The coverage split between CI and this protocol is listed in
 [READINESS.md](READINESS.md#verification-coverage).
 
 Steps use the English interface labels; the German labels are listed in
@@ -34,10 +37,11 @@ reviewed and published; other architectures are out of scope.
 ### Version under test
 
 The candidate is always a build of one recorded commit: the head SHA of the
-approved release pull request that sets `version.txt` to `1.0.0`, packaged by a
-manual `Release` workflow dispatch on that branch. These dispatch artifacts are
-the release candidate; Keyrook versions carry no `-rc` or other suffix, so the
-candidate already reports `1.0.0` (see
+approved release pull request that sets `version.txt` to the version under
+test, packaged by a manual `Release` workflow dispatch on that branch. Below,
+`<version>` stands for that version, for example `1.0.0`. These dispatch
+artifacts are the release candidate; Keyrook versions carry no `-rc` or other
+suffix, so the candidate already reports `<version>` (see
 [PACKAGING.md](PACKAGING.md#release-candidates)).
 
 **`main` is frozen for the whole run**: from the dispatch until the release is
@@ -47,19 +51,19 @@ candidate; if that happens, record the new SHA, dispatch a new build and repeat
 at least the sections the change can affect.
 
 1. Record the commit SHA of the approved release pull request that sets
-   `version.txt` to `1.0.0`.
+   `version.txt` to `<version>`.
 2. Before merging, run the `Release` workflow manually on that commit
    (see [PACKAGING.md](PACKAGING.md#workflow-behavior)) and download the
    installers from the run's artifacts. Record the run URL next to the SHA.
    After publication, repeat sections 1 and 7 with the assets of the published
-   `v1.0.0` release.
+   `v<version>` release.
 3. Compare each installer's SHA-256 with the checksum file that accompanies it
    (`SHA256SUMS.txt` for a published release):
    - Windows: `Get-FileHash .\<installer>.msi -Algorithm SHA256`
    - macOS: `shasum -a 256 <installer>.dmg`
    - Linux: `sha256sum <installer>.deb` (or `.rpm`)
 4. For the upgrade test, also download the installer of the most recent
-   release before 1.0 from the [release page](https://github.com/kdg1992/keyrook/releases)
+   release before `<version>` from the [release page](https://github.com/kdg1992/keyrook/releases)
    and verify it the same way.
 5. For the [migration test](#9-migration-of-a-vault-from-070), also download
    and verify the installers of the published release `v0.7.0`, the last
@@ -128,7 +132,7 @@ Windows:
 2. Accept the license and the default directory. The package is a per-user
    installation, so no administrator prompt is expected.
 3. Expected: a **Keyrook** Start menu entry exists and **Settings → Apps →
-   Installed apps** lists Keyrook with version `1.0.0`.
+   Installed apps** lists Keyrook with version `<version>`.
 
 macOS:
 
@@ -144,7 +148,7 @@ Linux:
 1. DEB: `sudo apt install ./<installer>.deb`. RPM: `sudo dnf install ./<installer>.rpm`.
    Both packages are unsigned by a distribution repository; accept only after
    the checksum comparison.
-2. Expected: `dpkg -s keyrook` (or `rpm -q keyrook`) reports version `1.0.0`,
+2. Expected: `dpkg -s keyrook` (or `rpm -q keyrook`) reports version `<version>`,
    and Keyrook appears in the application menu under Utilities.
 
 ### 1.2 First start and settings file
@@ -153,7 +157,7 @@ Linux:
    old one): `%APPDATA%\Keyrook`, `~/Library/Application Support/Keyrook`, or
    `$XDG_CONFIG_HOME/keyrook` (default `~/.config/keyrook`).
 2. Start Keyrook from the Start menu, Launchpad or application menu.
-3. Expected: the unlock form appears; **About** shows version `1.0.0`; no
+3. Expected: the unlock form appears; **About** shows version `<version>`; no
    settings file exists yet, because it is written on the first preference
    change or successful unlock.
 4. Open **Security** and change **Appearance** to **Dark**.
@@ -182,8 +186,8 @@ under test is not.
    minutes, **Lock when the window…** *loses focus or is minimized*, clipboard
    **10** seconds, **Check for updates on start** enabled. Confirm the backup
    folder is configured.
-2. Click **About → Check for updates**. Expected: version `1.0.0` is reported
-   as available, with plain-text release notes. (This applies only if 1.0.0 is
+2. Click **About → Check for updates**. Expected: version `<version>` is reported
+   as available, with plain-text release notes. (This applies only if `<version>` is
    already published; otherwise record n.a.)
 3. Quit Keyrook. Record the SHA-256 of `acceptance.keyrook` and a copy of
    `settings.json`.
@@ -191,8 +195,8 @@ under test is not.
    1.1 (on macOS, replace the application in **Applications**).
 5. Expected: only one Keyrook installation exists (one entry in Installed apps
    on Windows, one `Keyrook.app` on macOS, one `keyrook` package on Linux), and
-   **About** shows `1.0.0`. On macOS, Finder shows bundle version `1.0.0` for
-   0.x releases as well (see [PACKAGING.md](PACKAGING.md)); rely on **About**.
+   **About** shows `<version>`. On macOS, Finder shows bundle version `1.0.0`
+   for 0.x releases (see [PACKAGING.md](PACKAGING.md)); rely on **About**.
 6. Start Keyrook. Expected: all preferences from step 1 are unchanged, the
    unlock form is pre-filled with the vault path, and after unlocking a notice
    shows the restored backup folder and retention.
@@ -350,7 +354,7 @@ Keyrook cannot remove copies held there.
 3. Start Keyrook, unlock the vault and wait 2 minutes. Expected: no network
    activity from Keyrook.
 4. Click **About → Check for updates**. Expected: the result says
-   *Keyrook 1.0.0 is up to date.* (or reports a newer release), and the only
+   *Keyrook <version> is up to date.* (or reports a newer release), and the only
    connection is one HTTPS connection to `api.github.com`. Nothing is
    downloaded and no browser opens.
 5. Disconnect the network and click again. Expected: *The update check failed.
@@ -358,7 +362,7 @@ Keyrook cannot remove copies held there.
    stays usable.
 6. Enable **Check for updates on start** and restart. Expected: exactly one
    request to `api.github.com` at start, independent of unlocking, and no
-   notice while 1.0.0 is the latest release.
+   notice while `<version>` is the latest release.
 7. With network monitoring still running, open **Warnings** and click **Check
    passwords against known breaches …**. Expected: a question naming
    `api.pwnedpasswords.com`, the number of passwords and requests, the IP
@@ -707,5 +711,5 @@ These are documented behavior, not failures. Record the observed behavior in
    expects a lock on Windows or macOS, report it privately through the
    repository's **Security → Report a vulnerability** form instead of a public
    issue.
-5. Mark the row as *fail* with the issue link. Release 1.0 is not approved
+5. Mark the row as *fail* with the issue link. The release is not approved
    while a failure without an accepted explanation remains open.

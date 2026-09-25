@@ -2,9 +2,25 @@
 
 ## Supported versions
 
-Keyrook is maintained by a single person and is still before 1.0. Security
-fixes are made only for the latest released `0.x` minor version and published
-as a new release; older versions do not receive backports. Update to the
+Keyrook is maintained by a single person.
+
+| Version | Supported |
+| --- | --- |
+| Latest 1.x minor release | Yes |
+| Earlier 1.x minor releases | No |
+| 0.x | No |
+
+- Security fixes are made only for the latest 1.x minor release and published
+  as a new patch release of it. Earlier minor releases do not receive
+  backports; update to the latest one.
+- The 0.x releases are unsupported from 1.0.0 on. Their vaults open in every
+  1.x release (see the
+  [compatibility promise](../docs/FORMAT.md#compatibility-promise-from-100)).
+- Every installer bundles its own Java runtime. Security updates of that
+  runtime are shipped as patch releases (see
+  [bundled JDK security updates](../docs/PACKAGING.md#bundled-jdk-security-updates)).
+
+Update to the
 [latest release](https://github.com/kdg1992/keyrook/releases/latest) before
 reporting a problem.
 

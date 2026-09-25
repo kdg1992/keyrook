@@ -47,11 +47,10 @@ what the CI workflows check in addition.
   `BREAKING CHANGE:` or `Release-As:` lines in it unless that effect is
   intended.
 - Breaking changes are marked with `!` after the type or a `BREAKING CHANGE:`
-  footer. During 0.x they raise only the minor version. From 1.0.0 on they
-  raise the major version, so they are avoided and need the owner's explicit
-  approval before merging. Version 1.0.0 itself is requested once with a
-  `Release-As: 1.0.0` footer at the end of the final 1.0 pull request's
-  description (see [CI and releases](docs/CI.md#release-process)).
+  footer. They raise the major version, so they are avoided and need the
+  owner's explicit approval before merging. (During 0.x they raised only the
+  minor version; version 1.0.0 itself was requested once with a
+  `Release-As: 1.0.0` footer, see [CI and releases](docs/CI.md#release-process).)
 - Dependency updates follow the same rule: an update that changes what ships
   in the app (a runtime library) is `fix(deps)`, so it is released; an update
   that only touches build or test tooling is `build(deps)`, and GitHub Actions

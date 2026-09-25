@@ -1,7 +1,13 @@
-# Development readiness
+# Release readiness
 
-Keyrook is still in development. Installers are published for reviewed
-platforms, but use synthetic data until platform acceptance is complete.
+Keyrook 1.0 is a production release for its documented scope: the features and
+limits described in the [README](../README.md), [desktop usage](DESKTOP.md) and
+[security properties](SECURITY.md). It has not been independently audited, and
+the installers are unsigned and not notarized (see the
+[known limitations](../README.md#known-limitations)). The table below lists what
+is implemented and tested and where each area's documented boundary lies. The
+[manual acceptance protocol](ACCEPTANCE.md) results for 1.0.0 are recorded in
+the 1.0.0 acceptance tracking issue.
 
 | Area | Implemented and tested | Remaining boundary |
 | --- | --- | --- |
@@ -24,7 +30,7 @@ source build.
 ## Verification coverage
 
 The [manual acceptance protocol](ACCEPTANCE.md) must pass on Windows, macOS and
-Linux before release 1.0 is approved.
+Linux before 1.0.0 and each later minor release is approved.
 
 | Covered by CI | Covered by the manual acceptance protocol |
 | --- | --- |
@@ -43,25 +49,35 @@ Linux before release 1.0 is approved.
 
 ## Remaining gates for 1.0
 
-Release 1.0.0 is not yet approved. The remaining gates are:
+Release 1.0.0 is approved only after the last gate below. Status:
 
-1. **Branch protection.** The `main` ruleset described in
+1. **Branch protection** (done). The `main` ruleset described in
    [repository settings](CI.md#repository-settings-after-the-first-green-runs)
-   is active, and squash merges use the PR title and description as the commit
-   message.
-2. **1.0 documentation pull request.** A final pull request replaces the
+   is active with the required checks `build-linux`, `build-windows`,
+   `build-macos`, `pr-title`, `dependency-review` and `CodeQL`; only squash
+   merging is enabled, with the PR title and description as the commit message.
+2. **Release flow** (done). The draft-release flow (tag and draft release,
+   packaging, installer tests, then publication) was proven with release 0.8.1,
+   and `Recover release pull request` accepts any `MAJOR.MINOR.PATCH` version,
+   before or after 1.0.0 (see
+   [recovering an unpublished release](PACKAGING.md#recovering-an-unpublished-release)).
+3. **1.0 documentation pull request** (done with its merge). It replaces the
    development-build statements (this overview, the README, the security
-   documents and desktop usage, and the support policy in
+   documents, desktop usage and the support policy in
    [.github/SECURITY.md](../.github/SECURITY.md)), removes the pre-1.0 bump
-   options from `release-please-config.json`, and ends its description with the
-   footer `Release-As: 1.0.0` (see [release process](CI.md#release-process)).
-   Release Please then proposes 1.0.0 in its release pull request.
-3. **Acceptance run.** The owner runs the [manual acceptance protocol](ACCEPTANCE.md)
-   on every target system against a recorded release candidate: a manual
-   `Release` dispatch build of that release pull request's head SHA (see
+   options from `release-please-config.json` and adds the
+   [1.0.0 release notes](RELEASE-1.0.md). The maintainer ends its squash commit
+   description with the footer `Release-As: 1.0.0` (see
+   [release process](CI.md#release-process)), so Release Please proposes 1.0.0
+   in its release pull request.
+4. **Acceptance run** (remaining). The owner runs the
+   [manual acceptance protocol](ACCEPTANCE.md) on every target system against a
+   recorded release candidate: a manual `Release` dispatch build of the 1.0.0
+   release pull request's head SHA (see
    [release candidates](PACKAGING.md#release-candidates)). The run includes the
    real migration of vaults written by 0.7.0. `main` stays frozen during the
-   run, and every row passes or has an accepted explanation.
-4. **Release.** Only then is the release pull request for 1.0.0 merged, after
+   run, and every row passes or has an accepted explanation. The results are
+   recorded in the 1.0.0 acceptance tracking issue.
+5. **Release.** Only then is the release pull request for 1.0.0 merged, after
    its checks pass; afterwards the published installers are checked again as
    described under [version under test](ACCEPTANCE.md#version-under-test).
