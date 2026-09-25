@@ -125,6 +125,9 @@ compose.desktop {
         mainClass = "app.keyrook.app.MainKt"
         jvmArgs += "-Dkeyrook.version=${project.version}"
         jvmArgs += "--enable-native-access=ALL-UNNAMED"
+        // The JVM default of a quarter of RAM is too small on 4 GiB machines to open a schema 1 vault
+        // near the 64 MiB file limit (about 1.2 GiB during migration) plus Argon2 up to 256 MiB.
+        jvmArgs += "-XX:MaxRAMPercentage=50"
         javaHome = packagingJavaHome.absolutePath
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Dmg, TargetFormat.Deb, TargetFormat.Rpm)
