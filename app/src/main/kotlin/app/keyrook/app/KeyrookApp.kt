@@ -10,11 +10,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.*
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import app.keyrook.core.model.*
 
@@ -117,74 +112,39 @@ internal fun KeyrookApp(window: java.awt.Window? = null, settings: SettingsStore
     LaunchedEffect(window, preferences.uiScale) { window?.minimumSize = minimumWindowSize(preferences.uiScale) }
     KeyrookTheme(dark, preferences.contrast, preferences.uiScale) {
         Surface(Modifier.fillMaxSize().onPreviewKeyEvent { handleShortcut(it, onlyLock = true) }
-            .onKeyEvent { handleShortcut(it, onlyLock = false) }.focusRequester(rootFocus).focusable()) {
-            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Keyrook", style = MaterialTheme.typography.h4, modifier = Modifier.weight(1f).semantics { heading() })
-                    if (vault != null) WarningsBadge(warnings) { warningsOpen = true }
-                    TextButton(onClick = { updatePreferences { it.copy(theme = if (dark) ThemeMode.LIGHT else ThemeMode.DARK) } },
-                        modifier = Modifier.describedAs(UiText.text(if (dark) "a11y.switchToLight" else "a11y.switchToDark"))) {
-                        Text(if (dark) UiText.text("shell.light") else UiText.text("shell.dark"))
-                    }
-                    TextButton(onClick = { about = true }) { Text(UiText.text("shell.about")) }
-                    val settingsState = UiText.text(if (showSettings) "a11y.expanded" else "a11y.collapsed")
-                    TextButton(onClick = { showSettings = !showSettings }, modifier = Modifier.semantics { stateDescription = settingsState }) {
-                        Text(UiText.text("shell.security"))
-                    }
-                    if (vault != null || (busy && !locking)) Button(onClick = ::lockNow) { Text(UiText.text("shell.lock", shortcutPrefix)) }
+            .onKeyEvent { handleShortcut(it, onlyLock = false) }.focusRequester(rootFocus).focusable(),
+            color = MaterialTheme.colors.background) {
+            Column {
+                AppBar(dark, unlocked = vault != null, canLock = vault != null || (busy && !locking), shortcutPrefix,
+                    warnings = if (vault != null) warnings else null,
+                    onWarnings = { warningsOpen = true },
+                    onTheme = { updatePreferences { it.copy(theme = if (dark) ThemeMode.LIGHT else ThemeMode.DARK) } },
+                    onSettings = { showSettings = true }, onAbout = { about = true }, onLock = ::lockNow)
+                Box(Modifier.fillMaxWidth().height(3.dp)) {
+                    if (busy) LinearProgressIndicator(Modifier.fillMaxSize())
                 }
-                if (showSettings) {
-                    Row(Modifier.horizontalScroll(rememberScrollState())) {
-                        Choice(UiText.text("shell.theme"), preferences.theme.name, ThemeMode.entries.map { it.name to UiText.text("shell.theme.${it.name.lowercase()}") }, nullable = false) {
-                            it?.let { value -> updatePreferences { current -> current.copy(theme = ThemeMode.valueOf(value)) } }
-                        }
-                        Choice(UiText.text("shell.contrast"), preferences.contrast.name, ContrastMode.entries.map { it.name to UiText.text("shell.contrast.${it.name.lowercase()}") }, nullable = false) {
-                            it?.let { value -> updatePreferences { current -> current.copy(contrast = ContrastMode.valueOf(value)) } }
-                        }
-                        Choice(UiText.text("shell.uiScale"), preferences.uiScale.toString(), UI_SCALE_CHOICES.map { it.toString() to UiText.text("shell.uiScaleValue", it) }, nullable = false) {
-                            it?.toInt()?.let { value -> updatePreferences { current -> current.copy(uiScale = value) } }
-                        }
-                        Choice(UiText.text("shell.language"), preferences.language.name, AppLanguage.entries.map { it.name to UiText.text("shell.language.${it.name.lowercase()}") }, nullable = false) {
-                            it?.let { value -> updatePreferences { current -> current.copy(language = AppLanguage.valueOf(value)) } }
-                        }
-                        Choice(UiText.text("shell.lockMinutes"), preferences.inactivityMinutes.toString(), LOCK_MINUTE_CHOICES.map { it.toString() to it.toString() }, nullable = false) {
-                            it?.toInt()?.let { value -> updatePreferences { current -> current.copy(inactivityMinutes = value) } }
-                        }
-                        Choice(UiText.text("shell.windowLock"), preferences.windowLock.name, WindowLockPolicy.entries.map { it.name to UiText.text("shell.windowLock.${it.name.lowercase()}") }, nullable = false) {
-                            it?.let { value -> updatePreferences { current -> current.copy(windowLock = WindowLockPolicy.valueOf(value)) } }
-                        }
-                        Choice(UiText.text("shell.clipboardSeconds"), preferences.clipboardSeconds.toString(), CLIPBOARD_SECOND_CHOICES.map { it.toString() to it.toString() }, nullable = false) {
-                            it?.toLong()?.let { value ->
-                                runCatching { SecretClipboard.configure(value) }
-                                updatePreferences { current -> current.copy(clipboardSeconds = value) }
+                Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    UpdateNotice(updates)
+                    if (message.isNotEmpty()) Banner(message, BannerKind.ERROR)
+                    if (notice.isNotEmpty()) Banner(notice, BannerKind.INFO, onClose = { notice = "" })
+                    if (vault == null) {
+                        UnlockScreen(state, settings, unlockDelay)
+                    } else if (creating || editing != null) {
+                        Editor(vault!!, editing, busy, shortcuts, settings, template = if (editing == null) state.template else null,
+                            onCancel = { editing = null; creating = false }) { entry ->
+                            // The editor's busy flag lags one composition behind; a second Save in that window is refused here.
+                            submitEditedEntry(busy, entry) { candidate ->
+                                state.operation { Vault(entries = listOf(candidate)).use { controller.save(candidate) } }
                             }
                         }
+                    } else {
+                        Workspace(state, vault!!, settings, shortcuts, mac, warningsByEntry)
                     }
-                    Text(UiText.text("shell.settingsHint"))
-                    UpdateCheckSetting(preferences.checkUpdatesOnStart) { value -> updatePreferences { it.copy(checkUpdatesOnStart = value) } }
-                }
-                UpdateNotice(updates)
-                if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-                if (message.isNotEmpty()) Text(message, Modifier.semantics { liveRegion = LiveRegionMode.Polite }, color = MaterialTheme.colors.error)
-                if (notice.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(notice, Modifier.weight(1f).semantics { liveRegion = LiveRegionMode.Polite })
-                    TextButton(onClick = { notice = "" }) { Text(UiText.text("shell.close")) }
-                }
-                if (vault == null) {
-                    UnlockScreen(state, settings, unlockDelay)
-                } else if (creating || editing != null) {
-                    Editor(vault!!, editing, busy, shortcuts, settings, template = if (editing == null) state.template else null,
-                        onCancel = { editing = null; creating = false }) { entry ->
-                        // The editor's busy flag lags one composition behind; a second Save in that window is refused here.
-                        submitEditedEntry(busy, entry) { candidate ->
-                            state.operation { Vault(entries = listOf(candidate)).use { controller.save(candidate) } }
-                        }
-                    }
-                } else {
-                    Workspace(state, vault!!, settings, shortcuts, mac, warningsByEntry)
                 }
             }
         }
+        if (showSettings) SettingsDialog(preferences, onDismiss = { showSettings = false }, onChange = ::updatePreferences)
         AppDialogs(state, warnings, breached, updates, mac, onCloseAnswered)
     }
 }

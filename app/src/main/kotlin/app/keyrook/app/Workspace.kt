@@ -9,7 +9,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -40,9 +43,10 @@ internal fun Workspace(state: AppState, current: Vault, settings: SettingsStore,
     // The entry whose layout the save-as-template dialog is naming; null while it is closed.
     var templateSource by remember { mutableStateOf<Entry?>(null) }
     fun operation(onSuccess: () -> Unit = {}, action: () -> Vault?) = state.operation(onSuccess, action)
-    AppToolbar(dataActions(controller, settings, dialogs, { action -> operation(action = action) }, settingsFailed = {
+    val actions = dataActions(controller, settings, dialogs, { action -> operation(action = action) }, settingsFailed = {
         SwingUtilities.invokeLater { if (live.get()) message = UiText.text("settings.saveFailed") }
-    }), busy, organizer, onOrganizer = { organizer = !organizer })
+    })
+    val toolbar: @Composable () -> Unit = { AppToolbar(actions, busy, organizer, onOrganizer = { organizer = !organizer }) }
     if (organizer) OrganizationTools(current, controller, busy, ::operation, onClose = { organizer = false })
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val entryList: @Composable (Boolean) -> Unit = { compact ->
@@ -59,21 +63,23 @@ internal fun Workspace(state: AppState, current: Vault, settings: SettingsStore,
                 onEmptyTrash = { operation { controller.emptyTrash() } },
                 onBulkTrash = { ids, restore -> operation { controller.trashAll(ids, restore) } },
                 onBulkTag = { ids, tag, add -> operation { controller.tagAll(ids, tag, add) } },
-                onFavorite = { ids, favorite -> operation { controller.setFavorite(ids, favorite) } })
+                onFavorite = { ids, favorite -> operation { controller.setFavorite(ids, favorite) } }, toolbar = toolbar)
         }
         if (workspaceLayout(maxWidth.value) == WorkspaceLayout.LIST_DETAIL) {
-            Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                 Column(Modifier.weight(0.45f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     entryList(true)
                 }
-                Box(Modifier.fillMaxHeight().width(1.dp).background(MaterialTheme.colors.onSurface.copy(alpha = 0.12f)))
                 val selected = current.entries.firstOrNull { it.id == selection.selectedId }
-                EntryDetailPane(current, selected, selected?.let { warningsByEntry[it.id] }.orEmpty(), reveal, busy,
-                    onReveal = { reveal = it }, onEdit = { state.used(it.id); editing = it },
-                    onUsed = { state.used(it.id) },
-                    onFavorite = { entry -> operation { controller.setFavorite(setOf(entry.id), !entry.pinned) } },
-                    onSaveTemplate = { templateSource = it },
-                    modifier = Modifier.weight(0.55f).fillMaxHeight())
+                Surface(Modifier.weight(0.55f).fillMaxHeight(), shape = MaterialTheme.shapes.medium,
+                    border = BorderStroke(1.dp, LocalChrome.current.outline), color = MaterialTheme.colors.surface) {
+                    EntryDetailPane(current, selected, selected?.let { warningsByEntry[it.id] }.orEmpty(), reveal, busy,
+                        onReveal = { reveal = it }, onEdit = { state.used(it.id); editing = it },
+                        onUsed = { state.used(it.id) },
+                        onFavorite = { entry -> operation { controller.setFavorite(setOf(entry.id), !entry.pinned) } },
+                        onSaveTemplate = { templateSource = it },
+                        modifier = Modifier.fillMaxSize())
+                }
             }
         } else Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { entryList(false) }
     }
@@ -98,7 +104,7 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
                       onDuplicate: (Entry) -> Unit, onTrash: (String) -> Unit, onRestore: (String) -> Unit,
                       onPurge: (String) -> Unit, onEmptyTrash: () -> Unit,
                       onBulkTrash: (Set<String>, Boolean) -> Unit, onBulkTag: (Set<String>, String, Boolean) -> Unit,
-                      onFavorite: (Set<String>, Boolean) -> Unit) {
+                      onFavorite: (Set<String>, Boolean) -> Unit, toolbar: @Composable () -> Unit) {
     val search = view.search
     val includeHidden = view.includeHidden
     // Keyed on the snapshot instance: every save presents a new one, and a list of 5,000–10,000 entries is filtered,
@@ -186,35 +192,59 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
     }
     val searchField: @Composable (Modifier) -> Unit = { modifier ->
         OutlinedTextField(search, { if (it.length <= 256) onView(view.copy(search = it)) }, label = { Text(UiText.text("shell.search")) },
+            leadingIcon = { Icon(KeyrookIcons.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
             modifier = modifier.focusRequester(searchFocus).onPreviewKeyEvent { event ->
                 if (keyboardShortcut(event, mac, shortcutContext(ShortcutFocus.SEARCH)) != ShortcutAction.FOCUS_LIST) false
                 else { runCatching { listFocus.requestFocus() }.isSuccess }
-            }, singleLine = true)
+            }, singleLine = true, colors = TextFieldDefaults.outlinedTextFieldColors(backgroundColor = MaterialTheme.colors.surface))
     }
-    val listButtons: @Composable () -> Unit = {
-        Button(onClick = onCreate, enabled = !busy && !trash) { Text(UiText.text("shell.newEntry")) }
-        if (vault.templates.isNotEmpty()) TextButton(onClick = { choosingTemplate = true }, enabled = !busy && !trash) {
+    val createButtons: @Composable () -> Unit = {
+        Button(onClick = onCreate, enabled = !busy && !trash) { ButtonIcon(KeyrookIcons.Add); Text(UiText.text("shell.newEntry")) }
+        if (vault.templates.isNotEmpty()) OutlinedButton(onClick = { choosingTemplate = true }, enabled = !busy && !trash) {
             Text(UiText.text("template.new"))
         }
-        TextButton(onClick = { applyFilters(activeFilters.copy(trash = !trash)) }, enabled = !busy) { Text(if (trash) UiText.text("shell.active") else UiText.text("shell.trash")) }
-        if (trash) TextButton(enabled = !busy && trashCount > 0, onClick = { confirmation = ListConfirmation.EmptyTrash(trashCount) }) {
-            Text(UiText.text("list.emptyTrash"))
-        }
-        TextButton(onClick = { help = true }) { Text(UiText.text("shortcuts.title")) }
     }
     if (compact) {
         searchField(Modifier.fillMaxWidth())
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) { listButtons() }
-    } else Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            createButtons(); toolbar()
+        }
+    } else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         searchField(Modifier.weight(1f))
-        listButtons()
+        Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) { createButtons(); toolbar() }
     }
-    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-        LabeledCheckbox(includeHidden, UiText.text("shell.hiddenSearch")) { onView(view.copy(includeHidden = it)) }
-        LabeledCheckbox(activeFilters.favorites, UiText.text("filters.favorites")) { applyFilters(activeFilters.copy(favorites = it)) }
-        LabeledCheckbox(activeFilters.recent, UiText.text("filters.recent")) { applyFilters(activeFilters.copy(recent = it)) }
+    val filterCount = listOf(activeFilters.type != null, activeFilters.customerId != null, activeFilters.projectId != null,
+        activeFilters.tag != null, activeFilters.expiry != ExpiryFilter.ALL, activeFilters.sort != EntrySort.TITLE).count { it }
+    var showFilters by remember { mutableStateOf(false) }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        SegmentedControl(listOf(false to UiText.text("shell.active"), true to "${UiText.text("shell.trash")} ($trashCount)"), trash,
+            enabled = !busy, modifier = Modifier.selectableGroup()) { applyFilters(activeFilters.copy(trash = it)) }
+        if (trash) TextButton(enabled = !busy && trashCount > 0, onClick = { confirmation = ListConfirmation.EmptyTrash(trashCount) }) {
+            Text(UiText.text("list.emptyTrash"), color = MaterialTheme.colors.error)
+        }
+        Spacer(Modifier.weight(1f))
+        TextButton(onClick = { help = true }) { Text(UiText.text("shortcuts.title")) }
     }
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp),
+        itemVerticalAlignment = Alignment.CenterVertically) {
+        FilterChip(activeFilters.favorites, UiText.text("filters.favoritesShort"), description = UiText.text("filters.favorites")) {
+            applyFilters(activeFilters.copy(favorites = it))
+        }
+        FilterChip(activeFilters.recent, UiText.text("filters.recentShort"), description = UiText.text("filters.recent")) {
+            applyFilters(activeFilters.copy(recent = it))
+        }
+        FilterChip(includeHidden, UiText.text("filters.hiddenShort"), description = UiText.text("shell.hiddenSearch")) {
+            onView(view.copy(includeHidden = it))
+        }
+        val filterState = UiText.text(if (showFilters || filterCount > 0) "a11y.expanded" else "a11y.collapsed")
+        TextButton(onClick = { showFilters = !showFilters }, enabled = filterCount == 0,
+            modifier = Modifier.semantics { stateDescription = filterState }) {
+            Text(UiText.text("filters.more") + (if (filterCount > 0) " ($filterCount)" else "") +
+                if (showFilters || filterCount > 0) " ▴" else " ▾")
+        }
+    }
+    if (showFilters || filterCount > 0) FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp),
+        itemVerticalAlignment = Alignment.CenterVertically) {
         Choice(UiText.text("shell.type"), activeFilters.type?.name, EntryType.entries.map { it.name to it.label }) {
             applyFilters(activeFilters.copy(type = it?.let(EntryType::valueOf)))
         }
@@ -227,23 +257,23 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         Choice(UiText.text("shell.tag"), activeFilters.tag, visibleTags.map { it to it }) {
             applyFilters(activeFilters.copy(tag = it))
         }
-    }
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Choice(UiText.text("shell.expiry"), activeFilters.expiry.name, ExpiryFilter.entries.map { it.name to it.label }, nullable = false) {
             applyFilters(activeFilters.copy(expiry = ExpiryFilter.valueOf(requireNotNull(it))))
         }
         Choice(UiText.text("shell.sort"), activeFilters.sort.name, EntrySort.entries.map { it.name to it.label }, nullable = false) {
             applyFilters(activeFilters.copy(sort = EntrySort.valueOf(requireNotNull(it))))
         }
-        TextButton(onClick = { onView(ListView()) }) { Text(UiText.text("shell.reset")) }
+        TextButton(onClick = { onView(ListView()); showFilters = false }) { Text(UiText.text("shell.reset")) }
     }
     if (entries.isNotEmpty()) BulkBar(selection, entries, trash, busy, onSelection,
         onTrash = { confirmation = ListConfirmation.TrashMarked(selection.markedIds.toSet()) },
         onRestore = { onBulkTrash(selection.markedIds.toSet(), true) }, onTag = { bulkTag = it },
         onFavorite = { onFavorite(selection.markedIds.toSet(), it) })
-    if (notice.isNotEmpty()) Text(notice)
-    if (matches == null) Text(UiText.text("shell.searching"))
-    else if (entries.isEmpty()) Text(UiText.text("shell.noEntries"))
+    if (notice.isNotEmpty()) Banner(notice, BannerKind.INFO, onClose = { notice = "" })
+    if (matches == null) HintText(UiText.text("shell.searching"))
+    else if (entries.isEmpty()) Box(Modifier.fillMaxWidth().padding(vertical = 32.dp), contentAlignment = Alignment.Center) {
+        HintText(UiText.text("shell.noEntries"))
+    }
     val listState = rememberLazyListState()
     LaunchedEffect(selectedIndex, selection.selectedId) {
         if (selectedIndex < 0) return@LaunchedEffect

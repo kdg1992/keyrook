@@ -4,13 +4,14 @@ package app.keyrook.app
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.input.pointer.pointerInput
@@ -82,26 +83,39 @@ private fun EntryData.cardValue(field: Field?): CardValue? {
 @Composable
 internal fun ExpiryBadge(date: LocalDate, state: ExpiryState) {
     val formatted = date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(UiText.locale))
+    val colors = MaterialTheme.colors
     when (state) {
-        ExpiryState.VALID -> Text(UiText.text("list.expires", formatted), style = MaterialTheme.typography.body2)
+        ExpiryState.VALID -> Badge(UiText.text("list.expires", formatted),
+            colors.onSurface.copy(alpha = 0.08f).compositeOver(colors.surface), colors.onSurface)
         ExpiryState.EXPIRING_SOON, ExpiryState.EXPIRED -> {
             val expired = state == ExpiryState.EXPIRED
-            val colors = MaterialTheme.colors
-            Surface(color = if (expired) colors.error else colors.secondary,
-                contentColor = if (expired) colors.onError else colors.onSecondary, shape = RoundedCornerShape(4.dp)) {
-                Text(UiText.text(if (expired) "list.expired" else "list.expiringSoon", formatted),
-                    style = MaterialTheme.typography.body2, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
-            }
+            Badge(UiText.text(if (expired) "list.expired" else "list.expiringSoon", formatted),
+                if (expired) colors.error else colors.secondary, if (expired) colors.onError else colors.onSecondary)
         }
     }
 }
 
+/** A small rounded label, used for expiry dates and tags. */
+@Composable
+internal fun Badge(text: String, background: Color, content: Color, border: Color? = null) {
+    Surface(color = background, contentColor = content, shape = RoundedCornerShape(50), border = border?.let { BorderStroke(1.dp, it) }) {
+        Text(text, style = MaterialTheme.typography.caption, maxLines = 1,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+    }
+}
+
+@Composable
+private fun TagBadge(tag: String) {
+    val colors = MaterialTheme.colors
+    Badge("#$tag", colors.surface, colors.primary, border = colors.primary.copy(alpha = 0.5f))
+}
+
 /**
- * A list row. Selection is shown by border, tint and elevation and exposed to accessibility services. [markers] are
- * password warnings by reason only. [compact] cards, used next to the detail view, put their entry actions below the
- * text instead of beside it. With [onMark], a checkbox shows and toggles whether the entry is [marked] for a bulk action.
- * With [onFavorite], a star shows and toggles the favorite mark; reserved tags are never listed as tags. With
- * [onSaveTemplate], an action saves the entry's layout as a template.
+ * A list row: type, title and metadata, the quick copy/open actions, and the remaining actions in a menu. Selection is
+ * shown by border and tint and exposed to accessibility services. [markers] are password warnings by reason only.
+ * [compact] rows, used next to the detail view, keep only the menu at the side. With [onMark], a checkbox shows and
+ * toggles whether the entry is [marked] for a bulk action. With [onFavorite], a star shows and toggles the favorite
+ * mark; reserved tags are never listed as tags. With [onSaveTemplate], a menu item saves the entry's layout as a template.
  */
 @Composable
 internal fun EntryCardView(entry: Entry, info: EntryCardInfo, isSelected: Boolean, listFocused: Boolean, trash: Boolean,
@@ -112,57 +126,68 @@ internal fun EntryCardView(entry: Entry, info: EntryCardInfo, isSelected: Boolea
                            onSaveTemplate: (() -> Unit)? = null) {
     val colors = MaterialTheme.colors
     val latestClick by rememberUpdatedState(onClick)
-    Card(
+    val type = entry.data.type()
+    Surface(
         Modifier.fillMaxWidth()
             .semantics { selected = isSelected }
             .onFocusChanged { if (it.hasFocus) onFocusInside() }
             .pointerInput(entry.id) { detectTapGestures { latestClick() } },
-        backgroundColor = if (isSelected) colors.primary.copy(alpha = 0.08f).compositeOver(colors.surface) else colors.surface,
-        border = if (isSelected) BorderStroke(if (listFocused) 3.dp else 2.dp, colors.primary) else null,
-        elevation = if (isSelected) 4.dp else 2.dp,
+        shape = MaterialTheme.shapes.medium,
+        color = if (isSelected) colors.primary.copy(alpha = 0.08f).compositeOver(colors.surface) else colors.surface,
+        border = if (isSelected) BorderStroke(if (listFocused) 3.dp else 2.dp, colors.primary)
+            else BorderStroke(1.dp, LocalChrome.current.outline),
     ) {
-        Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (onMark != null) Checkbox(marked, onCheckedChange = { onMark() },
+        Row(Modifier.padding(start = 12.dp, end = 4.dp, top = 10.dp, bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (onMark != null) Checkbox(marked, onCheckedChange = { onMark() }, colors = brandCheckboxColors(),
                 modifier = Modifier.describedAs(UiText.text("a11y.markEntry", entry.title)))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            TypeAvatar(type)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(entry.title, Modifier.weight(1f, fill = false), style = MaterialTheme.typography.subtitle1,
+                        fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (onFavorite != null) FavoriteToggle(entry.title, entry.pinned, busy, onFavorite)
-                    Text(entry.title, style = MaterialTheme.typography.h6)
                 }
-                Text(listOfNotNull(entry.data.type().label,
+                HintText(listOfNotNull(type.label,
                     info.customer?.let { UiText.text("list.customerValue", it) },
-                    info.project?.let { UiText.text("list.projectValue", it) }).joinToString(" · "),
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    info.project?.let { UiText.text("list.projectValue", it) }).joinToString(" · "))
                 val details = listOfNotNull(info.username, info.address)
                 if (details.isNotEmpty()) Text(details.joinToString(" · ") { "${it.label}: ${it.value}" },
                     style = MaterialTheme.typography.body2, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (info.expiresOn != null && info.expiry != null) ExpiryBadge(info.expiresOn, info.expiry)
-                if (markers.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    markers.forEach { WarningChip(healthIssueText(it), severe = severeIssue(it)) }
-                }
                 val tags = ReservedTags.visible(entry.tags)
-                if (tags.isNotEmpty()) Text(tags.joinToString(", "), style = MaterialTheme.typography.body2)
-                if (!trash) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                val expiry = info.expiresOn != null && info.expiry != null
+                if (expiry || markers.isNotEmpty() || tags.isNotEmpty()) {
+                    FlowRow(Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        if (info.expiresOn != null && info.expiry != null) ExpiryBadge(info.expiresOn, info.expiry)
+                        markers.forEach { WarningChip(healthIssueText(it), severe = severeIssue(it)) }
+                        tags.forEach { TagBadge(it) }
+                    }
+                }
+                if (!trash) FlowRow(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                     QuickField.entries.forEach { kind ->
                         val field = entry.data.quickField(kind)
                         val present = remember(field) { field != null && EntryQuickActions.available(field, kind) }
                         if (field != null && present) {
                             val label = entry.data.quickLabel(field)
-                            TextButton(enabled = !busy, onClick = { onQuick(kind) }) {
+                            TextButton(enabled = !busy, onClick = { onQuick(kind) }, contentPadding = CompactButtonPadding,
+                                modifier = Modifier.heightIn(min = 30.dp)) {
                                 Text(when (kind) {
                                     QuickField.URL -> UiText.text("list.openField", label)
                                     QuickField.TOTP -> UiText.text("list.copyTotp")
                                     else -> UiText.text("list.copyField", label)
-                                })
+                                }, style = MaterialTheme.typography.body2, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
                 }
-                if (compact) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    EntryCardActions(trash, busy, onEdit, onDuplicate, onRestore, onPurge, onTrash, onSaveTemplate)
-                }
             }
-            if (!compact) EntryCardActions(trash, busy, onEdit, onDuplicate, onRestore, onPurge, onTrash, onSaveTemplate)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (!compact) {
+                    if (trash) TextButton(enabled = !busy, onClick = onRestore) { Text(UiText.text("shell.restore")) }
+                    else TextButton(enabled = !busy, onClick = onEdit) { Text(UiText.text("shell.edit")) }
+                }
+                EntryMenu(entry.title, trash, busy, compact, onEdit, onDuplicate, onRestore, onPurge, onTrash, onSaveTemplate)
+            }
         }
     }
 }
@@ -175,19 +200,40 @@ internal fun EntryCardView(entry: Entry, info: EntryCardInfo, isSelected: Boolea
 internal fun FavoriteToggle(title: String, favorite: Boolean, busy: Boolean, onToggle: () -> Unit) {
     val label = UiText.text("a11y.fieldOption", title, UiText.text(if (favorite) "favorite.remove" else "favorite.add"))
     val state = UiText.text(if (favorite) "a11y.favorite" else "a11y.notFavorite")
-    TextButton(enabled = !busy, onClick = onToggle, modifier = Modifier.semantics { contentDescription = label; stateDescription = state }) {
-        Text(if (favorite) "★" else "☆", style = MaterialTheme.typography.h6)
+    val colors = MaterialTheme.colors
+    TextButton(enabled = !busy, onClick = onToggle, contentPadding = PaddingValues(horizontal = 6.dp),
+        modifier = Modifier.defaultMinSize(minWidth = 32.dp, minHeight = 32.dp).semantics { contentDescription = label; stateDescription = state }) {
+        Text(if (favorite) "★" else "☆", style = MaterialTheme.typography.h6,
+            color = if (favorite) colors.secondary else colors.onSurface.copy(alpha = HINT_TEXT_ALPHA))
     }
 }
 
+/** The actions of one row that are not shown on it; [compact] rows also list the main action here. */
 @Composable
-private fun EntryCardActions(trash: Boolean, busy: Boolean, onEdit: () -> Unit, onDuplicate: () -> Unit,
-                             onRestore: () -> Unit, onPurge: () -> Unit, onTrash: () -> Unit, onSaveTemplate: (() -> Unit)?) {
-    if (!trash) TextButton(enabled = !busy, onClick = onEdit) { Text(UiText.text("shell.edit")) }
-    if (!trash) TextButton(enabled = !busy, onClick = onDuplicate) { Text(UiText.text("shell.duplicate")) }
-    if (!trash && onSaveTemplate != null) TextButton(enabled = !busy, onClick = onSaveTemplate) { Text(UiText.text("template.save")) }
-    if (trash) {
-        TextButton(enabled = !busy, onClick = onRestore) { Text(UiText.text("shell.restore")) }
-        TextButton(enabled = !busy, onClick = onPurge) { Text(UiText.text("list.purge"), color = MaterialTheme.colors.error) }
-    } else TextButton(enabled = !busy, onClick = onTrash) { Text(UiText.text("list.moveToTrash")) }
+private fun EntryMenu(title: String, trash: Boolean, busy: Boolean, compact: Boolean, onEdit: () -> Unit, onDuplicate: () -> Unit,
+                      onRestore: () -> Unit, onPurge: () -> Unit, onTrash: () -> Unit, onSaveTemplate: (() -> Unit)?) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(enabled = !busy, onClick = { open = true }, modifier = Modifier.describedAs(UiText.text("list.moreActions", title))) {
+            Icon(KeyrookIcons.More, contentDescription = null)
+        }
+        DropdownMenu(open, onDismissRequest = { open = false }) {
+            @Composable
+            fun item(label: String, danger: Boolean = false, action: () -> Unit) {
+                DropdownMenuItem(enabled = !busy, onClick = { open = false; action() }) {
+                    Text(label, color = if (danger) MaterialTheme.colors.error else Color.Unspecified)
+                }
+            }
+            if (trash) {
+                if (compact) item(UiText.text("shell.restore"), action = onRestore)
+                item(UiText.text("list.purge"), danger = true, action = onPurge)
+            } else {
+                if (compact) item(UiText.text("shell.edit"), action = onEdit)
+                item(UiText.text("shell.duplicate"), action = onDuplicate)
+                if (onSaveTemplate != null) item(UiText.text("template.save"), action = onSaveTemplate)
+                Divider()
+                item(UiText.text("list.moveToTrash"), danger = true, action = onTrash)
+            }
+        }
+    }
 }

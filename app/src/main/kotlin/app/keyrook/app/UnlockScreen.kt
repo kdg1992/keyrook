@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -27,8 +29,7 @@ internal fun UnlockScreen(state: AppState, settings: SettingsStore, unlockDelay:
     var message by state::message
     var notice by state::notice
     fun operation(action: () -> Vault?) = state.operation(action = action)
-    if (unlockDelay > 0) Text(UiText.text("shell.delay", (unlockDelay + 999) / 1000))
-    UnlockForm(busy || unlockDelay > 0, settings.current(), generateKey = { done ->
+    UnlockForm(busy || unlockDelay > 0, (unlockDelay + 999) / 1000, settings.current(), generateKey = { done ->
         operation {
             chooseNewKeyFile(dialogs)?.let { target -> generateKeyFile(target); credentialOnEdt { done(target) } }
             null
@@ -62,7 +63,7 @@ private fun chooseFile(save: Boolean): Path? =
     if (save) chooseNewFile(DialogFile.VAULT, "vault.keyrook") else chooseOpenFile(DialogFile.VAULT)
 
 @Composable
-private fun UnlockForm(busy: Boolean, remembered: AppSettings, generateKey: ((Path) -> Unit) -> Unit,
+private fun UnlockForm(busy: Boolean, delaySeconds: Long, remembered: AppSettings, generateKey: ((Path) -> Unit) -> Unit,
                        onOpen: (Path, CharArray, Path?, Boolean, KdfParameters) -> Unit) {
     var path by remember { mutableStateOf(remembered.lastVaultPath?.toString().orEmpty()) }
     var key by remember { mutableStateOf("") }
@@ -85,41 +86,71 @@ private fun UnlockForm(busy: Boolean, remembered: AppSettings, generateKey: ((Pa
         }
     }
     val submitting = Modifier.fillMaxWidth().submitOnEnter { submit() }
-    Column(Modifier.widthIn(max = 640.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(UiText.text(if (create) "credentials.createTitle" else "credentials.openTitle"), Modifier.semantics { heading() },
-            style = MaterialTheme.typography.h5)
-        Row(Modifier.selectableGroup()) {
-            LabeledRadioButton(!create, UiText.text("credentials.open"), enabled = !busy) { create = false }
-            LabeledRadioButton(create, UiText.text("credentials.create"), enabled = !busy) { create = true }
+    var advanced by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), contentAlignment = Alignment.TopCenter) {
+        Column(Modifier.widthIn(max = 560.dp).padding(top = 24.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            SectionCard {
+                Text(UiText.text(if (create) "credentials.createTitle" else "credentials.openTitle"), Modifier.semantics { heading() },
+                    style = MaterialTheme.typography.h5)
+                SegmentedControl(listOf(false to UiText.text("credentials.open"), true to UiText.text("credentials.create")), create,
+                    enabled = !busy, modifier = Modifier.selectableGroup()) { create = it }
+                if (delaySeconds > 0) Banner(UiText.text("shell.delay", delaySeconds), BannerKind.WARNING)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(path, { path = it }, label = { Text(UiText.text("credentials.vaultFile")) }, singleLine = true,
+                        enabled = !busy, modifier = Modifier.weight(1f).submitOnEnter { submit() })
+                    OutlinedButton(enabled = !busy, onClick = { chooseFile(create)?.let { path = it.toString() } },
+                        modifier = Modifier.padding(top = 8.dp).describedAs(UiText.text("credentials.selectFile"))) {
+                        Text(UiText.text("credentials.browse"))
+                    }
+                }
+                OutlinedTextField(password, { if (it.length <= 1024) password = it }, label = { Text(UiText.text("credentials.password")) }, singleLine = true,
+                    enabled = !busy, visualTransformation = PasswordVisualTransformation(), modifier = submitting)
+                if (create) OutlinedTextField(confirmation, { if (it.length <= 1024) confirmation = it }, label = { Text(UiText.text("credentials.repeatPassword")) },
+                    singleLine = true, enabled = !busy, visualTransformation = PasswordVisualTransformation(), modifier = submitting,
+                    isError = confirmation.isNotEmpty() && password != confirmation)
+                if (create && confirmation.isNotEmpty() && password != confirmation)
+                    Text(UiText.text("dialog.passwordMismatch"), color = MaterialTheme.colors.error, style = MaterialTheme.typography.caption)
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(key, { key = it }, label = { Text(UiText.text("credentials.optionalKey")) }, singleLine = true,
+                            enabled = !busy, modifier = Modifier.weight(1f).submitOnEnter { submit() })
+                        OutlinedButton(enabled = !busy, onClick = { chooseKeyFile()?.let { key = it.toString() } },
+                            modifier = Modifier.padding(top = 8.dp).describedAs(UiText.text("credentials.selectKey"))) {
+                            Text(UiText.text("credentials.browse"))
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TextButton(enabled = !busy, contentPadding = CompactButtonPadding, onClick = {
+                            generateKey { target -> key = target.toString() }
+                        }) { Text(UiText.text("credentials.generateKey")) }
+                        if (key.isNotEmpty()) TextButton(enabled = !busy, contentPadding = CompactButtonPadding, onClick = { key = "" }) {
+                            Text(UiText.text("credentials.noKey"))
+                        }
+                        if (create) {
+                            Spacer(Modifier.weight(1f))
+                            val state = UiText.text(if (advanced) "a11y.expanded" else "a11y.collapsed")
+                            TextButton(contentPadding = CompactButtonPadding, onClick = { advanced = !advanced },
+                                modifier = Modifier.semantics { stateDescription = state }) {
+                                Text(UiText.text("credentials.kdfTitle") + if (advanced) " ▴" else " ▾")
+                            }
+                        }
+                    }
+                }
+                if (create && (advanced || parameters == null)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(memory, { if (it.length <= 10) memory = it }, label = { Text(UiText.text("credentials.memory")) }, singleLine = true, enabled = !busy, modifier = Modifier.weight(1.4f))
+                        OutlinedTextField(rounds, { if (it.length <= 10) rounds = it }, label = { Text(UiText.text("credentials.iterations")) }, singleLine = true, enabled = !busy, modifier = Modifier.weight(1f))
+                        OutlinedTextField(lanes, { if (it.length <= 10) lanes = it }, label = { Text(UiText.text("credentials.parallelism")) }, singleLine = true, enabled = !busy, modifier = Modifier.weight(1f))
+                    }
+                    HintText(UiText.text("credentials.kdfExplanation"))
+                    if (parameters == null) Text(UiText.text("credentials.kdfInvalid"), color = MaterialTheme.colors.error)
+                }
+                Button(enabled = ready, onClick = { submit() }, modifier = Modifier.fillMaxWidth().height(44.dp)) {
+                    if (!create) ButtonIcon(KeyrookIcons.Lock)
+                    Text(UiText.text(if (create) "credentials.create" else "credentials.unlock"))
+                }
+                HintText(UiText.text("credentials.recoveryWarning"))
+            }
         }
-        OutlinedTextField(path, { path = it }, label = { Text(UiText.text("credentials.vaultFile")) }, singleLine = true,
-            enabled = !busy, modifier = submitting)
-        TextButton(enabled = !busy, onClick = { chooseFile(create)?.let { path = it.toString() } }) { Text(UiText.text("credentials.selectFile")) }
-        OutlinedTextField(key, { key = it }, label = { Text(UiText.text("credentials.optionalKey")) }, singleLine = true,
-            enabled = !busy, modifier = submitting)
-        Row {
-            TextButton(enabled = !busy, onClick = { chooseKeyFile()?.let { key = it.toString() } }) { Text(UiText.text("credentials.selectKey")) }
-            TextButton(enabled = !busy, onClick = {
-                generateKey { target -> key = target.toString() }
-            }) { Text(UiText.text("credentials.generateKey")) }
-            TextButton(enabled = !busy && key.isNotEmpty(), onClick = { key = "" }) { Text(UiText.text("credentials.noKey")) }
-        }
-        OutlinedTextField(password, { if (it.length <= 1024) password = it }, label = { Text(UiText.text("credentials.password")) }, singleLine = true,
-            enabled = !busy, visualTransformation = PasswordVisualTransformation(), modifier = submitting)
-        if (create) OutlinedTextField(confirmation, { if (it.length <= 1024) confirmation = it }, label = { Text(UiText.text("credentials.repeatPassword")) },
-            singleLine = true, enabled = !busy, visualTransformation = PasswordVisualTransformation(), modifier = submitting,
-            isError = confirmation.isNotEmpty() && password != confirmation)
-        if (create && confirmation.isNotEmpty() && password != confirmation)
-            Text(UiText.text("dialog.passwordMismatch"), color = MaterialTheme.colors.error, style = MaterialTheme.typography.caption)
-        if (create) {
-            Text(UiText.text("credentials.kdfTitle"))
-            OutlinedTextField(memory, { if (it.length <= 10) memory = it }, label = { Text(UiText.text("credentials.memory")) }, singleLine = true, enabled = !busy)
-            OutlinedTextField(rounds, { if (it.length <= 10) rounds = it }, label = { Text(UiText.text("credentials.iterations")) }, singleLine = true, enabled = !busy)
-            OutlinedTextField(lanes, { if (it.length <= 10) lanes = it }, label = { Text(UiText.text("credentials.parallelism")) }, singleLine = true, enabled = !busy)
-            Text(UiText.text("credentials.kdfExplanation"))
-            if (parameters == null) Text(UiText.text("credentials.kdfInvalid"), color = MaterialTheme.colors.error)
-        }
-        Text(UiText.text("credentials.recoveryWarning"))
-        Button(enabled = ready, onClick = { submit() }) { Text(UiText.text(if (create) "credentials.create" else "credentials.unlock")) }
     }
 }
