@@ -2,12 +2,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package app.keyrook.app
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.ripple.RippleAlpha
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlin.math.pow
 
 /**
@@ -92,10 +96,57 @@ internal fun blend(foreground: Long, background: Long, alpha: Float): Long {
     return 0xFF000000 or channel(16) or channel(8) or channel(0)
 }
 
-/** The standard Material colours by default; [ContrastMode.HIGH] uses [HighContrastPalette] in the same brightness. */
+/**
+ * The standard colours, derived from the application icon: its petrol blue as the accent and its cream on the window
+ * bar. Every text combination reaches at least 4.5:1 (WCAG AA); amber marks entries that expire soon.
+ */
+internal object BrandPalette {
+    val LIGHT = ContrastColors(
+        primary = 0xFF1D4E6B, primaryVariant = 0xFF143A51, secondary = 0xFF8A5300, secondaryVariant = 0xFF6E4200,
+        background = 0xFFF3F5F7, surface = 0xFFFFFFFF, error = 0xFFB3261E,
+        onPrimary = 0xFFFFFFFF, onSecondary = 0xFFFFFFFF, onBackground = 0xFF17232D, onSurface = 0xFF17232D, onError = 0xFFFFFFFF,
+    )
+    val DARK = ContrastColors(
+        primary = 0xFF8CC4E0, primaryVariant = 0xFF6AAED0, secondary = 0xFFF0B660, secondaryVariant = 0xFFE09A30,
+        background = 0xFF0E1820, surface = 0xFF16232D, error = 0xFFF2B8B5,
+        onPrimary = 0xFF08222F, onSecondary = 0xFF2A1800, onBackground = 0xFFE2E8ED, onSurface = 0xFFE2E8ED, onError = 0xFF601410,
+    )
+
+    /** Window bar: the icon's petrol blue and cream in light mode, a deeper shade of it in dark mode. */
+    const val BAR_LIGHT = 0xFF1D4E6B
+    const val BAR_DARK = 0xFF0A141B
+    const val ON_BAR = 0xFFF2EFE6
+}
+
+/** Brand colours; [ContrastMode.HIGH] uses [HighContrastPalette] in the same brightness. */
 internal fun appColors(dark: Boolean, contrast: ContrastMode): Colors = when (contrast) {
-    ContrastMode.STANDARD -> if (dark) darkColors() else lightColors()
+    ContrastMode.STANDARD -> (if (dark) BrandPalette.DARK else BrandPalette.LIGHT).toMaterial(dark)
     ContrastMode.HIGH -> (if (dark) HighContrastPalette.DARK else HighContrastPalette.LIGHT).toMaterial(dark)
+}
+
+/** Colours outside the Material set: the window bar, and the subtle outline of cards and sections. */
+internal data class ChromeColors(val bar: Color, val onBar: Color, val outline: Color, val highContrast: Boolean = false)
+
+internal fun chromeColors(dark: Boolean, contrast: ContrastMode, colors: Colors): ChromeColors = when (contrast) {
+    // High contrast keeps the pure palette everywhere, including the bar.
+    ContrastMode.HIGH -> ChromeColors(colors.background, colors.onBackground, colors.onSurface, highContrast = true)
+    ContrastMode.STANDARD -> ChromeColors(Color(if (dark) BrandPalette.BAR_DARK else BrandPalette.BAR_LIGHT),
+        Color(BrandPalette.ON_BAR), colors.onSurface.copy(alpha = if (dark) 0.16f else 0.12f))
+}
+
+internal val LocalChrome = staticCompositionLocalOf { ChromeColors(Color.Black, Color.White, Color.Gray) }
+
+private val appShapes = Shapes(small = RoundedCornerShape(6.dp), medium = RoundedCornerShape(10.dp), large = RoundedCornerShape(12.dp))
+
+private fun appTypography(): Typography = Typography().let { base ->
+    base.copy(
+        h4 = base.h4.copy(fontSize = 28.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.sp),
+        h5 = base.h5.copy(fontSize = 22.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.sp),
+        h6 = base.h6.copy(fontSize = 17.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.sp),
+        subtitle1 = base.subtitle1.copy(fontWeight = FontWeight.Medium),
+        subtitle2 = base.subtitle2.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.4.sp),
+        button = base.button.copy(fontWeight = FontWeight.SemiBold, letterSpacing = 0.2.sp),
+    )
 }
 
 /**
@@ -113,8 +164,9 @@ internal fun scaledDensity(base: Density, scalePercent: Int): Density =
 internal fun KeyrookTheme(dark: Boolean, contrast: ContrastMode, scalePercent: Int, content: @Composable () -> Unit) {
     val base = LocalDensity.current
     val density = remember(base, scalePercent) { scaledDensity(base, scalePercent) }
-    CompositionLocalProvider(LocalDensity provides density) {
-        MaterialTheme(colors = appColors(dark, contrast)) {
+    val colors = appColors(dark, contrast)
+    CompositionLocalProvider(LocalDensity provides density, LocalChrome provides chromeColors(dark, contrast, colors)) {
+        MaterialTheme(colors = colors, typography = remember { appTypography() }, shapes = appShapes) {
             if (contrast == ContrastMode.HIGH) {
                 CompositionLocalProvider(LocalRippleConfiguration provides RippleConfiguration(rippleAlpha = HighContrastPalette.rippleAlpha),
                     content = content)

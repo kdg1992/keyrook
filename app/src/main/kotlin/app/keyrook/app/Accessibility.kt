@@ -26,11 +26,11 @@ internal fun LabeledCheckbox(checked: Boolean, label: String, enabled: Boolean =
     val control = Modifier.toggleable(value = checked, enabled = enabled, role = Role.Checkbox, onValueChange = onCheckedChange)
         .then(if (description != null) Modifier.describedAs(description) else Modifier)
     if (stacked) Column(control, horizontalAlignment = Alignment.CenterHorizontally) {
-        Checkbox(checked, onCheckedChange = null, enabled = enabled)
+        Checkbox(checked, onCheckedChange = null, enabled = enabled, colors = brandCheckboxColors())
         Text(label)
     } else Row(control, verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(checked, onCheckedChange = null, enabled = enabled)
-        Text(label, Modifier.padding(end = 8.dp))
+        Checkbox(checked, onCheckedChange = null, enabled = enabled, colors = brandCheckboxColors())
+        Text(label, Modifier.padding(start = 4.dp, end = 8.dp))
     }
 }
 
@@ -39,8 +39,8 @@ internal fun LabeledCheckbox(checked: Boolean, label: String, enabled: Boolean =
 internal fun LabeledRadioButton(selected: Boolean, label: String, enabled: Boolean = true, onClick: () -> Unit) {
     Row(Modifier.selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = onClick),
         verticalAlignment = Alignment.CenterVertically) {
-        RadioButton(selected = selected, onClick = null, enabled = enabled)
-        Text(label, Modifier.padding(end = 8.dp))
+        RadioButton(selected = selected, onClick = null, enabled = enabled, colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colors.primary))
+        Text(label, Modifier.padding(start = 4.dp, end = 8.dp))
     }
 }
 
@@ -59,3 +59,8 @@ internal fun Modifier.revealSemantics(label: String, shown: Boolean): Modifier {
 
 /** A masked value is announced as hidden instead of as a row of bullet characters. */
 internal fun Modifier.maskedValueSemantics(label: String): Modifier = describedAs(UiText.text("a11y.maskedValue", label))
+
+/** Checked boxes use the accent colour; the Material default would take the warning amber. */
+@Composable
+internal fun brandCheckboxColors() = CheckboxDefaults.colors(checkedColor = MaterialTheme.colors.primary,
+    checkmarkColor = MaterialTheme.colors.onPrimary)

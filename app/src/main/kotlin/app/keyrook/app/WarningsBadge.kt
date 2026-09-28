@@ -57,16 +57,17 @@ internal fun vaultWarnings(vault: Vault?, controller: VaultController): List<Ent
 internal fun WarningChip(text: String, severe: Boolean) {
     val colors = MaterialTheme.colors
     Surface(color = if (severe) colors.error else colors.secondary,
-        contentColor = if (severe) colors.onError else colors.onSecondary, shape = RoundedCornerShape(4.dp)) {
-        Text(text, style = MaterialTheme.typography.caption, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+        contentColor = if (severe) colors.onError else colors.onSecondary, shape = RoundedCornerShape(50)) {
+        Text(text, style = MaterialTheme.typography.caption, maxLines = 1, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
     }
 }
 
 /** Header button of the warning list with the number of affected entries per reason. */
 @Composable
-internal fun WarningsBadge(findings: List<EntryHealth>?, onClick: () -> Unit) {
+internal fun WarningsBadge(findings: List<EntryHealth>?, contentColor: androidx.compose.ui.graphics.Color = MaterialTheme.colors.primary,
+                            onClick: () -> Unit) {
     val counts = remember(findings) { findings?.let(::warningCounts) }
-    TextButton(onClick = onClick) {
+    TextButton(onClick = onClick, colors = ButtonDefaults.textButtonColors(contentColor = contentColor)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(UiText.text("health.list"))
             when {

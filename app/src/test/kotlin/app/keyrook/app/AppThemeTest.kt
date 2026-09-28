@@ -37,6 +37,34 @@ class AppThemeTest {
         }
     }
 
+    @Test fun `every text colour of the brand palettes reaches AA contrast`() {
+        mapOf("light" to BrandPalette.LIGHT, "dark" to BrandPalette.DARK).forEach { (name, palette) ->
+            palette.textPairs().forEach { (foreground, background) ->
+                val ratio = contrastRatio(foreground, background)
+                assertTrue(ratio >= 4.5, "$name ${foreground.toString(16)} on ${background.toString(16)}: $ratio")
+            }
+            // Hints and field labels are drawn with reduced opacity and still pass AA.
+            listOf(palette.onSurface to palette.surface, palette.onBackground to palette.background).forEach { (text, surface) ->
+                assertTrue(contrastRatio(blend(text, surface, HINT_TEXT_ALPHA), surface) >= 4.5, "$name hint text")
+            }
+        }
+        listOf(BrandPalette.BAR_LIGHT, BrandPalette.BAR_DARK).forEach { bar ->
+            assertTrue(contrastRatio(BrandPalette.ON_BAR, bar) >= 4.5, "window bar ${bar.toString(16)}")
+        }
+        EntryType.entries.forEach { type ->
+            assertTrue(contrastRatio(0xFFFFFFFF, typeAvatarColor(type)) >= 4.5, "type symbol $type")
+        }
+    }
+
+    @Test fun `high contrast keeps the window bar in the palette`() {
+        val colors = appColors(dark = true, ContrastMode.HIGH)
+        val chrome = chromeColors(dark = true, ContrastMode.HIGH, colors)
+        assertEquals(colors.background, chrome.bar)
+        assertEquals(colors.onBackground, chrome.onBar)
+        assertTrue(chrome.highContrast)
+        assertFalse(chromeColors(dark = false, ContrastMode.STANDARD, appColors(false, ContrastMode.STANDARD)).highContrast)
+    }
+
     @Test fun `focused controls stay readable and visibly different from unfocused ones`() {
         palettes.forEach { (name, palette) ->
             // Text buttons tint with their text colour, filled buttons with their content colour over the fill.

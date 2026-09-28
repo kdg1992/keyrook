@@ -39,7 +39,7 @@ not match is pointed out below the field.
 ### Entry selection
 
 The entry list always has a selected entry while it shows any: it is marked by a
-colored border, a tint and a raised card, and is reported as selected to
+colored border and a tint, and is reported as selected to
 accessibility tools. The border is thicker while the list has keyboard focus.
 Clicking a card or moving the focus into one of its buttons selects it. The list
 receives the focus when it is shown, so ↑/↓ work right after unlocking or
@@ -71,8 +71,10 @@ above). Locking discards them together with the displayed vault.
 
 ## Layout and entry details
 
-After unlocking, the header shows the warning summary (see
-[Warning list](#warning-list)). Above the entry list, **Daten** (**Data**)
+The window bar in the colours of the application icon (petrol blue and cream)
+carries the name, the warning summary after unlocking (see
+[Warning list](#warning-list)), the appearance switch, **Einstellungen**
+(**Settings**), **Info** and **Sperren**. Next to the search field, **Daten** (**Data**)
 opens a menu with every backup, transfer and account action, grouped as
 backups (**Backup-Ordner**, **Backup-Status**, **Jetzt sichern**, **Backups
 deaktivieren**, **Integrität prüfen**, **Backup wiederherstellen**), transfer
@@ -84,10 +86,24 @@ open it with Enter, move between actions with ↑/↓, run one with Enter or clo
 the menu with Escape. **Kunden, Projekte und Vorlagen** next to it shows the customers,
 projects and templates section above the list until it is closed again.
 
+Below the search, **Aktive Einträge** and **Papierkorb** switch between the
+active list and the trash (with its entry count). The chips **Favoriten**,
+**Zuletzt verwendet** and **Verborgene Felder durchsuchen** toggle those
+options; screen readers read their full descriptions. **Filter** shows the
+drop-downs for type, customer, project, tag, expiry and sort order; it stays
+open while any of them differs from its default and shows how many do.
+
+Each card shows a coloured type symbol, the title, type, customer and project,
+visible username and address, expiry, warning and tag badges, and the quick
+copy/open buttons. **Bearbeiten** (or **Wiederherstellen** in the trash) sits
+beside the text; the remaining actions are in the card menu **⋮** (announced as
+*Weitere Aktionen für „Titel“*): **Duplizieren**, **Als Vorlage speichern** and
+**In den Papierkorb**, or **Endgültig löschen** in the trash.
+
 When the content area is at least 900 dp wide, the entry list and the details
 of the selected entry are shown side by side; narrower windows show the list
 alone, as before, and entries are read through **Bearbeiten**. In the side-by-side
-layout, the list's cards place their buttons below the text.
+layout, the cards also move **Bearbeiten** or **Wiederherstellen** into their menu.
 
 The detail view is read-only. It shows title, type, customer and project, tags,
 creation and modification time, the expiry badge, password warnings, ports,
@@ -251,7 +267,7 @@ an existing one.
 
 Full-text search includes current titles, tags, notes, field names and visible values, customer/project names and expiry dates. Space-separated terms must all match the same record, without case sensitivity. **Verborgene Felder durchsuchen** explicitly includes hidden current values; matching values are never exposed in result rows. History is excluded. Searches run in the background over an independently owned snapshot, are canceled when replaced or locked, and do not create a persistent plaintext index. Queries are limited to 256 characters.
 
-Filter the list by type, customer, project, tag and expiry, with **Nur Favoriten** (**Favorites only**) to [favorites](#favorites), and with **Zuletzt verwendet (diese Sitzung)** (**Recently used (this session)**) to [recently used entries](#recently-used-entries). Expiry options separate past dates, today through the next 30 days (inclusive), and records without an expiry date. Sort by title, latest modification or earliest expiry; undated records appear last in expiry order. Customer selection limits compatible projects. **Filter zurücksetzen** restores the active list, title order and default filters, and clears the search and hidden-field search option.
+Filter the list by type, customer, project, tag and expiry, with **Favoriten** (**Favorites**) to [favorites](#favorites), and with **Zuletzt verwendet** (**Recently used**, this session only) to [recently used entries](#recently-used-entries). Expiry options separate past dates, today through the next 30 days (inclusive), and records without an expiry date. Sort by title, latest modification or earliest expiry; undated records appear last in expiry order. Customer selection limits compatible projects. **Filter zurücksetzen** restores the active list, title order and default filters, and clears the search and hidden-field search option.
 
 The password generator supports 12–256 characters and selectable character classes. It uses `SecureRandom` with rejection sampling, so each selected class occurs at least once and every such password is equally likely. Three presets are offered: **Standard** (all symbols `!@#$%^&*()-_=+[]{}:,.?`, 12–256 characters), **Shell/FTP-sicher** (**Shell/FTP-safe**; symbols limited to `-`, `_` and `.`, so quotes, backslash, `$`, backtick, `!`, `&`, `;`, `|`, `<`, `>`, brackets and braces, `*`, `?`, `~`, `#`, `%`, space, `=`, `+`, `/`, `:`, `@`, `,` and `^` never occur and the password can be pasted into shells, URLs, FTP/SFTP clients and configuration files without quoting) and **Max. 16 Zeichen** (**Max 16 characters**; all symbols, 12–16 characters, for legacy panels that truncate or reject longer passwords). Switching to a preset whose maximum is below the entered length sets the length to that maximum; longer lengths are refused rather than cut. **Keine verwechselbaren Zeichen** (**No ambiguous characters**) combines with every preset and leaves out `0 O o 1 l I | 5 S 2 Z 8 B`, which reduces the character set and therefore the strength per character; choose a longer length where the target allows it. The last successfully used preset, length, character classes and ambiguity choice are remembered in the settings file. Passphrase generation accepts a user-supplied reviewed UTF-8 wordlist, optionally with a BOM, up to 6.5 MB. It must contain 1024–65536 distinct letter-only words of 2–32 characters, one per line; surrounding whitespace and blank lines are ignored. Choose hyphens or spaces between generated words. The chosen word count must provide at least 60 bits of selection entropy: at least six words for lists below 4096 words, otherwise at least five. Invalid lists and insufficient word counts have separate messages. No small demonstration wordlist is bundled. After a passphrase was generated from a chosen list, its path, the word count and the separator are remembered in the settings file, and **Passphrase mit gespeicherter Wortliste erzeugen** (**Generate passphrase with remembered word list**) reads and checks the list again with the same rules and limits; the full path is shown above it. The list content is never stored. If the remembered file is missing, a symbolic link or larger than 6.5 MB at start, the generator silently offers the normal file selection instead; if it fails the checks when used, a short notice asks for a word list and the path is forgotten. **Wortliste vergessen** (**Forget word list**) removes the path.
 
@@ -371,7 +387,7 @@ discards them. Values are never read for marking.
 
 The star (☆/★) before the title of an active list card and in the detail view
 marks an entry as a favorite or removes the mark; screen readers announce it as
-**Als Favorit markieren** or **Favorit entfernen**. **Nur Favoriten** above the
+**Als Favorit markieren** or **Favorit entfernen**. **Favoriten** above the
 list shows only favorites, also in the trash, where the star is not offered.
 Several entries can be marked at once with the [bulk actions](#bulk-actions).
 Changing the mark is saved like any other change: it takes one vault revision
@@ -398,7 +414,7 @@ other values reject the import). KeePass CSV imports no favorites.
 
 ### Recently used entries
 
-**Zuletzt verwendet (diese Sitzung)** (**Recently used (this session)**) above
+**Zuletzt verwendet** (**Recently used**) above
 the list shows the up to ten entries most recently used in this session, the
 latest first, instead of the chosen sort order. An entry counts as used when it
 is opened in the editor (**Bearbeiten**, Enter, Ctrl/⌘ + E), when one of its
@@ -618,7 +634,7 @@ What exactly is sent and what the service can learn is described in
 
 ## Locking and current boundaries
 
-Use **Sicherheit** (**Security** in English) to choose the appearance (follow system, light or dark), the contrast and interface scale (see [Accessibility](#accessibility)), the language (follow system, German or English), the inactivity deadline (default five minutes), when the window locks, clipboard expiry (default 20 seconds) and whether to check for updates on start (default off; see [Updates](#updates)). These preferences are saved and survive restarts.
+Use **Einstellungen** (**Settings** in English) in the window bar to choose the appearance (follow system, light or dark), the contrast and interface scale (see [Accessibility](#accessibility)), the language (follow system, German or English), the inactivity deadline (default five minutes), when the window locks, clipboard expiry (default 20 seconds) and whether to check for updates on start (default off; see [Updates](#updates)). These preferences are saved and survive restarts.
 
 **Sperren, wenn das Fenster…** (**Lock when the window…**) controls locking on window events and applies immediately:
 
@@ -655,7 +671,7 @@ the check failed. Development builds report that the check was skipped and
 send nothing. The release page opens in the system browser only after that
 click.
 
-Under **Sicherheit**, **Beim Start automatisch nach Updates suchen** (**Check
+Under **Einstellungen**, **Beim Start automatisch nach Updates suchen** (**Check
 for updates on start**) is off by default. When enabled, the same request is
 sent once from the next start on, in the background and independently of
 whether a vault is open; a notice appears only if a newer version exists and can
@@ -695,7 +711,7 @@ readable by earlier builds, which then fall back to their defaults.
 
 ## Accessibility
 
-Under **Sicherheit** (**Security**), two display preferences apply immediately
+Under **Einstellungen** (**Settings**), two display preferences apply immediately
 to the main window and every dialog drawn in it, and are saved like the other
 settings:
 
@@ -710,7 +726,8 @@ settings:
   or dark appearance with black on white or white on black, a dark-blue or
   yellow accent and dark red or light red for errors. Every text colour
   reaches at least 7:1 against its background (WCAG AAA), which a unit test
-  checks from the palette. Keyboard focus and pressed controls get a stronger
+  checks from the palette; the standard colours reach at least 4.5:1 (WCAG AA),
+  checked the same way. Keyboard focus and pressed controls get a stronger
   tint than in the standard colours, and focused text fields keep their thick
   accent-coloured border. Disabled controls are drawn faded in both modes.
 
@@ -733,7 +750,8 @@ and Orca on Linux. What they announce:
   per-field **Verborgen** and **URL-Feld** options in the editor name their
   field.
 - The theme button in the header names the appearance it switches to, the
-  **Sicherheit** button announces whether the settings are expanded, and the
+  **Filter** button and the Argon2 section of the create form announce whether
+  they are expanded, and the
   application name, entry title and editor and unlock headings are reported as
   headings. Error and notice messages under the header are marked as live
   regions where the platform bridge supports it.
@@ -745,6 +763,6 @@ and Orca on Linux. What they announce:
 - Every text field has a visible label that is also its accessible name. List
   cards report their selection (see [Entry selection](#entry-selection)).
 
-The focus order follows the visual order: header, settings, messages, then the
+The focus order follows the visual order: window bar, messages, then the
 unlock form, editor or entry list with its detail view. Dialogs take the focus
 when they open.

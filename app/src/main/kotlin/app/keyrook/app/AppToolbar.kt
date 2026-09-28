@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 /**
@@ -17,7 +18,10 @@ internal fun AppToolbar(actions: List<List<DataAction>>, busy: Boolean, organize
     var menu by remember { mutableStateOf(false) }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         Box {
-            OutlinedButton(enabled = !busy, onClick = { menu = true }) { Text(UiText.text("toolbar.data")) }
+            OutlinedButton(enabled = !busy, onClick = { menu = true }) {
+                Text(UiText.text("toolbar.data")); Spacer(Modifier.width(4.dp))
+                Icon(KeyrookIcons.ChevronDown, contentDescription = null, modifier = Modifier.size(16.dp))
+            }
             DropdownMenu(menu, onDismissRequest = { menu = false }) {
                 actions.forEachIndexed { index, group ->
                     if (index > 0) Divider()

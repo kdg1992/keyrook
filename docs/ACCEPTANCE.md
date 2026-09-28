@@ -160,7 +160,7 @@ Linux:
 3. Expected: the unlock form appears; **About** shows version `<version>`; no
    settings file exists yet, because it is written on the first preference
    change or successful unlock.
-4. Open **Security** and change **Appearance** to **Dark**.
+4. Open **Settings** in the window bar and change **Appearance** to **Dark**.
 5. Expected: `settings.json` now exists in the directory from step 1.
 6. Check permissions:
    - Windows: `icacls "$env:APPDATA\Keyrook\settings.json"` lists only the
@@ -398,8 +398,8 @@ Do not touch the mouse during steps 1–9.
    the trash.
 8. Tab to **Data**, open it with Enter, move with ↑/↓, close with Escape.
 9. Press Ctrl+L. Expected: **Lock check** passes.
-10. Language: in **Security**, switch **Language** to **Deutsch**. Expected:
-    labels change immediately (for example **Sperren**, **Sicherheit**),
+10. Language: in **Settings**, switch **Language** to **Deutsch**. Expected:
+    labels change immediately (for example **Sperren**, **Einstellungen**),
     the vault stays unlocked, and entry titles and values are unchanged.
     Switch to **English**, restart, and confirm English is kept. Standard file
     chooser buttons follow the operating-system language, not this choice.
@@ -430,9 +430,9 @@ VoiceOver, LNX-G with Orca.
 4. Unlock, open an entry in the editor, Tab to the **Hidden** option of the
    password field. Expected: it is announced as a check box named
    *Password: Hidden* with its checked state; Space toggles it.
-5. Tab to the header's appearance button and **Security**. Expected: the
-   appearance button names the appearance it switches to, and **Security**
-   announces *collapsed* or *expanded*.
+5. Tab to the window bar's appearance button, then to **Filters** above the
+   list. Expected: the appearance button names the appearance it switches to,
+   and **Filters** announces *collapsed* or *expanded*.
 6. Tab through the entry list. Expected: each card's check box is announced as
    *Select* followed by the entry title, and the star as *<title>: Mark as
    favorite* or *<title>: Remove from favorites* with its state. Mark two
@@ -444,7 +444,7 @@ VoiceOver, LNX-G with Orca.
 On WIN and one Linux system, with the operating-system scaling at 100 % and
 again at 150 % (Windows display scale, GNOME *Scale*):
 
-1. In **Security**, set **Interface scale** to **150%**. Expected: text,
+1. In **Settings**, set **Interface scale** to **150%**. Expected: text,
    buttons and spacing grow at once without restarting or locking; the window
    grows to at least 1080 × 780 dp unless the screen is smaller, in which case
    it fits the screen.
@@ -460,8 +460,8 @@ again at 150 % (Windows display scale, GNOME *Scale*):
 
 On each platform, in both light and dark appearance:
 
-1. In **Security**, set **Contrast** to **High contrast**. Expected: the
-   background becomes pure white (light) or black (dark), text is black or
+1. In **Settings**, set **Contrast** to **High contrast**. Expected: the
+   background, including the window bar, becomes pure white (light) or black (dark), text is black or
    white, text buttons are dark blue (light) or yellow (dark), and warning
    chips and error messages remain readable.
 2. Move through the unlock form or entry list with Tab. Expected: the focused
