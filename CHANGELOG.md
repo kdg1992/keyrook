@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/kdg1992/keyrook/compare/v1.0.0...v1.1.0) (2026-09-28)
+
+
+### Features
+
+* **desktop:** redesign the interface in the brand colours ([#71](https://github.com/kdg1992/keyrook/issues/71)) ([b4e6021](https://github.com/kdg1992/keyrook/commit/b4e60213055af21f98d19321851a61a5dbd4e9e9))
+
 ## [1.0.0](https://github.com/kdg1992/keyrook/compare/v0.8.1...v1.0.0) (2026-09-25)
 
 
