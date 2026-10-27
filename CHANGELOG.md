@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.2.0](https://github.com/kdg1992/keyrook/compare/v1.1.0...v1.2.0) (2026-10-27)
+
+
+### Features
+
+* **desktop:** offer longer lock deadlines and remember key files on request ([#80](https://github.com/kdg1992/keyrook/issues/80)) ([0463c24](https://github.com/kdg1992/keyrook/commit/0463c247f3860cb5a092e4c48b8e9cf3a4585ef7))
+
+
+### Bug Fixes
+
+* **deps:** update Compose, Skiko, Kotlin, serialization, SSHD and Gradle ([#81](https://github.com/kdg1992/keyrook/issues/81)) ([55bacce](https://github.com/kdg1992/keyrook/commit/55bacce80a02086a13ccb1c08e31ea09f4ee53aa))
+* **deps:** update the bundled JDK to Temurin 25.0.5+8 ([#83](https://github.com/kdg1992/keyrook/issues/83)) ([274cc05](https://github.com/kdg1992/keyrook/commit/274cc056bb629b4be54b88e4e5f9e70fce162cd5))
+
 ## [1.1.0](https://github.com/kdg1992/keyrook/compare/v1.0.0...v1.1.0) (2026-09-28)
 
 
