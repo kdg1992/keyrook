@@ -1,0 +1,70 @@
+{
+  "status": "source-and-ci-runtime-evidence-not-a-complete-redistribution-review",
+  "metadataSource": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jdk-sources_25.0.5_8.tar.gz.json",
+  "release": "jdk-25.0.5+8",
+  "sourceArchive": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jdk-sources_25.0.5_8.tar.gz",
+  "sourceArchiveSha256": "f331d870d998f9c144c361c220960f8ad2de169dc1b1c4dc4145291c501c2341",
+  "sourceArchiveDownloaded": true,
+  "sourceCommit": "https://github.com/adoptium/jdk25u/commit/7ec19fb1eda7e42498b7ee4ebde29f77aa961a1c",
+  "buildCommit": "https://github.com/adoptium/temurin-build/commit/1cf43d7a3e77886bfea7d550a902e151a87d724d",
+  "files": [
+    {
+      "file": "LICENSE.txt",
+      "source": "https://raw.githubusercontent.com/adoptium/jdk25u/7ec19fb1eda7e42498b7ee4ebde29f77aa961a1c/LICENSE",
+      "sha256": "4b9abebc4338048a7c2dc184e9f800deb349366bdf28eb23c2677a77b4c87726"
+    },
+    {
+      "file": "ASSEMBLY_EXCEPTION.txt",
+      "source": "https://raw.githubusercontent.com/adoptium/jdk25u/7ec19fb1eda7e42498b7ee4ebde29f77aa961a1c/ASSEMBLY_EXCEPTION",
+      "sha256": "75292f03bf23d3db7c985aecc191029b93883200721ed23ed34a2e601463df33"
+    },
+    {
+      "file": "ADDITIONAL_LICENSE_INFO.txt",
+      "source": "https://raw.githubusercontent.com/adoptium/jdk25u/7ec19fb1eda7e42498b7ee4ebde29f77aa961a1c/ADDITIONAL_LICENSE_INFO",
+      "sha256": "a69bce275ba7a3570af6579cb0f55682cd75fedfcd49e0e8e9022270c447c916"
+    }
+  ],
+  "sourceArchiveHashVerified": true,
+  "rootNoticesMatchSourceArchive": true,
+  "runtimeArchives": [
+    {
+      "target": "windows-x64",
+      "jdkVersion": "25.0.5+8-LTS",
+      "url": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jdk_x64_windows_hotspot_25.0.5_8.zip",
+      "sha256": "636bdc13dc649ddc7d5921c5c7d23cca6e44fd19d662b45cc9c02135a6c96c42",
+      "checksumSource": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jdk_x64_windows_hotspot_25.0.5_8.zip.sha256.txt",
+      "sbom": {
+        "file": "OpenJDK25U-sbom_x64_windows_hotspot_25.0.5_8.json",
+        "sha256": "f1b79aec0328facf6690609485baa19eab3390a9f6fe124dda64158c2467102a",
+        "metadataFile": "OpenJDK25U-sbom_x64_windows_hotspot_25.0.5_8-metadata.json",
+        "metadataSha256": "1043920e4aa2f1938491685a613faf8dbc2aebac35a8a74cbce4d94ddad56a10"
+      }
+    },
+    {
+      "target": "linux-x64",
+      "jdkVersion": "25.0.5+8-LTS",
+      "url": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jdk_x64_linux_hotspot_25.0.5_8.tar.gz",
+      "sha256": "68982529869257d0ee6b824ec5aa270ff8b118bb438670da0b97ebdab178d7fb",
+      "checksumSource": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jdk_x64_linux_hotspot_25.0.5_8.tar.gz.sha256.txt",
+      "sbom": {
+        "file": "OpenJDK25U-sbom_x64_linux_hotspot_25.0.5_8.json",
+        "sha256": "881f8e5cd7b9640d68b1d688933fc5ef32c49633c891406e8c4a5344208e3975",
+        "metadataFile": "OpenJDK25U-sbom_x64_linux_hotspot_25.0.5_8-metadata.json",
+        "metadataSha256": "5f18b1ca1731cea8cd3e45ad185e233f8118b052c79da0b5feb0c0d3877eb62d"
+      }
+    },
+    {
+      "target": "macos-arm64",
+      "jdkVersion": "25.0.5+8-LTS",
+      "url": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jdk_aarch64_mac_hotspot_25.0.5_8.tar.gz",
+      "sha256": "36dc14d797aaff6d89aab302cd053fdba6207dfdcf772052fa7b023a94b0e857",
+      "checksumSource": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jdk_aarch64_mac_hotspot_25.0.5_8.tar.gz.sha256.txt",
+      "sbom": {
+        "file": "OpenJDK25U-sbom_aarch64_mac_hotspot_25.0.5_8.json",
+        "sha256": "19b360b610e970790e96d656a7c75fd3904f8182ae0a5e72e9e4db38066a8122",
+        "metadataFile": "OpenJDK25U-sbom_aarch64_mac_hotspot_25.0.5_8-metadata.json",
+        "metadataSha256": "347f8ab4130e3b6b04370f8fe1b7ec8838c8151b22162e689ef60cd0300d6dd0"
+      }
+    }
+  ]
+}

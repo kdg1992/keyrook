@@ -138,3 +138,20 @@ the official platform JDK archives; the per-platform `jdk.legal.sha256` values
 are retained with the CI evidence. This is not a comparison of every installed
 executable, nor a complete redistribution approval. A locally installed Oracle
 JDK is not evidence for a Temurin package.
+
+### Temurin 25.0.5+8
+
+The October 2026 security update `jdk-25.0.5+8` replaces 25.0.4.1+1 in release
+packaging. [Its provenance](temurin-25.0.5+8/provenance.json) records the source
+archive (downloaded, matching the published SHA-256 and the release metadata),
+source commit `7ec19fb1eda7e42498b7ee4ebde29f77aa961a1c` and the build-recipe
+commit, and under `runtimeArchives` the official Windows x64, Linux x64 and
+macOS ARM64 JDK archives with their published SHA-256, which the release workflow
+downloads and verifies. All three archives were downloaded and match those
+checksums. The root LICENSE, ASSEMBLY_EXCEPTION and ADDITIONAL_LICENSE_INFO at the
+source commit, in the source archive and of 25.0.4.1+1 are byte-identical. The
+`legal/` directories of the three official archives, with symbolic links
+resolved, produce exactly the same per-file manifests and `jdk.legal.sha256`
+values as 25.0.4.1+1, so the retained notices in
+[ci-2026-09-23/jdk-notices](ci-2026-09-23/jdk-notices/) still apply. The platform
+SBOMs and their metadata are retained in that directory and name `25.0.5+8-LTS`.

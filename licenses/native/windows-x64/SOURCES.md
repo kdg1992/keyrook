@@ -1,7 +1,7 @@
 # Native sources and review: Windows x64
 
 Reviewed on 2026-10-27 by the Keyrook copyright holder for release packaging
-with Eclipse Temurin `25.0.4.1+1-LTS`, Compose Multiplatform 1.12.2 and
+with Eclipse Temurin `25.0.5+8-LTS`, Compose Multiplatform 1.12.2 and
 Gradle 9.8.2. The evidence comes from the
 [CI collection run](https://github.com/kdg1992/keyrook/actions/runs/40511327420)
 retained in [ci-2026-10-27](../../native-evidence/ci-2026-10-27/README.md).
@@ -57,7 +57,7 @@ Skiko components nevertheless applies to all targets.
 
 ## Bundled JDK
 
-- Eclipse Temurin `25.0.4.1+1-LTS` (Eclipse Adoptium), GPL-2.0 with Classpath
+- Eclipse Temurin `25.0.5+8-LTS` (Eclipse Adoptium), GPL-2.0 with Classpath
   Exception and the terms in its `legal/` directory.
 - The legal directory fingerprint `jdk.legal.sha256` matches the official
   Temurin archive of this target; the individual files are recorded in
@@ -65,7 +65,7 @@ Skiko components nevertheless applies to all targets.
   and ship in the installer under `licenses/bundled-jdk/`.
 - Corresponding source: each GitHub release publishes the official Temurin
   source archive whose SHA-256 is recorded in the
-  [Temurin provenance](../../native-evidence/temurin-25.0.4.1+1/provenance.json).
+  [Temurin provenance](../../native-evidence/temurin-25.0.5+8/provenance.json).
   The release workflow refuses publication if this archive is missing or differs.
 
 ## Keyrook
