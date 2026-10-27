@@ -1,0 +1,60 @@
+{
+  "status": "verified-evidence-not-redistribution-approval",
+  "runUrl": "https://github.com/kdg1992/keyrook/actions/runs/40511327420",
+  "commit": "d225436c7edce1c2316d1408129baf7305b70f85",
+  "applicationVersion": "1.1.0",
+  "composeVersion": "1.12.2",
+  "gradleVersion": "9.8.2",
+  "skikoEvidence": "../skiko-0.150.2/artifacts.json",
+  "jdkNotices": "../ci-2026-09-23/jdk-notices/",
+  "platforms": [
+    {
+      "target": "windows-x64",
+      "runtimeArtifacts": 52,
+      "jdkVersion": "25.0.4.1+1-LTS",
+      "jdkLegalFiles": 253,
+      "jdkLegalSha256": "dd182ea73c5e9fc7228dd9f8e3e60389b330ecc2ec7a4d836461b9b81e5f81a8",
+      "jdkLegalManifestUnchangedFrom": "../ci-2026-09-23/windows-x64/jdk-legal.sha256",
+      "artifactId": 12737232038,
+      "artifactSha256": "sha256:101cd738784e62e6c7c08d2d8f57c8e6c511e30ea7504e27abe5299a65839e70",
+      "skikoRuntimeSha256": "eebad490c2828198e86e641cbd44958617867ce70f893b21852f07d0be099c0a",
+      "files": {
+        "candidate.properties": "141dd806f207b05061c3573e884cff6e501ee85e6082d487ea5be9fec4447560",
+        "runtime-artifacts.tsv": "6806d2db72fd9c030394f1e8075349ba6a19ef3ea21090a49a88ab3328f54de8",
+        "jdk-legal.sha256": "dd182ea73c5e9fc7228dd9f8e3e60389b330ecc2ec7a4d836461b9b81e5f81a8"
+      }
+    },
+    {
+      "target": "linux-x64",
+      "runtimeArtifacts": 52,
+      "jdkVersion": "25.0.4.1+1-LTS",
+      "jdkLegalFiles": 254,
+      "jdkLegalSha256": "9eba21c82a3dc3e4cf47ff555e398221afd2721939d9dcfe5838a11679304a8b",
+      "jdkLegalManifestUnchangedFrom": "../ci-2026-09-23/linux-x64/jdk-legal.sha256",
+      "artifactId": 12737960649,
+      "artifactSha256": "sha256:b12da77bb707bb76c78c8b1dd0e100bcd263acda181996bb1102f19909f97990",
+      "skikoRuntimeSha256": "c6c1f9fa37464fd0bcca6e486a6b35307b6e2436199de9d009f877121de1c5c2",
+      "files": {
+        "candidate.properties": "b9b1f3828e79a0608352da4d585fe5d8b27e56bab8c68b7a1cbb629d2ab23c31",
+        "runtime-artifacts.tsv": "c2a79cab5390d716ec75e791d1b6fe94232fe16e63a31de088f1ab2c15ff2c90",
+        "jdk-legal.sha256": "9eba21c82a3dc3e4cf47ff555e398221afd2721939d9dcfe5838a11679304a8b"
+      }
+    },
+    {
+      "target": "macos-arm64",
+      "runtimeArtifacts": 52,
+      "jdkVersion": "25.0.4.1+1-LTS",
+      "jdkLegalFiles": 252,
+      "jdkLegalSha256": "9188e404dd6f50775105e9d84550915c189c3d4c3791de455de48765d4c50599",
+      "jdkLegalManifestUnchangedFrom": "../ci-2026-09-23/macos-arm64/jdk-legal.sha256",
+      "artifactId": 12736494903,
+      "artifactSha256": "sha256:8f1e4ab71c53616e2da94115c1a0e2fd1b1f8a7d3119e7cc6a4bf3b7dd90d283",
+      "skikoRuntimeSha256": "abea519fa519f7245412011cc3ab7a5852cb333b3dc3cac08a83f5bd806c7bec",
+      "files": {
+        "candidate.properties": "3e012672e31bb1bce4666af670c1cf572d5759d498e8ab617d4e9b49039cdb02",
+        "runtime-artifacts.tsv": "fe0e19e782514f1857a84748c09e1bf3cb7675a619907baa2d6887f92605689f",
+        "jdk-legal.sha256": "9188e404dd6f50775105e9d84550915c189c3d4c3791de455de48765d4c50599"
+      }
+    }
+  ]
+}

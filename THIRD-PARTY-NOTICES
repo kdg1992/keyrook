@@ -10,10 +10,10 @@ Incorporated.
 
 Runtime dependencies
 --------------------
-Kotlin standard library 2.4.20 — Apache-2.0
+Kotlin standard library 2.4.21 — Apache-2.0
   Copyright JetBrains s.r.o. and Kotlin contributors.
   https://github.com/JetBrains/kotlin
-kotlinx.serialization JSON and Core 1.11.0 — Apache-2.0
+kotlinx.serialization JSON and Core 1.12.0 — Apache-2.0
   Copyright JetBrains s.r.o. and contributors.
   https://github.com/Kotlin/kotlinx.serialization
 JetBrains annotations 23.0.0 (desktop application) / 13.0 (core library) — Apache-2.0
@@ -23,11 +23,11 @@ Bouncy Castle bcprov/bcpkix/bcutil-jdk18on 1.86 — MIT (Bouncy Castle license)
   Copyright (c) 2000-2026 The Legion of the Bouncy Castle Inc.
   https://www.bouncycastle.org/
 
-Apache MINA SSHD Common 2.19.0 — Apache-2.0 (embedded BCrypt: ISC)
+Apache MINA SSHD Common 2.20.0 — Apache-2.0 (embedded BCrypt: ISC)
 SLF4J API 1.7.36 — MIT; JCL bridge 1.7.36 — Apache-2.0
   See licenses/SSH-Third-Party.md for copyright and license notices.
-Compose Multiplatform 1.12.1 and AndroidX runtime libraries — Apache-2.0
-Skiko 0.150.1 — Apache-2.0; Skia — BSD-3-Clause
+Compose Multiplatform 1.12.2 and AndroidX runtime libraries — Apache-2.0
+Skiko 0.150.2 — Apache-2.0; Skia — BSD-3-Clause
   The native components linked into each platform binary, including the Adobe
   DNG SDK on Linux and macOS, are listed with their full notices in
   licenses/native/<os>-<arch>/NOTICE.txt.
@@ -40,7 +40,7 @@ Build and test tools (not application runtime dependencies)
 ---------------------------------------------------------
 Gradle and its generated wrapper 9.7.1 — Apache-2.0
   https://github.com/gradle/gradle
-Kotlin compiler/plugins/build tools 2.4.20 — Apache-2.0
+Kotlin compiler/plugins/build tools 2.4.21 — Apache-2.0
 Kotlin reflect 1.6.10 (compiler) / 2.2.21 (tests) — Apache-2.0
 kotlinx.coroutines 1.8.0 (compiler) / 1.10.2 (tests) — Apache-2.0
   https://github.com/Kotlin/kotlinx.coroutines

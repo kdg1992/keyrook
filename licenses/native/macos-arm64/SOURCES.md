@@ -1,10 +1,10 @@
 # Native sources and review: macOS ARM64
 
-Reviewed on 2026-09-23 by the Keyrook copyright holder for release packaging
-with Eclipse Temurin `25.0.4.1+1-LTS`, Compose Multiplatform 1.12.1 and
-Gradle 9.7.1. The evidence comes from the
-[CI collection run](https://github.com/kdg1992/keyrook/actions/runs/35887498871)
-retained in [ci-2026-09-23](../../native-evidence/ci-2026-09-23/README.md).
+Reviewed on 2026-10-27 by the Keyrook copyright holder for release packaging
+with Eclipse Temurin `25.0.4.1+1-LTS`, Compose Multiplatform 1.12.2 and
+Gradle 9.8.2. The evidence comes from the
+[CI collection run](https://github.com/kdg1992/keyrook/actions/runs/40511327420)
+retained in [ci-2026-10-27](../../native-evidence/ci-2026-10-27/README.md).
 This record is bound by hash in `inventory.properties`. Any change of a runtime
 artifact, of the JDK or of its legal files requires a new review.
 
@@ -12,33 +12,33 @@ artifact, of the JDK or of its legal files requires a new review.
 
 All 52 external runtime artifacts of this target are recorded with their SHA-256
 in `inventory.properties` and in
-[runtime-artifacts.tsv](../../native-evidence/ci-2026-09-23/macos-arm64/runtime-artifacts.tsv).
+[runtime-artifacts.tsv](../../native-evidence/ci-2026-10-27/macos-arm64/runtime-artifacts.tsv).
 Their licenses are Apache-2.0, MIT, ISC and the Bouncy Castle license, listed in
 `THIRD-PARTY-NOTICES`. None of them requires distribution of source code.
 
 ## Skiko native runtime
 
-- Artifact: [skiko-awt-runtime-macos-arm64-0.150.1.jar](https://repo.maven.apache.org/maven2/org/jetbrains/skiko/skiko-awt-runtime-macos-arm64/0.150.1/skiko-awt-runtime-macos-arm64-0.150.1.jar),
-  SHA-256 `bd186dd6bf8736eb69be190107e1b3ab7bd2452ae917faaa516ef513217a5f33`, identical to the Maven Central checksum.
-- Native library `libskiko-macos-arm64.dylib`, SHA-256 `4b22275236c861e1288750f3022a5851440f1ba7dec227e6d428b5ee0899175a`
-- Native library `libskiko-macos-x64.dylib`, SHA-256 `d0bc2312ebe44602a2618fc0d87b8a775519be7d53989421a170e5a5cff9e3dd`
+- Artifact: [skiko-awt-runtime-macos-arm64-0.150.2.jar](https://repo.maven.apache.org/maven2/org/jetbrains/skiko/skiko-awt-runtime-macos-arm64/0.150.2/skiko-awt-runtime-macos-arm64-0.150.2.jar),
+  SHA-256 `abea519fa519f7245412011cc3ab7a5852cb333b3dc3cac08a83f5bd806c7bec`, identical to the Maven Central checksum.
+- Native library `libskiko-macos-arm64.dylib`, SHA-256 `680e40272519123174e97630c92549e2672a3f4deca1744f30f4a472af64b744`
+- Native library `libskiko-macos-x64.dylib`, SHA-256 `c4392e16dddd1181e46ecf58cc55ec0564fe9deaeb03efa58ae778712a28d962`
 - Prebuilt by JetBrains from Skiko commit
-  [`3956e988e6e93eaf1ee985d725049443e7845807`](https://github.com/JetBrains/skiko/tree/3956e988e6e93eaf1ee985d725049443e7845807)
+  [`caed3841b8725429bb9b9805ff162a40eb7bce47`](https://github.com/JetBrains/skiko/tree/caed3841b8725429bb9b9805ff162a40eb7bce47)
   and Skia commit
-  [`1f14f1166a847cb0e148f981600bf1e3e6ca6e46`](https://github.com/JetBrains/skia/tree/1f14f1166a847cb0e148f981600bf1e3e6ca6e46)
+  [`a3f509bf52564dc8b27940bebe599d77ac0c4ae3`](https://github.com/JetBrains/skia/tree/a3f509bf52564dc8b27940bebe599d77ac0c4ae3)
   with the build options of the pinned
-  [Skiko build script](https://github.com/JetBrains/skiko/blob/3956e988e6e93eaf1ee985d725049443e7845807/skiko/build.gradle.kts)
-  and [Skia release build](https://github.com/JetBrains/skia/blob/1f14f1166a847cb0e148f981600bf1e3e6ca6e46/tools/skia_release/build.py).
+  [Skiko build script](https://github.com/JetBrains/skiko/blob/caed3841b8725429bb9b9805ff162a40eb7bce47/skiko/build.gradle.kts)
+  and [Skia release build](https://github.com/JetBrains/skia/blob/a3f509bf52564dc8b27940bebe599d77ac0c4ae3/tools/skia_release/build.py).
   Keyrook redistributes these binaries unmodified.
 - Component revisions follow the pinned
-  [Skia DEPS](https://github.com/JetBrains/skia/blob/1f14f1166a847cb0e148f981600bf1e3e6ca6e46/DEPS);
+  [Skia DEPS](https://github.com/JetBrains/skia/blob/a3f509bf52564dc8b27940bebe599d77ac0c4ae3/DEPS);
   the table in [native component provenance](../../native-evidence/README.md)
   lists each commit and the source URL and SHA-256 of each notice.
 
 | Component | License | Source obligation |
 | --- | --- | --- |
-| Skiko 0.150.1 (JetBrains) | Apache-2.0 | None; notices included in NOTICE.txt |
-| Skia m150-1f14f1166a (Google, JetBrains fork) | BSD-3-Clause | None; notices included in NOTICE.txt |
+| Skiko 0.150.2 (JetBrains) | Apache-2.0 | None; notices included in NOTICE.txt |
+| Skia m150-a3f509bf52 (Google, JetBrains fork) | BSD-3-Clause | None; notices included in NOTICE.txt |
 | Expat | MIT | None; notices included in NOTICE.txt |
 | HarfBuzz | MIT (Old MIT) | None; notices included in NOTICE.txt |
 | ICU | Unicode-3.0 and bundled third-party terms | None; notices included in NOTICE.txt |

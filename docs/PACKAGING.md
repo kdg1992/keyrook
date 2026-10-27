@@ -63,7 +63,8 @@ below; recovering a source release does not change the reviewed inventory.
 
 Reviewed inventories exist for Windows x64, Linux x64 and macOS ARM64 in
 [`licenses/native/`](../licenses/native/). They were created from the
-[collected CI evidence](../licenses/native-evidence/ci-2026-09-23/README.md):
+[collected CI evidence](../licenses/native-evidence/ci-2026-09-23/README.md), updated
+for Compose 1.12.2 and Skiko 0.150.2 from [later CI evidence](../licenses/native-evidence/ci-2026-10-27/README.md):
 52 external runtime artifacts per platform and the complete JDK legal
 directories, matched against official Temurin archives, together with the
 verified Skiko artifacts and [native component provenance](../licenses/native-evidence/README.md).

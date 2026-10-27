@@ -8,23 +8,35 @@ which satisfy the packaging approval gate.
 the actual Windows x64, Linux x64 and macOS ARM64 runtime inventories, all JDK
 legal-file bytes, official platform SBOMs, and their verified archive provenance.
 It also records DNG-related strings in the selected macOS native binaries.
+[CI evidence from 2026-10-27](ci-2026-10-27/README.md) records the runtime
+inventories after the Compose 1.12.2 and Skiko 0.150.2 update; the JDK and its
+legal files are unchanged.
 
-## Skiko 0.150.1
+## Skiko 0.150.2
 
 The release resolves to commit
-`3956e988e6e93eaf1ee985d725049443e7845807`. Its
-[build properties](https://github.com/JetBrains/skiko/blob/3956e988e6e93eaf1ee985d725049443e7845807/skiko/gradle.properties)
-select Skia `m150-1f14f1166a`, commit
-`1f14f1166a847cb0e148f981600bf1e3e6ca6e46`.
+`caed3841b8725429bb9b9805ff162a40eb7bce47`. Its
+[build properties](https://github.com/JetBrains/skiko/blob/caed3841b8725429bb9b9805ff162a40eb7bce47/skiko/gradle.properties)
+select Skia `m150-a3f509bf52`, commit
+`a3f509bf52564dc8b27940bebe599d77ac0c4ae3`.
 
-[provenance.json](skiko-0.150.1/provenance.json) records the official URL and
+[provenance.json](skiko-0.150.2/provenance.json) records the official URL and
 SHA-256 of each unmodified notice file. Git preserves their original bytes.
-[artifacts.json](skiko-0.150.1/artifacts.json) records all five selected platform
+[artifacts.json](skiko-0.150.2/artifacts.json) records all five selected platform
 runtime JARs, their Maven Central SHA-256 checksums and every nonempty ZIP entry's
 checksum. Artifact bytes were downloaded and checked, without executing natives.
 These runtime JARs contain no complete aggregate native license inventory.
 
-The pinned [Skiko build DSL](https://github.com/JetBrains/skiko/blob/3956e988e6e93eaf1ee985d725049443e7845807/skiko/build.gradle.kts)
+Compared with the previously reviewed Skiko 0.150.1 (Skia `m150-1f14f1166a`,
+retained in [skiko-0.150.1](skiko-0.150.1/provenance.json)), the Skiko build
+script is byte-identical, every notice file listed below has the same bytes and
+the Skia DEPS differ only in the `infra_revision` and `task_drivers_revision`
+CI tooling pins; all third-party component revisions are unchanged. Skia's
+`BUILD.gn` only adds the `SK_GANESH` define for GPU-as-extension builds. The
+marker counts and ELF symbols recorded in the additional provenance are the
+same as for 0.150.1; only the binary hashes changed.
+
+The pinned [Skiko build DSL](https://github.com/JetBrains/skiko/blob/caed3841b8725429bb9b9805ff162a40eb7bce47/skiko/build.gradle.kts)
 declares static linkage of ICU, HarfBuzz, PNG, JPEG, WebP, zlib and Expat along
 with Skia's own modules. It additionally declares D3D12MemoryAllocator for
 Windows JVM and piex/DNG SDK for macOS JVM. Linux declares dynamic system GL,
@@ -33,7 +45,7 @@ evidence for an audit; it is not a proof of the exact reachable contents of
 every published binary.
 
 The copied external notices use the revisions selected by Skia's pinned
-[DEPS](https://github.com/JetBrains/skia/blob/1f14f1166a847cb0e148f981600bf1e3e6ca6e46/DEPS):
+[DEPS](https://github.com/JetBrains/skia/blob/a3f509bf52564dc8b27940bebe599d77ac0c4ae3/DEPS):
 
 | Component | Commit | Copied notice family |
 | --- | --- | --- |
@@ -55,7 +67,7 @@ This software is based in part on the work of the Independent JPEG Group.
 The selected DNG SDK revision is not covered by Skia's own BSD notice. Its
 [Android build metadata](https://android.googlesource.com/platform/external/dng_sdk/+/dbe0a676450d9b8c71bf00688bb306409b779e90/Android.bp)
 flags special licensing conditions and includes `legacy_by_exception_only`.
-The copied [source-code terms](skiko-0.150.1/dng-sdk-LICENSE.source_code.txt)
+The copied [source-code terms](skiko-0.150.2/dng-sdk-LICENSE.source_code.txt)
 include commercial-distribution indemnification and restrictions on documentation.
 The review resolved this as follows: the license grants distribution and
 sublicensing for any purpose, its notices and attribution are included, and
@@ -65,7 +77,7 @@ native libraries. See the reviewed `SOURCES.md` of each platform in
 
 ### Additional binary component evidence
 
-[Additional provenance](skiko-0.150.1/additional-provenance.json) records a static
+[Additional provenance](skiko-0.150.2/additional-provenance.json) records a static
 inspection of the already checksummed Windows x64, Linux x64 and macOS ARM64
 runtime JARs. Native-entry hashes were compared with `artifacts.json`; no native
 library was executed. The macOS ARM64 JAR also contains an x64 dylib.
@@ -78,14 +90,14 @@ targets. Counts, representative ELF symbols and binary digests are retained in
 the provenance file. These observations do not establish a complete component
 inventory; missing strings cannot prove absence.
 
-The pinned [Skia defaults](https://github.com/JetBrains/skia/blob/1f14f1166a847cb0e148f981600bf1e3e6ca6e46/gn/skia.gni)
+The pinned [Skia defaults](https://github.com/JetBrains/skia/blob/a3f509bf52564dc8b27940bebe599d77ac0c4ae3/gn/skia.gni)
 enable Wuffs, enable FreeType on Linux, and enable DNG when its prerequisites are
-available. The [RAW target](https://github.com/JetBrains/skia/blob/1f14f1166a847cb0e148f981600bf1e3e6ca6e46/BUILD.gn)
+available. The [RAW target](https://github.com/JetBrains/skia/blob/a3f509bf52564dc8b27940bebe599d77ac0c4ae3/BUILD.gn)
 depends on DNG SDK and piex. The explicit Skiko link list alone is insufficient
 to identify all code inside the resulting library.
 
-Unmodified [Wuffs license](skiko-0.150.1/wuffs-LICENSE.txt) and
-[FreeType license](skiko-0.150.1/freetype-FTL.txt) files have been added at the
+Unmodified [Wuffs license](skiko-0.150.2/wuffs-LICENSE.txt) and
+[FreeType license](skiko-0.150.2/freetype-FTL.txt) files have been added at the
 revisions selected by the pinned Skia `DEPS`; their original URLs and SHA-256
 digests are in the additional provenance. The selected Wuffs generated C source
 is copyright 2017 The Wuffs Authors and declares Apache-2.0. FreeType's FTL text
@@ -95,9 +107,9 @@ compiled components.
 
 ### Remaining native evidence
 
-The [Skia release build](https://github.com/JetBrains/skia/blob/1f14f1166a847cb0e148f981600bf1e3e6ca6e46/tools/skia_release/build.py)
+The [Skia release build](https://github.com/JetBrains/skia/blob/a3f509bf52564dc8b27940bebe599d77ac0c4ae3/tools/skia_release/build.py)
 selects bundled dependency implementations and platform-specific graphics options.
-Its [archive recipe](https://github.com/JetBrains/skia/blob/1f14f1166a847cb0e148f981600bf1e3e6ca6e46/tools/skia_release/archive.py)
+Its [archive recipe](https://github.com/JetBrains/skia/blob/a3f509bf52564dc8b27940bebe599d77ac0c4ae3/tools/skia_release/archive.py)
 copies some external license files; it is not an aggregate licensing report.
 Per-file/subdirectory exceptions, generated Unicode data, graphics extensions,
 compiler runtimes and any installer-embedded auxiliary code still require review.
