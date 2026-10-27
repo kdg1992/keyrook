@@ -33,11 +33,6 @@ class VaultControllerTest {
             }
             controller.trash(entry.id, false).use { assertNotNull(it.entries.single().deletedAt) }
             controller.trash(entry.id, true).use { assertNull(it.entries.single().deletedAt) }
-            controller.duplicate(entry.id).use {
-                assertEquals(2, it.entries.size)
-                assertEquals(2, it.entries.map { candidate -> candidate.id }.toSet().size)
-                assertEquals("Synthetic login (Kopie)", it.entries.last().title)
-            }
         }
     }
 

@@ -25,30 +25,43 @@ import javax.swing.SwingUtilities
 
 /**
  * Edits [source], or creates a new entry when it is null. A new entry can start from [template]: its type, field
- * layout, tags, customer and project are preset, and every value starts empty. Switching to another type starts
- * that type blank.
+ * layout, tags, customer and project are preset, and every value starts empty. Otherwise [context] can duplicate an
+ * entry (its layout, tags, customer, project and visible values; hidden values start empty) or preset the type,
+ * customer and project. Switching to another type keeps the values of fields with the same label.
  */
 @Composable
 internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcuts: ShortcutActions, settings: SettingsStore? = null,
-                   template: EntryTemplate? = null, onCancel: () -> Unit, onSave: (Entry) -> Unit) {
+                   template: EntryTemplate? = null, context: NewEntryContext? = null, onCancel: () -> Unit, onSave: (Entry) -> Unit) {
     val preset = template?.takeIf { source == null }
-    val initialType = source?.data?.type() ?: preset?.type?.entryType() ?: EntryType.WEB
+    val copy = context?.copyOf?.takeIf { source == null && preset == null }
+    val fresh = context?.takeIf { source == null && preset == null && copy == null }
+    val initialType = source?.data?.type() ?: copy?.data?.type() ?: preset?.type?.entryType() ?: fresh?.type ?: EntryType.WEB
     var type by remember { mutableStateOf(initialType) }
+    // Values typed before a type switch, by field label, so the new type keeps what still fits.
+    var carried by remember { mutableStateOf(emptyMap<String, Pair<String, Boolean>>()) }
     val initialData = remember(type) {
-        source?.data ?: preset?.takeIf { it.type.entryType() == type }?.newData() ?: blankData(type)
+        source?.data ?: copy?.data?.takeIf { it.type() == type } ?: preset?.takeIf { it.type.entryType() == type }?.newData() ?: blankData(type)
     }
     var data by remember(initialData) { mutableStateOf(initialData) }
-    DisposableEffect(initialData) { onDispose { if (source == null) initialData.fields().forEach { it.value.close() } } }
-    var title by remember { mutableStateOf(source?.title.orEmpty()) }
-    val initialTags = remember { if (source != null) editorTags(source) else preset?.tags?.joinToString(", ").orEmpty() }
+    // The editor owns only data it created; an edited or duplicated entry's data belongs to the vault snapshot.
+    DisposableEffect(initialData) { onDispose { if (source == null && initialData !== copy?.data) initialData.fields().forEach { it.value.close() } } }
+    val initialTitle = remember { source?.title ?: copy?.let { UiText.text("entry.duplicateTitle", it.title) }.orEmpty() }
+    var title by remember { mutableStateOf(initialTitle) }
+    val initialTags = remember { if (source != null || copy != null) editorTags(source ?: copy) else preset?.tags?.joinToString(", ").orEmpty() }
     var tags by remember { mutableStateOf(initialTags) }
     val originalNotes = remember { source?.notes?.useChars { String(it) }.orEmpty() }
     var notes by remember { mutableStateOf(originalNotes) }
     var expires by remember { mutableStateOf(source?.expiresOn.orEmpty()) }
-    val originalValues = remember(initialData) { data.fields().map { it.value.useChars { chars -> String(chars) } } }
+    val originalValues = remember(initialData) {
+        if (copy != null && initialData === copy.data) duplicateValues(copy) else data.fields().map { it.value.useChars { chars -> String(chars) } }
+    }
     val originalHidden = remember(initialData) { data.fields().map { it.hidden } }
-    var values by remember(initialData) { mutableStateOf(originalValues) }
-    var hidden by remember(initialData) { mutableStateOf(originalHidden) }
+    var values by remember(initialData) {
+        mutableStateOf(initialData.labels().mapIndexed { index, label -> carried[label]?.first?.takeIf { originalValues[index].isEmpty() } ?: originalValues[index] })
+    }
+    var hidden by remember(initialData) {
+        mutableStateOf(initialData.labels().mapIndexed { index, label -> carried[label]?.second?.takeIf { originalValues[index].isEmpty() } ?: originalHidden[index] })
+    }
     var error by remember { mutableStateOf(false) }
     var rejected by remember { mutableStateOf(false) }
     var attempted by remember { mutableStateOf(false) }
@@ -58,8 +71,8 @@ internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcu
         portDrafts = portDrafts + (slot to text)
         parsePort(text)?.let(apply)
     }
-    val initialCustomer = source?.customerId ?: preset?.customerId?.takeIf { id -> vault.customers.any { it.id == id } }
-    val initialProject = source?.projectId ?: preset?.projectId?.takeIf { id -> vault.projects.any { it.id == id } }
+    val initialCustomer = source?.customerId ?: (copy?.customerId ?: preset?.customerId ?: fresh?.customerId)?.takeIf { id -> vault.customers.any { it.id == id } }
+    val initialProject = source?.projectId ?: (copy?.projectId ?: preset?.projectId ?: fresh?.projectId)?.takeIf { id -> vault.projects.any { it.id == id } }
     var customerId by remember { mutableStateOf(initialCustomer) }
     var projectId by remember { mutableStateOf(initialProject) }
     var history by remember { mutableStateOf(false) }
@@ -80,7 +93,7 @@ internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcu
     LaunchedEffect(Unit) { titleFocus.requestFocus() }
     val shownPorts = editorPorts(data, portDrafts)
     val validation = validateEditor(title, tags, notes, expires, values, shownPorts, data.totpSlot(initialData, originalValues))
-    val dirty = title != source?.title.orEmpty() || tags != initialTags ||
+    val dirty = title != initialTitle || tags != initialTags ||
         notes != originalNotes || expires != source?.expiresOn.orEmpty() || customerId != initialCustomer ||
         projectId != initialProject || values != originalValues || hidden != originalHidden ||
         data != initialData || type != initialType || customLabel.isNotEmpty() ||
@@ -137,11 +150,16 @@ internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcu
             SectionCard(UiText.text("editor.sectionGeneral")) {
                 if (source == null) FlowRow(Modifier.selectableGroup(), horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    EntryType.entries.forEach { candidate -> TypeChip(candidate, type == candidate, !busy) { type = candidate } }
+                    EntryType.entries.forEach { candidate -> TypeChip(candidate, type == candidate, !busy) {
+                        if (candidate != type) {
+                            carried = carried + data.labels().zip(values.zip(hidden)).filter { it.second.first.isNotEmpty() }
+                            type = candidate
+                        }
+                    } }
                 }
                 val titleError = validation.title?.takeIf { attempted || titleEdited || it.problem != InputProblem.TITLE_REQUIRED }
                 OutlinedTextField(title, { title = it; titleEdited = true }, label = { Text(UiText.text("editor.title")) }, enabled = !busy,
-                    isError = titleError != null, modifier = Modifier.fillMaxWidth().focusRequester(titleFocus))
+                    isError = titleError != null, singleLine = true, modifier = Modifier.fillMaxWidth().focusRequester(titleFocus))
                 FieldError(titleError)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Choice(UiText.text("common.customer"), customerId, vault.customers.map { it.id to it.name }, !busy) {
@@ -255,6 +273,8 @@ internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcu
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(values[index], { value -> values = values.toMutableList().also { it[index] = value } },
                             label = { Text(label) }, enabled = !busy, isError = index in validation.values, modifier = Modifier.weight(1f),
+                            // Single-line fields move on with Tab; a value that already holds line breaks keeps them editable.
+                            singleLine = !data.multiLineField(index) && '\n' !in values[index],
                             visualTransformation = if (hidden[index]) PasswordVisualTransformation() else VisualTransformation.None)
                         val hiddenText = UiText.text("common.hidden")
                         LabeledCheckbox(hidden[index], hiddenText, enabled = !busy,

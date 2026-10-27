@@ -7,6 +7,8 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import app.keyrook.core.generator.PasswordGenerator
 import app.keyrook.core.generator.PasswordOptions
 import app.keyrook.core.generator.PasswordPreset
@@ -90,7 +92,22 @@ internal fun GeneratorTools(busy: Boolean, onBusy: (Boolean) -> Unit, settings: 
             }
         }, "passphrase-worker").apply { isDaemon = true; start() }
     }
-    TextButton(enabled = !busy, onClick = { expanded = !expanded }) { Text(UiText.text("generator.title")) }
+    fun generatePassword() {
+        passwordError = runCatching {
+            val options = PasswordOptions(length.toInt(), lower, upper, digits, symbols, preset, noAmbiguous)
+            deliverGeneratedSecret(PasswordGenerator().generate(options), alive::get, insert)
+            rememberChoice { it.withPasswordOptions(options) }
+        }.isFailure
+    }
+    // One click generates with the remembered or currently shown options; the options stay one click away.
+    Row {
+        TextButton(enabled = !busy, onClick = ::generatePassword) { Text(UiText.text("generator.quick")) }
+        val state = UiText.text(if (expanded) "a11y.expanded" else "a11y.collapsed")
+        TextButton(enabled = !busy, onClick = { expanded = !expanded }, modifier = Modifier.semantics { stateDescription = state }) {
+            Text(UiText.text("generator.title") + if (expanded) " ▴" else " ▾")
+        }
+    }
+    if (!expanded && passwordError) Text(UiText.text("generator.passwordError"), color = MaterialTheme.colors.error)
     if (expanded) {
         Row(Modifier.selectableGroup()) {
             PasswordPreset.entries.forEach { choice ->
@@ -110,13 +127,7 @@ internal fun GeneratorTools(busy: Boolean, onBusy: (Boolean) -> Unit, settings: 
             LabeledCheckbox(symbols, UiText.text("generator.symbols"), enabled = !busy) { symbols = it }
         }
         LabeledCheckbox(noAmbiguous, UiText.text("generator.noAmbiguous"), enabled = !busy) { noAmbiguous = it }
-        Button(enabled = !busy, onClick = {
-            passwordError = runCatching {
-                val options = PasswordOptions(length.toInt(), lower, upper, digits, symbols, preset, noAmbiguous)
-                deliverGeneratedSecret(PasswordGenerator().generate(options), alive::get, insert)
-                rememberChoice { it.withPasswordOptions(options) }
-            }.isFailure
-        }) { Text(UiText.text("generator.generate")) }
+        Button(enabled = !busy, onClick = ::generatePassword) { Text(UiText.text("generator.generate")) }
         if (passwordError) Text(UiText.text("generator.passwordError"), color = MaterialTheme.colors.error)
         Text(UiText.text("generator.wordListHelp"))
         Text(UiText.text("generator.entropyHelp"))
