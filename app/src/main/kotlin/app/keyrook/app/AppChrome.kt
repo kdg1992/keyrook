@@ -91,7 +91,7 @@ internal fun SettingsDialog(preferences: AppSettings, onDismiss: () -> Unit, onC
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     SectionTitle(UiText.text("settings.session"))
                     SettingRow(UiText.text("shell.lockMinutes")) {
-                        Choice(UiText.text("shell.lockMinutes"), preferences.inactivityMinutes.toString(), LOCK_MINUTE_CHOICES.map { it.toString() to it.toString() }, nullable = false, showLabel = false) {
+                        Choice(UiText.text("shell.lockMinutes"), preferences.inactivityMinutes.toString(), LOCK_MINUTE_CHOICES.map { it.toString() to lockDeadlineLabel(it) }, nullable = false, showLabel = false) {
                             it?.toInt()?.let { value -> onChange { current -> current.copy(inactivityMinutes = value) } }
                         }
                     }
@@ -128,3 +128,7 @@ private fun SettingRow(label: String, control: @Composable () -> Unit) {
         control()
     }
 }
+
+/** Deadlines below an hour in minutes, longer ones in whole hours. */
+internal fun lockDeadlineLabel(minutes: Int): String =
+    if (minutes < 60) UiText.text("shell.lockMinutesValue", minutes) else UiText.text("shell.lockHoursValue", minutes / 60)
