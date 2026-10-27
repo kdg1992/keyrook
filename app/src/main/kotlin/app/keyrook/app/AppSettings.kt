@@ -26,7 +26,8 @@ internal enum class ContrastMode { STANDARD, HIGH }
  */
 internal enum class WindowLockPolicy { FOCUS_LOSS, MINIMIZE, NEVER }
 
-internal val LOCK_MINUTE_CHOICES = listOf(1, 2, 5, 10, 15, 30)
+/** Inactivity deadlines in minutes. The longer ones suit all-day work in other windows; operating-system lock events still lock at once. */
+internal val LOCK_MINUTE_CHOICES = listOf(1, 2, 5, 10, 15, 30, 60, 120, 240, 480)
 internal val CLIPBOARD_SECOND_CHOICES = listOf(5L, 10L, 20L, 30L, 60L, 120L)
 
 /** Interface scale in percent, applied to all sizes and text on top of the operating system's own scaling. */
@@ -35,7 +36,10 @@ internal const val DEFAULT_UI_SCALE = 100
 
 internal data class StoredBackup(val folder: Path, val policy: BackupPolicy, val enabled: Boolean)
 
-/** Non-secret preferences only. Vault, backup and word-list paths are metadata;key-file paths, passwords and vault content never enter here. */
+/**
+ * Non-secret preferences only. Vault, backup and word-list paths are metadata; passwords, key-file contents and vault content
+ * never enter here. A key-file path is kept only for a vault whose user chose to remember it at unlock ([keyFiles]).
+ */
 internal data class AppSettings(
     val theme: ThemeMode = ThemeMode.SYSTEM,
     val inactivityMinutes: Int = 5,
@@ -53,8 +57,20 @@ internal data class AppSettings(
     /** One of [UI_SCALE_CHOICES]; applied immediately to the whole window and its dialogs. */
     val uiScale: Int = DEFAULT_UI_SCALE,
     val contrast: ContrastMode = ContrastMode.STANDARD,
+    /** Key-file path per vault path, only for vaults where the user opted in; reveals where the second factor lives. */
+    val keyFiles: Map<String, Path> = emptyMap(),
 ) {
     fun backupFor(vault: Path): StoredBackup? = backups[vaultKey(vault)]
+
+    fun keyFileFor(vault: Path): Path? = keyFiles[vaultKey(vault)]
+
+    /** Remembers [keyFile] for [vault], or forgets it when null. The most recently remembered vaults win when the map is full. */
+    fun withKeyFile(vault: Path, keyFile: Path?): AppSettings {
+        val key = vaultKey(vault)
+        val others = (keyFiles - key).entries.map { it.toPair() }
+        val entries = if (keyFile == null) others else others + (key to keyFile.toAbsolutePath().normalize())
+        return copy(keyFiles = entries.takeLast(MAX_KEY_FILE_VAULTS).toMap())
+    }
 
     /** The most recently configured vaults win when the bounded map is full. */
     fun withBackup(vault: Path, backup: StoredBackup): AppSettings {
@@ -72,10 +88,12 @@ internal data class AppSettings(
         window = window?.toDocument(),
         generator = generator.toDocument(),
         uiScale = uiScale, contrast = contrast.name,
+        keyFiles = keyFiles.mapValues { (_, value) -> value.toString() },
     )
 
     companion object {
         const val MAX_BACKUP_VAULTS = 64
+        const val MAX_KEY_FILE_VAULTS = 64
         const val UPDATE_CHECK_ON_START = "ON_START"
         const val UPDATE_CHECK_MANUAL = "MANUAL"
         private const val MAX_PATH_LENGTH = 4096
@@ -89,6 +107,10 @@ internal data class AppSettings(
                 val policy = try { BackupPolicy(value.latest, value.daily) } catch (_: IllegalArgumentException) { return@mapNotNull null }
                 vaultKey(vault) to StoredBackup(folder, policy, value.enabled)
             }.takeLast(MAX_BACKUP_VAULTS).toMap()
+            val keyFiles = document.keyFiles.entries.mapNotNull { (key, value) ->
+                val vault = storedPath(key)?.takeIf { vaultKey(it) == key } ?: return@mapNotNull null
+                vaultKey(vault) to (storedPath(value) ?: return@mapNotNull null)
+            }.takeLast(MAX_KEY_FILE_VAULTS).toMap()
             return AppSettings(
                 theme = ThemeMode.entries.find { it.name == document.theme } ?: defaults.theme,
                 inactivityMinutes = document.inactivityMinutes?.takeIf { it in LOCK_MINUTE_CHOICES } ?: defaults.inactivityMinutes,
@@ -103,6 +125,7 @@ internal data class AppSettings(
                 generator = GeneratorPreferences.fromDocument(document.generator, storedPath(document.generator?.wordListPath)),
                 uiScale = document.uiScale?.takeIf { it in UI_SCALE_CHOICES } ?: defaults.uiScale,
                 contrast = ContrastMode.entries.find { it.name == document.contrast } ?: defaults.contrast,
+                keyFiles = keyFiles,
             )
         }
 
@@ -116,9 +139,12 @@ internal data class AppSettings(
 
 internal fun vaultKey(path: Path): String = path.toAbsolutePath().normalize().toString()
 
-/** Records only where the vault lives. The key file stays unrecorded so the settings do not reveal the second factor. */
-internal fun rememberUnlockedPath(settings: SettingsStore, vault: Path) {
-    settings.update { it.copy(lastVaultPath = vault.toAbsolutePath().normalize()) }
+/**
+ * Records where the vault lives and, only when the user opted in, which key file opened it. A null [keyFile] forgets any key file
+ * remembered for this vault, so unticking the option or unlocking without a key file removes it from the settings.
+ */
+internal fun rememberUnlockedPath(settings: SettingsStore, vault: Path, keyFile: Path? = null) {
+    settings.update { it.copy(lastVaultPath = vault.toAbsolutePath().normalize()).withKeyFile(vault, keyFile) }
 }
 
 /**

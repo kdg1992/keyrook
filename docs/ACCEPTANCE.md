@@ -170,7 +170,7 @@ Linux:
    - Linux: `stat -c '%a %n' ~/.config/keyrook ~/.config/keyrook/settings.json`
      prints `700` and `600`.
 7. Open the synthetic vault. Expected: `settings.json` contains the vault path
-   and backup settings, but no password, key-file path, entry title or
+   and backup settings, but no password, key-file path (none was remembered), entry title or
    `KR-CANARY` value (search the file for `KR-CANARY` and `Acceptance`).
 8. Set **Language** to **Deutsch**, quit and restart. Expected: the interface
    starts in German and the unlock form is pre-filled with the vault path.
@@ -551,7 +551,14 @@ Use the synthetic test vault unless stated otherwise.
    both fail with the same generic message that does not say which factor was
    wrong, and the vault file's SHA-256 is unchanged.
 4. Quit and restart. Expected: the key-file field is empty (key-file paths are
-   never saved) and `settings.json` does not contain `acceptance.key`.
+   saved only on request) and `settings.json` does not contain `acceptance.key`.
+5. Unlock with password and key file and **Schlüsseldatei für diesen Tresor
+   merken** ticked, lock, quit and restart. Expected: the form shows the vault
+   and the key file with the option ticked, and the vault opens with the
+   password alone typed. `settings.json` contains `acceptance.key` under
+   `keyFiles`.
+6. Clear the option and unlock again. Expected: `settings.json` no longer
+   contains `acceptance.key`, and after a restart the key-file field is empty.
 
 ### 10.2 Backup restore to a new file
 
@@ -684,8 +691,8 @@ These are documented behavior, not failures. Record the observed behavior in
 - Revealed text and edited fields are immutable JVM strings; locking removes
   them from the screen, not necessarily from memory.
 - Installers are unsigned and the macOS application is not notarized.
-- Key-file paths are never saved; the key file must be selected after each
-  start.
+- Key-file paths are saved only when the user ticks the option per vault; the
+  saved path then shows where the second factor is.
 - The system file chooser and window title bar follow the operating system's
   scaling and contrast settings, not Keyrook's. Whether live-region
   announcements of error messages are spoken depends on the platform's Java
