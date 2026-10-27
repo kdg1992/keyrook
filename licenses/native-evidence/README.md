@@ -11,6 +11,8 @@ It also records DNG-related strings in the selected macOS native binaries.
 [CI evidence from 2026-10-27](ci-2026-10-27/README.md) records the runtime
 inventories after the Compose 1.12.2 and Skiko 0.150.2 update; the JDK and its
 legal files are unchanged.
+[CI evidence for Temurin 25.0.5+8](ci-2026-10-27-temurin-25.0.5/README.md)
+records the same inventories packaged with the October 2026 JDK security update.
 
 ## Skiko 0.150.2
 
