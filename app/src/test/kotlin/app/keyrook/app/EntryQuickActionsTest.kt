@@ -101,4 +101,26 @@ class EntryQuickActionsTest {
             url.value.close()
         }
     }
+
+    @Test fun `host and connection commands come from the connection records only`() {
+        val server = EntryData.Server(field("web01.example.invalid"), 2222, field("deploy"), field("synthetic-secret", true), field(""), field(""))
+        val sftp = EntryData.Transfer(field("files.example.invalid"), 22, TransferProtocol.SFTP, field("upload"), field("synthetic-secret", true), field(""))
+        val ftp = sftp.copy(protocol = TransferProtocol.FTP)
+        val mail = EntryData.Email(field("box@example.invalid"), field("box"), field("synthetic-secret", true),
+            smtp = MailEndpoint(field("smtp.example.invalid"), 465, MailEncryption.TLS))
+        val unsafe = server.copy(username = field("x; rm -rf /"))
+        try {
+            assertSame(server.host, server.quickField(QuickField.HOST))
+            assertSame(sftp.host, sftp.quickField(QuickField.HOST))
+            assertSame(mail.smtp!!.host, mail.quickField(QuickField.HOST))
+            assertNull(blankData(EntryType.WEB).quickField(QuickField.HOST))
+            assertEquals("SSH" to "ssh -p 2222 -l 'deploy' -- 'web01.example.invalid'", server.connectionCommand())
+            assertEquals("SFTP" to "sftp -P 22 -- 'upload@files.example.invalid'", sftp.connectionCommand())
+            assertNull(ftp.connectionCommand())
+            assertNull(mail.connectionCommand())
+            // A login name the shell would interpret yields no command instead of an unsafe one.
+            assertNull(unsafe.connectionCommand())
+            assertFalse(server.connectionCommand()!!.second.contains("synthetic-secret"))
+        } finally { listOf(server, sftp, mail, unsafe).forEach { data -> data.fields().forEach { it.value.close() } } }
+    }
 }

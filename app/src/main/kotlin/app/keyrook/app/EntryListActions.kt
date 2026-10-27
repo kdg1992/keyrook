@@ -12,6 +12,7 @@ import androidx.compose.ui.input.key.*
 import app.keyrook.core.model.EntryData
 import app.keyrook.core.model.Field
 import app.keyrook.core.model.PrimaryFieldNames
+import app.keyrook.core.model.TransferProtocol
 import app.keyrook.core.model.primarySecret
 import app.keyrook.core.model.primaryUrl
 import app.keyrook.core.model.primaryUsername
@@ -20,7 +21,7 @@ import java.awt.Desktop
 import java.net.URI
 import java.time.Instant
 
-internal enum class QuickField { USERNAME, SECRET, TOTP, URL }
+internal enum class QuickField { USERNAME, SECRET, TOTP, URL, HOST }
 
 /**
  * Selection follows field semantics and the core's field labels for custom entries (see [PrimaryFieldNames]), never
@@ -32,7 +33,30 @@ internal fun EntryData.quickField(kind: QuickField): Field? = when (kind) {
     // Copies the current one-time code computed from the stored secret, never the secret itself.
     QuickField.TOTP -> (this as? EntryData.Web)?.totp
     QuickField.URL -> primaryUrl()
+    QuickField.HOST -> hostField()
 }
+
+/** The host a hoster connects to: server and transfer host, the first mail server's host, or the domain name. */
+internal fun EntryData.hostField(): Field? = when (this) {
+    is EntryData.Server -> host
+    is EntryData.Transfer -> host
+    is EntryData.Email -> (imap ?: smtp ?: pop3)?.host
+    is EntryData.Domain -> name
+    else -> null
+}
+
+/**
+ * The protocol name and the SSH or SFTP command of a server or SFTP record, built like the detail pane's command copy;
+ * null for other records and when host, port or login name do not form a valid command. The password is never included.
+ */
+internal fun EntryData.connectionCommand(): Pair<String, String>? = runCatching {
+    fun Field.text() = value.useChars { String(it) }
+    when (this) {
+        is EntryData.Server -> "SSH" to ConnectionCommands.ssh(host.text(), port, username.text())
+        is EntryData.Transfer -> if (protocol == TransferProtocol.SFTP) "SFTP" to ConnectionCommands.sftp(host.text(), port, username.text()) else null
+        else -> null
+    }
+}.getOrNull()
 
 internal fun EntryData.quickLabel(field: Field): String = labels()[fields().indexOfFirst { it === field }]
 

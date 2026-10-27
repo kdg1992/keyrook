@@ -13,7 +13,8 @@ in the **Info** dialog.
 | Ctrl/⌘ + L | Lock immediately, including while vault work is running. |
 | Ctrl/⌘ + N | Create an entry from the active entry list; unavailable in the trash, while editing or during work. |
 | Ctrl/⌘ + F | Focus full-text search from the entry list. |
-| ↓ (in the search field) | Move the focus from the search field into the entry list. |
+| ↓ or Enter (in the search field) | Move the focus from the search field into the entry list. |
+| Escape (in the search field) | Clear the search. |
 | ↑ / ↓ | Select the previous/next entry (stops at the first and last entry). |
 | Home / End (Pos1 / Ende) | Select the first/last entry. |
 | Enter | Open the selected entry in the editor. |
@@ -22,6 +23,8 @@ in the **Info** dialog.
 | Ctrl/⌘ + B | Copy the selected entry's username. |
 | Ctrl/⌘ + T | Copy the current TOTP code of the selected web login (see [TOTP codes](#totp-codes)). |
 | Ctrl/⌘ + U | Open the selected entry's URL. |
+| Ctrl/⌘ + D | Copy the selected entry's host: server and FTP/SFTP host, the first mail server, or the domain name. |
+| Ctrl/⌘ + K | Copy the SSH command of a server or the SFTP command of an SFTP record (without the password). |
 | Delete (Entf); on macOS also ⌫ | Move the marked entries, or without marks the selected entry, to the trash after the usual **In den Papierkorb verschieben?** confirmation. |
 | Space (Leertaste) | Mark or unmark the selected entry for a bulk action (see [Bulk actions](#bulk-actions)); also in the trash. |
 | Ctrl/⌘ + A | Mark every listed entry; pressed again while all are marked, it clears the marks. |
@@ -50,15 +53,17 @@ changes under the same search (for example after an entry was moved to the
 trash), the selection stays on its entry or, if it left the list, moves to the
 next remaining entry, otherwise to the previous one. The list scrolls to keep
 the selection visible. A typical flow: Ctrl/⌘ + F, type part of the title,
-↓, then Ctrl/⌘ + C.
+then Ctrl/⌘ + C (or B, D, K) directly from the search field.
 
 **Text-field rule:** entry shortcuts (arrows, Home/End, Enter, Delete/⌫, Space and
-Ctrl/⌘ + C/B/T/U/E/A) act only while the keyboard focus is in the entry list, that
-is on the list itself or on a button of one of its cards. While any text field
-has the focus, including the search field, every key keeps its normal editing
-meaning; Ctrl/⌘ + C copies selected text as usual. The only exception is ↓ in
-the single-line search field, which has no editing meaning there and moves into
-the list. With the focus on a card button, Enter activates that button. Entry
+Ctrl/⌘ + C/B/T/U/E/D/K/A) act while the keyboard focus is in the entry list, that
+is on the list itself or on a button of one of its cards. In the search field,
+Ctrl/⌘ + C/B/T/U/E/D/K act on the selected entry as well, so a search is
+followed directly by a copy; Ctrl/⌘ + C copies the entry's password only while
+no text is selected in the field, and with a selection it copies that text as
+usual. ↓ and Enter move from the search field into the list and Escape clears
+it, while ↑, Home/End, Delete/⌫, Space and Ctrl/⌘ + A keep editing the text. In
+every other text field each key keeps its normal editing meaning. With the focus on a card button, Enter activates that button. Entry
 shortcuts are ignored while work is running, a dialog is open or an editor is
 shown, and edit/copy/open/trash are not available in the trash view (only
 selection moves and marking are). Global shortcuts (Ctrl/⌘ + L/N/F/S, Escape) behave as
@@ -335,8 +340,12 @@ the deletion still contain the entry and remain the only way to recover it;
 backup retention can eventually remove those older backups.
 
 Active list rows offer quick actions without opening the editor: copy the
-username, copy the password (the passphrase for SSH keys) and open the URL of
-web and hosting-panel records. Custom records, including Bitwarden and KeePass
+username, copy the password (the passphrase for SSH keys), open the URL of
+web and hosting-panel records, copy the host of server, transfer, email (the
+first configured mail server) and domain records, and copy the SSH command of
+server records or the SFTP command of SFTP records. The command button appears
+only when host, port and login name form a valid command, and the command never
+contains the password. Custom records, including Bitwarden and KeePass
 imports, use fields by their label, ignoring case: *username*, *user* or
 *Benutzername* for the username; *password*, *Passwort* or *passphrase* for the
 password, otherwise the first hidden field not labelled as a username, URL or

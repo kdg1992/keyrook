@@ -30,24 +30,26 @@ internal fun rememberInitialFocus(): FocusRequester {
     return focus
 }
 
-internal enum class ShortcutKey { L, N, F, S, C, B, U, E, T, A, SPACE, ESCAPE, UP, DOWN, HOME, END, ENTER, DELETE, BACKSPACE, OTHER }
+internal enum class ShortcutKey { L, N, F, S, C, B, U, E, T, A, D, K, SPACE, ESCAPE, UP, DOWN, HOME, END, ENTER, DELETE, BACKSPACE, OTHER }
 internal enum class ShortcutAction {
     LOCK, NEW_ENTRY, SEARCH, SAVE, CANCEL, FOCUS_LIST, SELECT_PREVIOUS, SELECT_NEXT, SELECT_FIRST, SELECT_LAST,
     COPY_PASSWORD, COPY_USERNAME, COPY_TOTP, OPEN_URL, EDIT_ENTRY, TRASH_ENTRY, TOGGLE_MARK, MARK_ALL,
+    COPY_HOST, COPY_COMMAND, CLEAR_SEARCH,
 }
 
 /**
- * Where keyboard focus is. Entry shortcuts act only with [LIST] focus (the entry list or a button in one of its
- * cards). A focused text field ([TEXT], or [SEARCH] for the list's search field) keeps every key for text editing,
- * so Ctrl/⌘+C copies selected text, Delete/Backspace edit, arrows/Home/End move the caret and Enter stays with the
- * field. The only list key a search field forwards is Down, which a single-line field does not use.
+ * Where keyboard focus is. Entry shortcuts act with [LIST] focus (the entry list or a button in one of its cards) and
+ * from the list's [SEARCH] field, so a search can be followed by a copy without leaving the field. There Ctrl/⌘+C
+ * copies the entry only while no text is selected in the field; with a selection it copies that text as usual.
+ * Down and Enter move from the search field to the list and Escape clears it; Delete/Backspace, the other arrows
+ * and Home/End keep editing the text. Any other text field ([TEXT]) keeps every key.
  */
 internal enum class ShortcutFocus { OTHER, TEXT, SEARCH, LIST }
 
 internal data class ShortcutContext(val unlocked: Boolean, val busy: Boolean, val editing: Boolean,
                                     val locking: Boolean = false, val modal: Boolean = false,
                                     val focus: ShortcutFocus = ShortcutFocus.OTHER, val selection: Boolean = false,
-                                    val trash: Boolean = false)
+                                    val trash: Boolean = false, val textSelected: Boolean = false)
 
 internal fun shortcutKey(key: Key): ShortcutKey = when (key) {
     Key.L -> ShortcutKey.L
@@ -60,6 +62,8 @@ internal fun shortcutKey(key: Key): ShortcutKey = when (key) {
     Key.E -> ShortcutKey.E
     Key.T -> ShortcutKey.T
     Key.A -> ShortcutKey.A
+    Key.D -> ShortcutKey.D
+    Key.K -> ShortcutKey.K
     Key.Spacebar -> ShortcutKey.SPACE
     Key.Escape -> ShortcutKey.ESCAPE
     Key.DirectionUp -> ShortcutKey.UP
@@ -89,11 +93,15 @@ internal fun keyboardShortcut(key: ShortcutKey, keyDown: Boolean, control: Boole
         ShortcutKey.N -> if (!context.editing) ShortcutAction.NEW_ENTRY else null
         ShortcutKey.F -> if (!context.editing) ShortcutAction.SEARCH else null
         ShortcutKey.S -> if (context.editing) ShortcutAction.SAVE else null
-        ShortcutKey.C -> context.onSelectedEntry(ShortcutAction.COPY_PASSWORD)
+        // In the search field a text selection keeps Ctrl/⌘+C for copying that text.
+        ShortcutKey.C -> if (context.focus == ShortcutFocus.SEARCH && context.textSelected) null
+            else context.onSelectedEntry(ShortcutAction.COPY_PASSWORD)
         ShortcutKey.B -> context.onSelectedEntry(ShortcutAction.COPY_USERNAME)
         ShortcutKey.T -> context.onSelectedEntry(ShortcutAction.COPY_TOTP)
         ShortcutKey.U -> context.onSelectedEntry(ShortcutAction.OPEN_URL)
         ShortcutKey.E -> context.onSelectedEntry(ShortcutAction.EDIT_ENTRY)
+        ShortcutKey.D -> context.onSelectedEntry(ShortcutAction.COPY_HOST)
+        ShortcutKey.K -> context.onSelectedEntry(ShortcutAction.COPY_COMMAND)
         // Only with list focus, so Ctrl/⌘+A keeps selecting text in text fields.
         ShortcutKey.A -> if (context.focus == ShortcutFocus.LIST && !context.editing) ShortcutAction.MARK_ALL else null
         else -> null
@@ -102,10 +110,16 @@ internal fun keyboardShortcut(key: ShortcutKey, keyDown: Boolean, control: Boole
 
 private fun unmodifiedShortcut(key: ShortcutKey, mac: Boolean, context: ShortcutContext): ShortcutAction? {
     if (key == ShortcutKey.ESCAPE) {
-        return if (context.unlocked && context.editing && !context.busy && !context.modal) ShortcutAction.CANCEL else null
+        if (!context.unlocked || context.busy || context.modal) return null
+        return when {
+            context.editing -> ShortcutAction.CANCEL
+            context.focus == ShortcutFocus.SEARCH -> ShortcutAction.CLEAR_SEARCH
+            else -> null
+        }
     }
     if (!context.unlocked || context.busy || context.modal || context.editing) return null
-    if (context.focus == ShortcutFocus.SEARCH) return if (key == ShortcutKey.DOWN) ShortcutAction.FOCUS_LIST else null
+    if (context.focus == ShortcutFocus.SEARCH)
+        return if (key == ShortcutKey.DOWN || key == ShortcutKey.ENTER) ShortcutAction.FOCUS_LIST else null
     if (context.focus != ShortcutFocus.LIST) return null
     return when (key) {
         ShortcutKey.UP -> ShortcutAction.SELECT_PREVIOUS
@@ -124,7 +138,7 @@ private fun unmodifiedShortcut(key: ShortcutKey, mac: Boolean, context: Shortcut
 
 /** Trashed entries are neither edited, copied nor trashed again from the keyboard. */
 private fun ShortcutContext.onSelectedEntry(action: ShortcutAction): ShortcutAction? =
-    if (focus == ShortcutFocus.LIST && selection && !trash && !editing) action else null
+    if ((focus == ShortcutFocus.LIST || focus == ShortcutFocus.SEARCH) && selection && !trash && !editing) action else null
 
 /** Help rows; every [ShortcutAction] is documented by at least one row. */
 internal enum class ShortcutHelp(val actions: Set<ShortcutAction>, private val letter: String?,
@@ -133,6 +147,7 @@ internal enum class ShortcutHelp(val actions: Set<ShortcutAction>, private val l
     NEW(setOf(ShortcutAction.NEW_ENTRY), "N", null, "shortcuts.new"),
     SEARCH(setOf(ShortcutAction.SEARCH), "F", null, "shortcuts.search"),
     FOCUS_LIST(setOf(ShortcutAction.FOCUS_LIST), null, "shortcuts.key.down", "shortcuts.focusList"),
+    CLEAR_SEARCH(setOf(ShortcutAction.CLEAR_SEARCH), null, "shortcuts.key.escapeSearch", "shortcuts.clearSearch"),
     MOVE(setOf(ShortcutAction.SELECT_PREVIOUS, ShortcutAction.SELECT_NEXT), null, "shortcuts.key.arrows", "shortcuts.move"),
     FIRST_LAST(setOf(ShortcutAction.SELECT_FIRST, ShortcutAction.SELECT_LAST), null, "shortcuts.key.homeEnd", "shortcuts.firstLast"),
     OPEN(setOf(ShortcutAction.EDIT_ENTRY), null, "shortcuts.key.enter", "shortcuts.open"),
@@ -141,6 +156,8 @@ internal enum class ShortcutHelp(val actions: Set<ShortcutAction>, private val l
     COPY_USERNAME(setOf(ShortcutAction.COPY_USERNAME), "B", null, "shortcuts.copyUsername"),
     COPY_TOTP(setOf(ShortcutAction.COPY_TOTP), "T", null, "shortcuts.copyTotp"),
     OPEN_URL(setOf(ShortcutAction.OPEN_URL), "U", null, "shortcuts.openUrl"),
+    COPY_HOST(setOf(ShortcutAction.COPY_HOST), "D", null, "shortcuts.copyHost"),
+    COPY_COMMAND(setOf(ShortcutAction.COPY_COMMAND), "K", null, "shortcuts.copyCommand"),
     TRASH(setOf(ShortcutAction.TRASH_ENTRY), null, "shortcuts.key.delete", "shortcuts.trash"),
     MARK(setOf(ShortcutAction.TOGGLE_MARK), null, "shortcuts.key.space", "shortcuts.mark"),
     MARK_ALL(setOf(ShortcutAction.MARK_ALL), "A", null, "shortcuts.markAll"),
