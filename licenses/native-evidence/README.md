@@ -8,6 +8,9 @@ which satisfy the packaging approval gate.
 the actual Windows x64, Linux x64 and macOS ARM64 runtime inventories, all JDK
 legal-file bytes, official platform SBOMs, and their verified archive provenance.
 It also records DNG-related strings in the selected macOS native binaries.
+[CI evidence from 2026-10-27](ci-2026-10-27/README.md) records the runtime
+inventories after the Compose 1.12.2 and Skiko 0.150.2 update; the JDK and its
+legal files are unchanged.
 
 ## Skiko 0.150.2
 

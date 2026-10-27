@@ -1,10 +1,10 @@
 # Native sources and review: macOS ARM64
 
-Reviewed on 2026-09-23 by the Keyrook copyright holder for release packaging
+Reviewed on 2026-10-27 by the Keyrook copyright holder for release packaging
 with Eclipse Temurin `25.0.4.1+1-LTS`, Compose Multiplatform 1.12.2 and
-Gradle 9.7.1. The evidence comes from the
-[CI collection run](https://github.com/kdg1992/keyrook/actions/runs/35887498871)
-retained in [ci-2026-09-23](../../native-evidence/ci-2026-09-23/README.md).
+Gradle 9.8.2. The evidence comes from the
+[CI collection run](https://github.com/kdg1992/keyrook/actions/runs/40511327420)
+retained in [ci-2026-10-27](../../native-evidence/ci-2026-10-27/README.md).
 This record is bound by hash in `inventory.properties`. Any change of a runtime
 artifact, of the JDK or of its legal files requires a new review.
 
@@ -12,7 +12,7 @@ artifact, of the JDK or of its legal files requires a new review.
 
 All 52 external runtime artifacts of this target are recorded with their SHA-256
 in `inventory.properties` and in
-[runtime-artifacts.tsv](../../native-evidence/ci-2026-09-23/macos-arm64/runtime-artifacts.tsv).
+[runtime-artifacts.tsv](../../native-evidence/ci-2026-10-27/macos-arm64/runtime-artifacts.tsv).
 Their licenses are Apache-2.0, MIT, ISC and the Bouncy Castle license, listed in
 `THIRD-PARTY-NOTICES`. None of them requires distribution of source code.
 
