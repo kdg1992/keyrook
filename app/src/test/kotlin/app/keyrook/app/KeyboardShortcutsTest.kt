@@ -91,27 +91,53 @@ class KeyboardShortcutsTest {
     }
 
     @Test fun `text fields keep copy delete arrows home end and enter for editing`() {
-        listOf(ShortcutFocus.TEXT, ShortcutFocus.SEARCH, ShortcutFocus.OTHER).forEach { focus ->
+        listOf(ShortcutFocus.TEXT, ShortcutFocus.OTHER).forEach { focus ->
             val state = list.copy(focus = focus)
-            listOf(ShortcutKey.C, ShortcutKey.B, ShortcutKey.T, ShortcutKey.U, ShortcutKey.E).forEach { key ->
+            listOf(ShortcutKey.C, ShortcutKey.B, ShortcutKey.T, ShortcutKey.U, ShortcutKey.E, ShortcutKey.D, ShortcutKey.K).forEach { key ->
                 assertNull(resolve(key, state), "$focus $key")
             }
-            listOf(ShortcutKey.UP, ShortcutKey.HOME, ShortcutKey.END, ShortcutKey.ENTER, ShortcutKey.DELETE,
-                ShortcutKey.BACKSPACE).forEach { key ->
+            listOf(ShortcutKey.UP, ShortcutKey.DOWN, ShortcutKey.HOME, ShortcutKey.END, ShortcutKey.ENTER, ShortcutKey.DELETE,
+                ShortcutKey.BACKSPACE, ShortcutKey.ESCAPE).forEach { key ->
                 assertNull(resolve(key, state, control = false), "$focus $key")
                 assertNull(resolve(key, state, mac = true, meta = false), "$focus $key mac")
             }
             assertEquals(ShortcutAction.SEARCH, resolve(ShortcutKey.F, state))
         }
+        assertNull(resolve(ShortcutKey.DOWN, list.copy(focus = ShortcutFocus.SEARCH), control = false, shift = true))
+    }
+
+    @Test fun `the search field moves to the list clears with escape and acts on the selected entry`() {
         val search = list.copy(focus = ShortcutFocus.SEARCH)
-        assertEquals(ShortcutAction.FOCUS_LIST, resolve(ShortcutKey.DOWN, search, control = false))
-        assertNull(resolve(ShortcutKey.DOWN, list.copy(focus = ShortcutFocus.TEXT), control = false))
-        assertNull(resolve(ShortcutKey.DOWN, list.copy(focus = ShortcutFocus.OTHER), control = false))
-        assertNull(resolve(ShortcutKey.DOWN, search, control = false, shift = true))
+        listOf(false, true).forEach { mac ->
+            assertEquals(ShortcutAction.FOCUS_LIST, resolve(ShortcutKey.DOWN, search, mac, control = false, meta = false))
+            assertEquals(ShortcutAction.FOCUS_LIST, resolve(ShortcutKey.ENTER, search, mac, control = false, meta = false))
+            assertEquals(ShortcutAction.CLEAR_SEARCH, resolve(ShortcutKey.ESCAPE, search, mac, control = false, meta = false))
+            assertEquals(ShortcutAction.COPY_PASSWORD, resolve(ShortcutKey.C, search, mac))
+            assertEquals(ShortcutAction.COPY_USERNAME, resolve(ShortcutKey.B, search, mac))
+            assertEquals(ShortcutAction.COPY_TOTP, resolve(ShortcutKey.T, search, mac))
+            assertEquals(ShortcutAction.OPEN_URL, resolve(ShortcutKey.U, search, mac))
+            assertEquals(ShortcutAction.EDIT_ENTRY, resolve(ShortcutKey.E, search, mac))
+            assertEquals(ShortcutAction.COPY_HOST, resolve(ShortcutKey.D, search, mac))
+            assertEquals(ShortcutAction.COPY_COMMAND, resolve(ShortcutKey.K, search, mac))
+            // Selected text in the field keeps Ctrl/⌘+C for copying that text.
+            assertNull(resolve(ShortcutKey.C, search.copy(textSelected = true), mac))
+            assertEquals(ShortcutAction.COPY_USERNAME, resolve(ShortcutKey.B, search.copy(textSelected = true), mac))
+            // Text editing and list-only keys stay with the field.
+            listOf(ShortcutKey.UP, ShortcutKey.HOME, ShortcutKey.END, ShortcutKey.DELETE, ShortcutKey.BACKSPACE, ShortcutKey.SPACE).forEach { key ->
+                assertNull(resolve(key, search, mac, control = false, meta = false), "$key")
+            }
+            assertNull(resolve(ShortcutKey.A, search, mac))
+        }
+        assertNull(resolve(ShortcutKey.C, search.copy(selection = false)))
+        assertNull(resolve(ShortcutKey.ESCAPE, search.copy(busy = true), control = false))
+        assertNull(resolve(ShortcutKey.ESCAPE, search.copy(modal = true), control = false))
+        assertEquals(ShortcutAction.FOCUS_LIST, resolve(ShortcutKey.ENTER, search.copy(selection = false), control = false))
+        assertEquals(ShortcutAction.COPY_HOST, resolve(ShortcutKey.D, list))
+        assertEquals(ShortcutAction.COPY_COMMAND, resolve(ShortcutKey.K, list, mac = true))
     }
 
     @Test fun `entry actions need a selection an active list and an idle unlocked vault`() {
-        val entryKeys = listOf(ShortcutKey.C, ShortcutKey.B, ShortcutKey.T, ShortcutKey.U, ShortcutKey.E)
+        val entryKeys = listOf(ShortcutKey.C, ShortcutKey.B, ShortcutKey.T, ShortcutKey.U, ShortcutKey.E, ShortcutKey.D, ShortcutKey.K)
         listOf(list.copy(selection = false), list.copy(trash = true), list.copy(busy = true), list.copy(modal = true),
             list.copy(editing = true), list.copy(unlocked = false)).forEach { state ->
             entryKeys.forEach { assertNull(resolve(it, state), "$state $it") }
@@ -129,7 +155,7 @@ class KeyboardShortcutsTest {
 
     @Test fun `help documents every action with keys that resolve to it`() {
         assertEquals(ShortcutAction.entries.toSet(), ShortcutHelp.entries.flatMap { it.actions }.toSet())
-        val contexts = listOf(list, ShortcutContext(true, false, true))
+        val contexts = listOf(list, ShortcutContext(true, false, true), list.copy(focus = ShortcutFocus.SEARCH))
         ShortcutHelp.entries.forEach { row ->
             row.shortcutKey?.let { key ->
                 listOf(false, true).forEach { mac ->

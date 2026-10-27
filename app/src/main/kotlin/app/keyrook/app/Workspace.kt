@@ -20,6 +20,8 @@ import androidx.compose.ui.input.key.*
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import app.keyrook.core.model.*
 import app.keyrook.core.security.HealthIssue
@@ -156,11 +158,26 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
             else -> UiText.text("list.copyFailed")
         }
     }
+    fun commandAction(entry: Entry) {
+        val command = entry.data.connectionCommand()
+        if (command != null) onUsed(entry.id)
+        notice = when {
+            command == null -> UiText.text("list.noCommand")
+            runCatching { SecretClipboard.copy(command.second) }.isSuccess -> UiText.text("command.copied", command.first)
+            else -> UiText.text("command.failed")
+        }
+    }
+    // The search field's text and selection; the text follows the view so a lock or reset clears it.
+    var searchValue by remember { mutableStateOf(TextFieldValue(search, TextRange(search.length))) }
+    val searchFieldValue = if (searchValue.text == search) searchValue else TextFieldValue(search, TextRange(search.length))
     fun shortcutContext(focus: ShortcutFocus) = ShortcutContext(unlocked = true, busy = busy, editing = false,
-        modal = confirmation != null || help || bulkTag != null || choosingTemplate, focus = focus, selection = selectedEntry != null, trash = trash)
-    fun handleListKey(event: KeyEvent): Boolean {
-        val action = keyboardShortcut(event, mac, shortcutContext(ShortcutFocus.LIST)) ?: return false
+        modal = confirmation != null || help || bulkTag != null || choosingTemplate, focus = focus, selection = selectedEntry != null, trash = trash,
+        textSelected = focus == ShortcutFocus.SEARCH && !searchFieldValue.selection.collapsed)
+    fun handleListKey(event: KeyEvent, focus: ShortcutFocus = ShortcutFocus.LIST): Boolean {
+        val action = keyboardShortcut(event, mac, shortcutContext(focus)) ?: return false
         when (action) {
+            ShortcutAction.FOCUS_LIST -> return runCatching { listFocus.requestFocus() }.isSuccess
+            ShortcutAction.CLEAR_SEARCH -> if (search.isEmpty()) return false else onView(view.copy(search = ""))
             ShortcutAction.SELECT_PREVIOUS -> onSelection(selection.previous())
             ShortcutAction.SELECT_NEXT -> onSelection(selection.next())
             ShortcutAction.SELECT_FIRST -> onSelection(selection.first())
@@ -182,6 +199,8 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
                     ShortcutAction.COPY_USERNAME -> quickAction(entry, QuickField.USERNAME)
                     ShortcutAction.COPY_TOTP -> quickAction(entry, QuickField.TOTP)
                     ShortcutAction.OPEN_URL -> quickAction(entry, QuickField.URL)
+                    ShortcutAction.COPY_HOST -> quickAction(entry, QuickField.HOST)
+                    ShortcutAction.COPY_COMMAND -> commandAction(entry)
                     ShortcutAction.EDIT_ENTRY -> onEdit(entry)
                     ShortcutAction.TOGGLE_MARK -> onSelection(selection.toggleMark(entry.id))
                     else -> return false
@@ -191,12 +210,12 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         return true
     }
     val searchField: @Composable (Modifier) -> Unit = { modifier ->
-        OutlinedTextField(search, { if (it.length <= 256) onView(view.copy(search = it)) }, label = { Text(UiText.text("shell.search")) },
+        OutlinedTextField(searchFieldValue, { value ->
+            if (value.text.length <= 256) { searchValue = value; if (value.text != search) onView(view.copy(search = value.text)) }
+        }, label = { Text(UiText.text("shell.search")) },
             leadingIcon = { Icon(KeyrookIcons.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
-            modifier = modifier.focusRequester(searchFocus).onPreviewKeyEvent { event ->
-                if (keyboardShortcut(event, mac, shortcutContext(ShortcutFocus.SEARCH)) != ShortcutAction.FOCUS_LIST) false
-                else { runCatching { listFocus.requestFocus() }.isSuccess }
-            }, singleLine = true, colors = TextFieldDefaults.outlinedTextFieldColors(backgroundColor = MaterialTheme.colors.surface))
+            modifier = modifier.focusRequester(searchFocus).onPreviewKeyEvent { event -> handleListKey(event, ShortcutFocus.SEARCH) },
+            singleLine = true, colors = TextFieldDefaults.outlinedTextFieldColors(backgroundColor = MaterialTheme.colors.surface))
     }
     val createButtons: @Composable () -> Unit = {
         Button(onClick = onCreate, enabled = !busy && !trash) { ButtonIcon(KeyrookIcons.Add); Text(UiText.text("shell.newEntry")) }
@@ -293,7 +312,7 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
                 trash = trash, busy = busy,
                 onClick = { onSelection(selection.select(entry.id)); runCatching { listFocus.requestFocus() } },
                 onFocusInside = { onSelection(selection.select(entry.id)) },
-                onQuick = { kind -> quickAction(entry, kind) },
+                onQuick = { kind -> quickAction(entry, kind) }, onCommand = { commandAction(entry) },
                 onEdit = { onEdit(entry) }, onDuplicate = { onDuplicate(entry) }, onRestore = { onRestore(entry.id) },
                 onPurge = { confirmation = ListConfirmation.Purge(entry.id, entry.title) },
                 onTrash = { confirmation = ListConfirmation.Trash(entry.id, entry.title) },

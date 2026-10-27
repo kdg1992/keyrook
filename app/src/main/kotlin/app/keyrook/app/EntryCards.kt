@@ -120,6 +120,7 @@ private fun TagBadge(tag: String) {
 @Composable
 internal fun EntryCardView(entry: Entry, info: EntryCardInfo, isSelected: Boolean, listFocused: Boolean, trash: Boolean,
                            busy: Boolean, onClick: () -> Unit, onFocusInside: () -> Unit, onQuick: (QuickField) -> Unit,
+                           onCommand: () -> Unit,
                            onEdit: () -> Unit, onDuplicate: () -> Unit, onRestore: () -> Unit, onPurge: () -> Unit,
                            onTrash: () -> Unit, markers: List<HealthIssue> = emptyList(), compact: Boolean = false,
                            marked: Boolean = false, onMark: (() -> Unit)? = null, onFavorite: (() -> Unit)? = null,
@@ -178,6 +179,12 @@ internal fun EntryCardView(entry: Entry, info: EntryCardInfo, isSelected: Boolea
                                 }, style = MaterialTheme.typography.body2, fontWeight = FontWeight.SemiBold)
                             }
                         }
+                    }
+                    // Only the protocol is kept; the command text is built again when the button is used.
+                    val protocol = remember(entry.data) { entry.data.connectionCommand()?.first }
+                    if (protocol != null) TextButton(enabled = !busy, onClick = onCommand, contentPadding = CompactButtonPadding,
+                        modifier = Modifier.heightIn(min = 30.dp)) {
+                        Text(UiText.text("list.copyCommand", protocol), style = MaterialTheme.typography.body2, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
