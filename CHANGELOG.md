@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.0](https://github.com/kdg1992/keyrook/compare/v1.2.0...v1.3.0) (2026-10-27)
+
+
+### Features
+
+* **desktop:** copy from the search field and copy hosts and SSH commands ([#84](https://github.com/kdg1992/keyrook/issues/84)) ([536044c](https://github.com/kdg1992/keyrook/commit/536044cc0cc81cc9af62f89664bdf00f1eed1e1a))
+* **desktop:** start new entries from the list context and duplicate into the editor ([#85](https://github.com/kdg1992/keyrook/issues/85)) ([29e28d2](https://github.com/kdg1992/keyrook/commit/29e28d2930d2695e405ffe7b456716c34e864638))
+
 ## [1.2.0](https://github.com/kdg1992/keyrook/compare/v1.1.0...v1.2.0) (2026-10-27)
 
 
