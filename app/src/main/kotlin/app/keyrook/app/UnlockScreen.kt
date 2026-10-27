@@ -9,6 +9,7 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -34,11 +35,11 @@ internal fun UnlockScreen(state: AppState, settings: SettingsStore, unlockDelay:
             chooseNewKeyFile(dialogs)?.let { target -> generateKeyFile(target); credentialOnEdt { done(target) } }
             null
         }
-    }) { path, password, key, create, parameters ->
+    }) { path, password, key, create, parameters, rememberKey ->
         operation {
             val unlocked = controller.unlock(path, password, key, create, parameters)
             try {
-                rememberUnlockedPath(settings, path)
+                rememberUnlockedPath(settings, path, key?.takeIf { rememberKey })
                 val token = controller.sessionEpoch.capture()
                 // Restored settings are unauthenticated: always show them, confirm destructive retention.
                 val restored = restoreRememberedBackups(controller, settings) { text -> dialogs.confirm(text) }
@@ -64,9 +65,21 @@ private fun chooseFile(save: Boolean): Path? =
 
 @Composable
 private fun UnlockForm(busy: Boolean, delaySeconds: Long, remembered: AppSettings, generateKey: ((Path) -> Unit) -> Unit,
-                       onOpen: (Path, CharArray, Path?, Boolean, KdfParameters) -> Unit) {
+                       onOpen: (Path, CharArray, Path?, Boolean, KdfParameters, Boolean) -> Unit) {
     var path by remember { mutableStateOf(remembered.lastVaultPath?.toString().orEmpty()) }
-    var key by remember { mutableStateOf("") }
+    // The key file remembered for the shown vault; replaced when another vault is chosen unless the user edited the field.
+    var rememberedKey by remember { mutableStateOf(remembered.lastVaultPath?.let(remembered::keyFileFor)?.toString().orEmpty()) }
+    var key by remember { mutableStateOf(rememberedKey) }
+    var rememberKey by remember { mutableStateOf(rememberedKey.isNotEmpty()) }
+    fun selectVault(value: String) {
+        path = value
+        val stored = runCatching { Path.of(value) }.getOrNull()?.takeIf { it.isAbsolute }?.let(remembered::keyFileFor)?.toString().orEmpty()
+        if (key == rememberedKey) {
+            key = stored
+            rememberKey = stored.isNotEmpty()
+        }
+        rememberedKey = stored
+    }
     var password by remember { mutableStateOf("") }
     var confirmation by remember { mutableStateOf("") }
     var create by remember { mutableStateOf(false) }
@@ -82,10 +95,13 @@ private fun UnlockForm(busy: Boolean, delaySeconds: Long, remembered: AppSetting
         val keyPath = if (key.isBlank()) null else runCatching { Path.of(key) }.getOrNull()
         if (target != null && (key.isBlank() || keyPath != null)) {
             val chars = password.toCharArray(); password = ""; confirmation = ""
-            onOpen(target, chars, keyPath, create, requireNotNull(parameters))
+            onOpen(target, chars, keyPath, create, requireNotNull(parameters), rememberKey && keyPath != null)
         }
     }
     val submitting = Modifier.fillMaxWidth().submitOnEnter { submit() }
+    // With a remembered vault only the password is missing, so it takes the focus; otherwise the vault file does.
+    val initialFocus = rememberInitialFocus()
+    val focusPassword = remember { path.isNotBlank() }
     var advanced by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), contentAlignment = Alignment.TopCenter) {
         Column(Modifier.widthIn(max = 560.dp).padding(top = 24.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -96,15 +112,17 @@ private fun UnlockForm(busy: Boolean, delaySeconds: Long, remembered: AppSetting
                     enabled = !busy, modifier = Modifier.selectableGroup()) { create = it }
                 if (delaySeconds > 0) Banner(UiText.text("shell.delay", delaySeconds), BannerKind.WARNING)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(path, { path = it }, label = { Text(UiText.text("credentials.vaultFile")) }, singleLine = true,
-                        enabled = !busy, modifier = Modifier.weight(1f).submitOnEnter { submit() })
-                    OutlinedButton(enabled = !busy, onClick = { chooseFile(create)?.let { path = it.toString() } },
+                    OutlinedTextField(path, { selectVault(it) }, label = { Text(UiText.text("credentials.vaultFile")) }, singleLine = true,
+                        enabled = !busy, modifier = Modifier.weight(1f).submitOnEnter { submit() }
+                            .then(if (focusPassword) Modifier else Modifier.focusRequester(initialFocus)))
+                    OutlinedButton(enabled = !busy, onClick = { chooseFile(create)?.let { selectVault(it.toString()) } },
                         modifier = Modifier.padding(top = 8.dp).describedAs(UiText.text("credentials.selectFile"))) {
                         Text(UiText.text("credentials.browse"))
                     }
                 }
                 OutlinedTextField(password, { if (it.length <= 1024) password = it }, label = { Text(UiText.text("credentials.password")) }, singleLine = true,
-                    enabled = !busy, visualTransformation = PasswordVisualTransformation(), modifier = submitting)
+                    enabled = !busy, visualTransformation = PasswordVisualTransformation(),
+                    modifier = if (focusPassword) submitting.focusRequester(initialFocus) else submitting)
                 if (create) OutlinedTextField(confirmation, { if (it.length <= 1024) confirmation = it }, label = { Text(UiText.text("credentials.repeatPassword")) },
                     singleLine = true, enabled = !busy, visualTransformation = PasswordVisualTransformation(), modifier = submitting,
                     isError = confirmation.isNotEmpty() && password != confirmation)
@@ -123,7 +141,7 @@ private fun UnlockForm(busy: Boolean, delaySeconds: Long, remembered: AppSetting
                         TextButton(enabled = !busy, contentPadding = CompactButtonPadding, onClick = {
                             generateKey { target -> key = target.toString() }
                         }) { Text(UiText.text("credentials.generateKey")) }
-                        if (key.isNotEmpty()) TextButton(enabled = !busy, contentPadding = CompactButtonPadding, onClick = { key = "" }) {
+                        if (key.isNotEmpty()) TextButton(enabled = !busy, contentPadding = CompactButtonPadding, onClick = { key = ""; rememberKey = false }) {
                             Text(UiText.text("credentials.noKey"))
                         }
                         if (create) {
@@ -135,6 +153,10 @@ private fun UnlockForm(busy: Boolean, delaySeconds: Long, remembered: AppSetting
                             }
                         }
                     }
+                }
+                if (key.isNotEmpty()) Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    LabeledCheckbox(rememberKey, UiText.text("credentials.rememberKey"), enabled = !busy) { rememberKey = it }
+                    if (rememberKey) HintText(UiText.text("credentials.rememberKeyHint"))
                 }
                 if (create && (advanced || parameters == null)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

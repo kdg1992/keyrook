@@ -359,4 +359,52 @@ class AppSettingsTest {
         assertTrue(memory.flush())
         assertEquals(2, failures.get())
     }
+
+    @Test fun `a key file is remembered only per opted-in vault and forgotten on opt-out`() {
+        val root = directory.toRealPath()
+        val config = root.resolve("config")
+        val file = config.resolve(SettingsStore.FILE_NAME)
+        val first = root.resolve("first.keyrook")
+        val second = root.resolve("second.keyrook")
+        val key = root.resolve("keys").resolve("factor.bin")
+        val store = SettingsStore(config)
+        rememberUnlockedPath(store, first)
+        assertTrue(store.flush())
+        assertFalse(Files.readString(file).contains("factor.bin"), "Without opt-in no key-file path is written")
+        rememberUnlockedPath(store, first, key)
+        rememberUnlockedPath(store, second)
+        assertTrue(store.flush())
+        val loaded = SettingsStore(config).current()
+        assertEquals(key, loaded.keyFileFor(first))
+        assertNull(loaded.keyFileFor(second))
+        assertEquals(second, loaded.lastVaultPath)
+        rememberUnlockedPath(store, first)
+        assertTrue(store.flush())
+        assertNull(SettingsStore(config).current().keyFileFor(first))
+        assertFalse(Files.readString(file).contains("factor.bin"), "Unlocking without the option forgets the key file")
+    }
+
+    @Test fun `remembered key files are bounded and invalid entries are dropped`() {
+        val root = directory.toRealPath()
+        var settings = AppSettings()
+        (0..AppSettings.MAX_KEY_FILE_VAULTS).forEach { settings = settings.withKeyFile(root.resolve("v$it.keyrook"), root.resolve("k$it")) }
+        assertEquals(AppSettings.MAX_KEY_FILE_VAULTS, settings.keyFiles.size)
+        assertNull(settings.keyFileFor(root.resolve("v0.keyrook")), "The oldest entry gives way")
+        assertEquals(root.resolve("k${AppSettings.MAX_KEY_FILE_VAULTS}"), settings.keyFileFor(root.resolve("v${AppSettings.MAX_KEY_FILE_VAULTS}.keyrook")))
+        val config = Files.createDirectory(root.resolve("config"))
+        fun json(path: Path) = path.toString().replace("\\", "\\\\")
+        val vault = root.resolve("a.keyrook")
+        Files.writeString(config.resolve(SettingsStore.FILE_NAME), """{"version":1,"keyFiles":{
+            "${json(vault)}": "${json(root.resolve("a.key"))}",
+            "relative.keyrook": "${json(root.resolve("b.key"))}",
+            "${json(root.resolve("c.keyrook"))}": "relative.key"}}""")
+        assertEquals(mapOf(vaultKey(vault) to root.resolve("a.key")), SettingsStore(config).current().keyFiles)
+    }
+
+    @Test fun `long inactivity deadlines are offered in hours`() {
+        assertEquals(listOf(60, 120, 240, 480), LOCK_MINUTE_CHOICES.filter { it >= 60 })
+        val deadline = InactivityDeadline { 0L }
+        LOCK_MINUTE_CHOICES.forEach { assertFalse(deadline.expired(it)) }
+        assertThrows(IllegalArgumentException::class.java) { deadline.expired(LOCK_MINUTE_CHOICES.last() + 1) }
+    }
 }

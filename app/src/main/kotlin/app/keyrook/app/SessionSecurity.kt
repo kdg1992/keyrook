@@ -92,7 +92,7 @@ internal class InactivityDeadline(
         return true
     }
     @Synchronized fun expired(timeoutMinutes: Int): Boolean {
-        require(timeoutMinutes in 1..30)
+        require(timeoutMinutes in 1..LOCK_MINUTE_CHOICES.last())
         return elapsed.reached(timeoutMinutes * 60_000_000_000L)
     }
 }

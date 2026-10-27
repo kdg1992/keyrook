@@ -8,12 +8,12 @@ import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
 
 /**
- * Plaintext application preferences. Holds vault, backup and word-list paths and choices only, never credentials, key-file paths,
- * generated secrets, word-list content or vault content.
+ * Plaintext application preferences. Holds vault, backup and word-list paths and choices, and key-file paths only for vaults
+ * where the user opted in; never passwords, key-file contents, generated secrets, word-list content or vault content.
  *
  * Compatibility: a new preference is added as an optional field with a default, so files written before it existed still decode
  * within the same [SettingsCodec.VERSION]. Unknown keys stay rejected. A change that alters or removes an existing field needs a
- * version bump instead. [language], [windowLock], [updateCheck], [window], [generator], [uiScale] and [contrast] were
+ * version bump instead. [language], [windowLock], [updateCheck], [window], [generator], [uiScale], [contrast] and [keyFiles] were
  * added this way.
  */
 @Serializable
@@ -36,6 +36,8 @@ data class SettingsDocument(
     val uiScale: Int? = null,
     /** Colour contrast chosen in the UI; absent or unknown values mean the standard colours. */
     val contrast: String? = null,
+    /** Key-file path per vault path, written only for vaults where the user chose to remember the key file. */
+    val keyFiles: Map<String, String> = emptyMap(),
 )
 
 /**
