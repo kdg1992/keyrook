@@ -52,11 +52,12 @@ internal fun Workspace(state: AppState, current: Vault, settings: SettingsStore,
         val entryList: @Composable (Boolean) -> Unit = { compact ->
             VaultList(current, controller, busy, shortcuts, mac, listView, { listView = it }, selection,
                 { selection = it }, warningsByEntry, compact, state.recent.of(current.id), onUsed = state::used,
-                onCreate = { state.template = null; creating = true },
-                onCreateFromTemplate = { template -> state.template = template; creating = true },
+                onCreate = { context -> state.template = null; state.newEntry = context.copy(type = context.type ?: state.lastType); creating = true },
+                onCreateFromTemplate = { template -> state.template = template; state.newEntry = null; creating = true },
                 onSaveTemplate = { templateSource = it },
                 onEdit = { state.used(it.id); editing = it },
-                onDuplicate = { entry -> operation { controller.duplicate(entry.id) } },
+                // A duplicate opens in the editor without its secrets and is saved only from there.
+                onDuplicate = { entry -> state.template = null; state.newEntry = NewEntryContext(copyOf = entry); creating = true },
                 onTrash = { id -> operation { controller.trash(id, false) } },
                 onRestore = { id -> operation { controller.trash(id, true) } },
                 onPurge = { id -> operation { controller.purge(setOf(id)) } },
@@ -99,7 +100,7 @@ internal fun Workspace(state: AppState, current: Vault, settings: SettingsStore,
 private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, shortcuts: ShortcutActions, mac: Boolean,
                       view: ListView, onView: (ListView) -> Unit, selectionState: EntrySelection,
                       onSelection: (EntrySelection) -> Unit, issues: Map<String, Set<HealthIssue>>, compact: Boolean,
-                      recent: List<String>, onUsed: (String) -> Unit, onCreate: () -> Unit,
+                      recent: List<String>, onUsed: (String) -> Unit, onCreate: (NewEntryContext) -> Unit,
                       onCreateFromTemplate: (EntryTemplate) -> Unit, onSaveTemplate: (Entry) -> Unit, onEdit: (Entry) -> Unit,
                       onDuplicate: (Entry) -> Unit, onTrash: (String) -> Unit, onRestore: (String) -> Unit,
                       onPurge: (String) -> Unit, onEmptyTrash: () -> Unit,
@@ -125,7 +126,9 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
     var bulkTag by remember { mutableStateOf<Boolean?>(null) }
     var choosingTemplate by remember { mutableStateOf(false) }
     val trashCount = remember(snapshot) { vault.entries.count { it.deletedAt != null } }
-    val latestNew by rememberUpdatedState({ if (!busy && !trash && confirmation == null) onCreate() })
+    // A new entry starts with the type, customer and project the list is filtered by.
+    fun create() = onCreate(NewEntryContext(activeFilters.type, activeFilters.customerId, activeFilters.projectId))
+    val latestNew by rememberUpdatedState({ if (!busy && !trash && confirmation == null) create() })
     DisposableEffect(shortcuts) {
         shortcuts.newEntry = { latestNew() }
         shortcuts.search = { searchFocus.requestFocus() }
@@ -199,7 +202,7 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
             }, singleLine = true, colors = TextFieldDefaults.outlinedTextFieldColors(backgroundColor = MaterialTheme.colors.surface))
     }
     val createButtons: @Composable () -> Unit = {
-        Button(onClick = onCreate, enabled = !busy && !trash) { ButtonIcon(KeyrookIcons.Add); Text(UiText.text("shell.newEntry")) }
+        Button(onClick = ::create, enabled = !busy && !trash) { ButtonIcon(KeyrookIcons.Add); Text(UiText.text("shell.newEntry")) }
         if (vault.templates.isNotEmpty()) OutlinedButton(onClick = { choosingTemplate = true }, enabled = !busy && !trash) {
             Text(UiText.text("template.new"))
         }

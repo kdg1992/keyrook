@@ -119,18 +119,6 @@ class VaultController(internal val session: VaultSession = VaultSession(),
         return session.snapshot()
     }
 
-    fun duplicate(id: String): Vault {
-        ensureOperationCurrent()
-        session.snapshot().use { current ->
-            val source = current.entries.single { it.id == id }
-            val now = java.time.Instant.now().toString()
-            val duplicate = source.copy(id = java.util.UUID.randomUUID().toString(), title = UiText.text("entry.duplicateTitle", source.title),
-                createdAt = now, modifiedAt = now, deletedAt = null, history = emptyList())
-            session.save(current.copy(entries = current.entries + duplicate))
-        }
-        return session.snapshot()
-    }
-
     /** Irreversibly removes trashed entries with their history; only earlier backups still contain them. */
     fun purge(ids: Set<String>): Vault = purgeSelected { ids }
 

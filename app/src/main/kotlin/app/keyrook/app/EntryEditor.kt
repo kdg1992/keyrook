@@ -89,6 +89,24 @@ internal fun submitEditedEntry(busy: Boolean, candidate: Entry, save: (Entry) ->
 }
 
 /** The editor's tag text: the user's tags, never a reserved one. */
+/**
+ * How a new entry starts without a template: [copyOf] duplicates an entry's layout and visible values, otherwise [type],
+ * [customerId] and [projectId] preset a blank entry, for example from the list's active filters.
+ */
+internal data class NewEntryContext(val type: EntryType? = null, val customerId: String? = null, val projectId: String? = null,
+                                    val copyOf: Entry? = null)
+
+/** The values a duplicate of [entry] starts with: hidden fields such as passwords, keys and TOTP secrets start empty. */
+internal fun duplicateValues(entry: Entry): List<String> =
+    entry.data.fields().map { field -> if (field.hidden) "" else field.value.useChars { String(it) } }
+
+/** Fields that hold multi-line text: SSH key material and DNS notes. Every other field takes a single line. */
+internal fun EntryData.multiLineField(index: Int): Boolean = when (this) {
+    is EntryData.Ssh -> fields()[index] === privateKey || fields()[index] === publicKey
+    is EntryData.Domain -> fields()[index] === dnsNotes
+    else -> false
+}
+
 internal fun editorTags(source: Entry?): String = source?.tags?.let(ReservedTags::visible)?.joinToString(", ").orEmpty()
 
 /**

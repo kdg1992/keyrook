@@ -32,6 +32,10 @@ internal class AppState {
     var creating by mutableStateOf(false)
     // The template a new entry starts from while [creating]; null for a blank entry.
     var template by mutableStateOf<EntryTemplate?>(null)
+    // Without a template: the entry to duplicate or the type, customer and project a new entry starts with.
+    var newEntry by mutableStateOf<NewEntryContext?>(null)
+    // The type of the entry created last in this session, preset for the next one; reset on lock.
+    var lastType by mutableStateOf<EntryType?>(null)
     var locking by mutableStateOf(false)
     var showSettings by mutableStateOf(false)
     // List view, selection and shown detail values live here so they survive the editor; lock resets them.
@@ -53,7 +57,7 @@ internal class AppState {
         // After invalidating: a worker's dialog request is either canceled here or refused by its guard.
         dialogs.cancelAll()
         java.awt.Window.getWindows().filterIsInstance<java.awt.Dialog>().filter { it.isVisible }.forEach { it.dispose() }
-        editing = null; creating = false; template = null; about = false; showSettings = false
+        editing = null; creating = false; template = null; newEntry = null; lastType = null; about = false; showSettings = false
         if (confirmClose) { confirmClose = false; onCloseAnswered(false) }
         reveal = RevealState(); listView = ListView(); selection = EntrySelection(); organizer = false; warningsOpen = false
         recent = RecentEntries()
