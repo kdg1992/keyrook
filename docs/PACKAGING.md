@@ -88,7 +88,7 @@ depends on this check. Native image/installer tasks additionally refuse executio
 outside GitHub Actions. Regular source builds and tests remain available locally.
 There is no Gradle switch to ignore the inventory check.
 
-Release packaging pins Temurin `25.0.4.1+1`, matching the retained JDK evidence.
+Release packaging pins Temurin `25.0.5+8`, matching the retained JDK evidence.
 After all platform packages pass verification, publication also downloads the
 matching official JDK source archive, verifies its recorded SHA-256, and includes
 it with its provenance and the release checksums. A failed source download or
@@ -193,7 +193,9 @@ July and October), and immediately for an out-of-band fix. To move to it:
    legal texts, in a new `licenses/native-evidence/temurin-<version>/`
    directory with its `provenance.json`, following the existing one.
 2. Point the pin in `scripts/collect-jdk-archive.mjs` at the new evidence and
-   version, and add the per-platform runtime archive records it reads.
+   version, and record the official Windows x64, Linux x64 and macOS ARM64 JDK
+   archives with their published SHA-256 under `runtimeArchives` in the new
+   `provenance.json`; the script reads them from there.
 3. Dispatch `Release` manually. Packaging then stops at the approval gate
    because the reviewed inventories still name the old JDK, but the
    `native-inventory-<platform>` evidence is uploaded. Retain it as a new

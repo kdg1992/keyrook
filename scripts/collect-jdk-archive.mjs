@@ -7,17 +7,17 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 import path from 'node:path';
 
-const evidence = 'licenses/native-evidence/temurin-25.0.4.1+1';
+const evidence = 'licenses/native-evidence/temurin-25.0.5+8';
+const jdkVersion = '25.0.5+8-LTS';
 const provenance = JSON.parse(await readFile(`${evidence}/provenance.json`, 'utf8'));
 const mode = process.argv[2] ?? 'source';
 if (!['source', 'runtime'].includes(mode) || process.argv.length > 3) throw Error('Invalid archive mode');
 const targetPlatform = {win32: 'windows', linux: 'linux', darwin: 'macos'}[process.platform];
 let archive = {url: provenance.sourceArchive, sha256: provenance.sourceArchiveSha256};
 if (mode === 'runtime') {
-    const records = JSON.parse(await readFile('licenses/native-evidence/ci-2026-09-23/provenance.json', 'utf8'));
-    const record = records.platforms.find(item => item.target === `${targetPlatform}-${process.arch}`);
-    if (!record || record.jdkVersion !== '25.0.4.1+1-LTS') throw Error('No matching JDK runtime evidence');
-    archive = record.jdkArchive;
+    const record = (provenance.runtimeArchives ?? []).find(item => item.target === `${targetPlatform}-${process.arch}`);
+    if (!record || record.jdkVersion !== jdkVersion) throw Error('No matching JDK runtime evidence');
+    archive = record;
 }
 const url = new URL(archive.url);
 if (url.protocol !== 'https:' || url.hostname !== 'github.com' ||

@@ -1,0 +1,69 @@
+{
+  "status": "verified-evidence-not-redistribution-approval",
+  "runUrl": "https://github.com/kdg1992/keyrook/actions/runs/40520479241",
+  "commit": "1f1ac5fa39676d9f4888af414622eb0316baf696",
+  "temurinEvidence": "../temurin-25.0.5+8/provenance.json",
+  "jdkNotices": "../ci-2026-09-23/jdk-notices/",
+  "platforms": [
+    {
+      "target": "windows-x64",
+      "runtimeArtifacts": 52,
+      "jdkVersion": "25.0.5+8-LTS",
+      "jdkLegalFiles": 253,
+      "jdkLegalSha256": "dd182ea73c5e9fc7228dd9f8e3e60389b330ecc2ec7a4d836461b9b81e5f81a8",
+      "artifactId": 12741527468,
+      "artifactSha256": "sha256:9374f130983d35cea2cb7d2d27f1f81e417fef19ab32422528d32bf50a3b78f1",
+      "jdkArchive": {
+        "url": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jdk_x64_windows_hotspot_25.0.5_8.zip",
+        "sha256": "636bdc13dc649ddc7d5921c5c7d23cca6e44fd19d662b45cc9c02135a6c96c42",
+        "legalFilesMatch": true
+      },
+      "jdkLegalManifestIdenticalTo": "../ci-2026-09-23/windows-x64/jdk-legal.sha256",
+      "files": {
+        "candidate.properties": "c993d5d0ceaa0eb2f048d20fb83e4b1289b70918ce5cf1b71856d91933cc763f",
+        "runtime-artifacts.tsv": "6806d2db72fd9c030394f1e8075349ba6a19ef3ea21090a49a88ab3328f54de8",
+        "jdk-legal.sha256": "dd182ea73c5e9fc7228dd9f8e3e60389b330ecc2ec7a4d836461b9b81e5f81a8"
+      }
+    },
+    {
+      "target": "linux-x64",
+      "runtimeArtifacts": 52,
+      "jdkVersion": "25.0.5+8-LTS",
+      "jdkLegalFiles": 254,
+      "jdkLegalSha256": "9eba21c82a3dc3e4cf47ff555e398221afd2721939d9dcfe5838a11679304a8b",
+      "artifactId": 12742320790,
+      "artifactSha256": "sha256:ec690231eae0ea98c97c53f3ea36a9b362550bb71075d7afb27bc93cbbf5246e",
+      "jdkArchive": {
+        "url": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jdk_x64_linux_hotspot_25.0.5_8.tar.gz",
+        "sha256": "68982529869257d0ee6b824ec5aa270ff8b118bb438670da0b97ebdab178d7fb",
+        "legalFilesMatch": true
+      },
+      "jdkLegalManifestIdenticalTo": "../ci-2026-09-23/linux-x64/jdk-legal.sha256",
+      "files": {
+        "candidate.properties": "9b19f0a1ca3e5dfb19214a50a082360c2b0c906110ae543378655b627b38642a",
+        "runtime-artifacts.tsv": "c2a79cab5390d716ec75e791d1b6fe94232fe16e63a31de088f1ab2c15ff2c90",
+        "jdk-legal.sha256": "9eba21c82a3dc3e4cf47ff555e398221afd2721939d9dcfe5838a11679304a8b"
+      }
+    },
+    {
+      "target": "macos-arm64",
+      "runtimeArtifacts": 52,
+      "jdkVersion": "25.0.5+8-LTS",
+      "jdkLegalFiles": 252,
+      "jdkLegalSha256": "9188e404dd6f50775105e9d84550915c189c3d4c3791de455de48765d4c50599",
+      "artifactId": 12742410728,
+      "artifactSha256": "sha256:8c023e4dc75930d77730c6c426c20f3b32a97cd3ec6d4bd747ac319ff5c10f5e",
+      "jdkArchive": {
+        "url": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jdk_aarch64_mac_hotspot_25.0.5_8.tar.gz",
+        "sha256": "36dc14d797aaff6d89aab302cd053fdba6207dfdcf772052fa7b023a94b0e857",
+        "legalFilesMatch": true
+      },
+      "jdkLegalManifestIdenticalTo": "../ci-2026-09-23/macos-arm64/jdk-legal.sha256",
+      "files": {
+        "candidate.properties": "7a9e7a093d7f5ebd485e502662597ba836d814f4d04c96efd2e2b9bff1e228d3",
+        "runtime-artifacts.tsv": "fe0e19e782514f1857a84748c09e1bf3cb7675a619907baa2d6887f92605689f",
+        "jdk-legal.sha256": "9188e404dd6f50775105e9d84550915c189c3d4c3791de455de48765d4c50599"
+      }
+    }
+  ]
+}
