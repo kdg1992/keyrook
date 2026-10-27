@@ -7,7 +7,7 @@ these are not additional copies of the same library in the application.
 
 | Component family | Resolved version | License |
 | --- | --- | --- |
-| JetBrains Compose Multiplatform (desktop, animation, foundation, material, runtime, UI) | 1.12.1 | Apache-2.0 |
+| JetBrains Compose Multiplatform (desktop, animation, foundation, material, runtime, UI) | 1.12.2 | Apache-2.0 |
 | AndroidX Compose runtime | 1.12.1 | Apache-2.0 |
 | AndroidX Lifecycle | 2.11.0 | Apache-2.0 |
 | JetBrains AndroidX Lifecycle adapters | 2.9.6 | Apache-2.0 |
@@ -18,8 +18,8 @@ these are not additional copies of the same library in the application.
 | JetBrains annotations | 23.0.0 | Apache-2.0 |
 | JSpecify annotations | 1.0.0 | Apache-2.0 |
 | JetBrains Runtime API (`jbr-api`, not a bundled JDK) | 1.9.0 | Apache-2.0 |
-| Skiko JVM bindings and platform runtime | 0.150.1 | Apache-2.0; native Skia and dependencies retain their own licenses |
-| Skia graphics engine | m150-1f14f1166a | BSD-3-Clause, with separately licensed third-party components |
+| Skiko JVM bindings and platform runtime | 0.150.2 | Apache-2.0; native Skia and dependencies retain their own licenses |
+| Skia graphics engine | m150-a3f509bf52 | BSD-3-Clause, with separately licensed third-party components |
 
 Kotlin standard library, serialization, and cryptographic library notices are
 listed in the root `THIRD-PARTY-NOTICES`. The full Apache license is in
@@ -30,11 +30,11 @@ JVM modules: [Maven Central](https://repo.maven.apache.org/maven2/) and
 [Google Maven](https://dl.google.com/dl/android/maven2/).
 Upstream projects: [Compose](https://github.com/JetBrains/compose-multiplatform),
 [AndroidX](https://android.googlesource.com/platform/frameworks/support/),
-[Skiko](https://github.com/JetBrains/skiko/tree/v0.150.1).
+[Skiko](https://github.com/JetBrains/skiko/tree/v0.150.2).
 
 ## Skiko notice
 
-From [Skiko 0.150.1 NOTICE](https://github.com/JetBrains/skiko/blob/v0.150.1/NOTICE):
+From [Skiko 0.150.2 NOTICE](https://github.com/JetBrains/skiko/blob/v0.150.2/NOTICE):
 
 ```text
 This project contains code adapted from "The Android Open Source Project" licensed under the Apache License, Version 2.0 (the "License"):
@@ -45,8 +45,8 @@ https://android.googlesource.com/platform/frameworks/base
 ## Skia notice
 
 The Skia revision is pinned by
-[Skiko's build properties](https://github.com/JetBrains/skiko/blob/v0.150.1/skiko/gradle.properties).
-The following is the [license at that revision](https://github.com/JetBrains/skia/blob/m150-1f14f1166a/LICENSE):
+[Skiko's build properties](https://github.com/JetBrains/skiko/blob/v0.150.2/skiko/gradle.properties).
+The following is the [license at that revision](https://github.com/JetBrains/skia/blob/m150-a3f509bf52/LICENSE):
 
 ```text
 Copyright (c) 2011 Google Inc. All rights reserved.
@@ -82,7 +82,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## Native distribution coverage
 
-The inspected `skiko-awt-runtime-windows-x64:0.150.1` JAR contains no aggregate
+The inspected `skiko-awt-runtime-windows-x64:0.150.2` JAR contains no aggregate
 LICENSE or NOTICE file. The notices above cover Skiko and Skia themselves;
 they are not a complete notice bundle for statically linked native codecs,
 font libraries, and Unicode data. Before distributing native installers, the
@@ -97,9 +97,9 @@ JDK legal files/version. Missing or stale records fail the build before native
 image or installer creation; there is no bypass property. See
 [Native packaging](../docs/PACKAGING.md) for the inventory format and workflow.
 
-The upstream [Skiko v0.150.1 tree](https://github.com/JetBrains/skiko/tree/v0.150.1)
+The upstream [Skiko v0.150.2 tree](https://github.com/JetBrains/skiko/tree/v0.150.2)
 provides its own LICENSE and NOTICE. The
-[pinned Skia tree](https://github.com/JetBrains/skia/tree/m150-1f14f1166a)
+[pinned Skia tree](https://github.com/JetBrains/skia/tree/m150-a3f509bf52)
 also contains separately licensed third-party directories and references external
 dependencies. Those source-tree files alone do not establish which components
 are linked into every prebuilt Skiko runtime. No complete per-binary native

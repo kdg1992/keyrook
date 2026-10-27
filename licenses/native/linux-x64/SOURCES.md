@@ -1,7 +1,7 @@
 # Native sources and review: Linux x64
 
 Reviewed on 2026-09-23 by the Keyrook copyright holder for release packaging
-with Eclipse Temurin `25.0.4.1+1-LTS`, Compose Multiplatform 1.12.1 and
+with Eclipse Temurin `25.0.4.1+1-LTS`, Compose Multiplatform 1.12.2 and
 Gradle 9.7.1. The evidence comes from the
 [CI collection run](https://github.com/kdg1992/keyrook/actions/runs/35887498871)
 retained in [ci-2026-09-23](../../native-evidence/ci-2026-09-23/README.md).
@@ -18,26 +18,26 @@ Their licenses are Apache-2.0, MIT, ISC and the Bouncy Castle license, listed in
 
 ## Skiko native runtime
 
-- Artifact: [skiko-awt-runtime-linux-x64-0.150.1.jar](https://repo.maven.apache.org/maven2/org/jetbrains/skiko/skiko-awt-runtime-linux-x64/0.150.1/skiko-awt-runtime-linux-x64-0.150.1.jar),
-  SHA-256 `920c1cb033abfb79202f9f455fb86491bec5e45c156f186c0125b10fce97e093`, identical to the Maven Central checksum.
-- Native library `libskiko-linux-x64.so`, SHA-256 `10674295a4eb78232b97fb94c20a66687b8af8e4b512b1224dcf75f8e16cc030`
+- Artifact: [skiko-awt-runtime-linux-x64-0.150.2.jar](https://repo.maven.apache.org/maven2/org/jetbrains/skiko/skiko-awt-runtime-linux-x64/0.150.2/skiko-awt-runtime-linux-x64-0.150.2.jar),
+  SHA-256 `c6c1f9fa37464fd0bcca6e486a6b35307b6e2436199de9d009f877121de1c5c2`, identical to the Maven Central checksum.
+- Native library `libskiko-linux-x64.so`, SHA-256 `c733456df0b83210d9e79b90a581c4e005c28d2ef2c4cd17d146d74f7a60f378`
 - Prebuilt by JetBrains from Skiko commit
-  [`3956e988e6e93eaf1ee985d725049443e7845807`](https://github.com/JetBrains/skiko/tree/3956e988e6e93eaf1ee985d725049443e7845807)
+  [`caed3841b8725429bb9b9805ff162a40eb7bce47`](https://github.com/JetBrains/skiko/tree/caed3841b8725429bb9b9805ff162a40eb7bce47)
   and Skia commit
-  [`1f14f1166a847cb0e148f981600bf1e3e6ca6e46`](https://github.com/JetBrains/skia/tree/1f14f1166a847cb0e148f981600bf1e3e6ca6e46)
+  [`a3f509bf52564dc8b27940bebe599d77ac0c4ae3`](https://github.com/JetBrains/skia/tree/a3f509bf52564dc8b27940bebe599d77ac0c4ae3)
   with the build options of the pinned
-  [Skiko build script](https://github.com/JetBrains/skiko/blob/3956e988e6e93eaf1ee985d725049443e7845807/skiko/build.gradle.kts)
-  and [Skia release build](https://github.com/JetBrains/skia/blob/1f14f1166a847cb0e148f981600bf1e3e6ca6e46/tools/skia_release/build.py).
+  [Skiko build script](https://github.com/JetBrains/skiko/blob/caed3841b8725429bb9b9805ff162a40eb7bce47/skiko/build.gradle.kts)
+  and [Skia release build](https://github.com/JetBrains/skia/blob/a3f509bf52564dc8b27940bebe599d77ac0c4ae3/tools/skia_release/build.py).
   Keyrook redistributes these binaries unmodified.
 - Component revisions follow the pinned
-  [Skia DEPS](https://github.com/JetBrains/skia/blob/1f14f1166a847cb0e148f981600bf1e3e6ca6e46/DEPS);
+  [Skia DEPS](https://github.com/JetBrains/skia/blob/a3f509bf52564dc8b27940bebe599d77ac0c4ae3/DEPS);
   the table in [native component provenance](../../native-evidence/README.md)
   lists each commit and the source URL and SHA-256 of each notice.
 
 | Component | License | Source obligation |
 | --- | --- | --- |
-| Skiko 0.150.1 (JetBrains) | Apache-2.0 | None; notices included in NOTICE.txt |
-| Skia m150-1f14f1166a (Google, JetBrains fork) | BSD-3-Clause | None; notices included in NOTICE.txt |
+| Skiko 0.150.2 (JetBrains) | Apache-2.0 | None; notices included in NOTICE.txt |
+| Skia m150-a3f509bf52 (Google, JetBrains fork) | BSD-3-Clause | None; notices included in NOTICE.txt |
 | Expat | MIT | None; notices included in NOTICE.txt |
 | HarfBuzz | MIT (Old MIT) | None; notices included in NOTICE.txt |
 | ICU | Unicode-3.0 and bundled third-party terms | None; notices included in NOTICE.txt |

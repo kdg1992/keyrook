@@ -2,8 +2,8 @@ Keyrook native distribution notices: Linux x64
 =================================================
 
 This file lists the licenses of the native components contained in the Skiko
-runtime for Linux x64 (skiko-awt-runtime-linux-x64-0.150.1.jar, SHA-256
-920c1cb033abfb79202f9f455fb86491bec5e45c156f186c0125b10fce97e093).
+runtime for Linux x64 (skiko-awt-runtime-linux-x64-0.150.2.jar, SHA-256
+c6c1f9fa37464fd0bcca6e486a6b35307b6e2436199de9d009f877121de1c5c2).
 Keyrook itself is licensed under GPL-3.0-or-later with the additional permission
 in licenses/GPL-3.0-Additional-Permission.txt. The Java libraries are listed in
 THIRD-PARTY-NOTICES. The bundled Eclipse Temurin runtime keeps its own notices in
@@ -14,8 +14,8 @@ Incorporated.
 
 Components
 ----------
-- Skiko 0.150.1 (JetBrains): Apache-2.0
-- Skia m150-1f14f1166a (Google, JetBrains fork): BSD-3-Clause
+- Skiko 0.150.2 (JetBrains): Apache-2.0
+- Skia m150-a3f509bf52 (Google, JetBrains fork): BSD-3-Clause
 - Expat: MIT
 - HarfBuzz: MIT (Old MIT)
 - ICU: Unicode-3.0 and bundled third-party terms
@@ -29,7 +29,7 @@ Components
 - Adobe DNG SDK 1.4 (Android external/dng_sdk): DNG SDK License Agreement and DNG patent license
 
 ------------------------------------------------------------------------------
-Skiko 0.150.1 (JetBrains) — skiko-NOTICE.txt
+Skiko 0.150.2 (JetBrains) — skiko-NOTICE.txt
 ------------------------------------------------------------------------------
 
 This project contains code adapted from "The Android Open Source Project" licensed under the Apache License, Version 2.0 (the "License"):
@@ -37,7 +37,7 @@ This project contains code adapted from "The Android Open Source Project" licens
 https://android.googlesource.com/platform/frameworks/base
 
 ------------------------------------------------------------------------------
-Skiko 0.150.1 (JetBrains) — skiko-LICENSE.txt
+Skiko 0.150.2 (JetBrains) — skiko-LICENSE.txt
 ------------------------------------------------------------------------------
 
                                  Apache License
@@ -243,7 +243,7 @@ Skiko 0.150.1 (JetBrains) — skiko-LICENSE.txt
    limitations under the License.
 
 ------------------------------------------------------------------------------
-Skia m150-1f14f1166a (Google, JetBrains fork) — skia-LICENSE.txt
+Skia m150-a3f509bf52 (Google, JetBrains fork) — skia-LICENSE.txt
 ------------------------------------------------------------------------------
 
 Copyright (c) 2011 Google Inc. All rights reserved.

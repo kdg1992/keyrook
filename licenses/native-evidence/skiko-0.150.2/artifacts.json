@@ -1,0 +1,146 @@
+{
+    "status": "verified-artifact-bytes-not-a-complete-license-inventory",
+    "version": "0.150.2",
+    "artifacts": [
+        {
+            "target": "windows-x64",
+            "url": "https://repo.maven.apache.org/maven2/org/jetbrains/skiko/skiko-awt-runtime-windows-x64/0.150.2/skiko-awt-runtime-windows-x64-0.150.2.jar",
+            "sha256": "eebad490c2828198e86e641cbd44958617867ce70f893b21852f07d0be099c0a",
+            "checksumSource": "https://repo.maven.apache.org/maven2/org/jetbrains/skiko/skiko-awt-runtime-windows-x64/0.150.2/skiko-awt-runtime-windows-x64-0.150.2.jar.sha256",
+            "entries": [
+                {
+                    "name": "META-INF/MANIFEST.MF",
+                    "bytes": 25,
+                    "sha256": "566ad1a80220026d05099562645ce968ff0e7c36cde22634332605bb34cc3eff"
+                },
+                {
+                    "name": "skiko-windows-x64.dll",
+                    "bytes": 14119424,
+                    "sha256": "e90e2e5ae3d48c7694b6cf5948953f6d007fe40478b1040353040acef118dd41"
+                },
+                {
+                    "name": "skiko-windows-x64.dll.sha256",
+                    "bytes": 64,
+                    "sha256": "b7d8879a014a7d0fceb8c6a880e2af57a4d2e6ea4a70ecc1abd898521617d00c"
+                },
+                {
+                    "name": "icudtl.dat",
+                    "bytes": 10468208,
+                    "sha256": "9ae98c06cbb0ea43c5cd6b5725310c008c65e46072421a1118cb88e1de9a8b92"
+                }
+            ]
+        },
+        {
+            "target": "linux-x64",
+            "url": "https://repo.maven.apache.org/maven2/org/jetbrains/skiko/skiko-awt-runtime-linux-x64/0.150.2/skiko-awt-runtime-linux-x64-0.150.2.jar",
+            "sha256": "c6c1f9fa37464fd0bcca6e486a6b35307b6e2436199de9d009f877121de1c5c2",
+            "checksumSource": "https://repo.maven.apache.org/maven2/org/jetbrains/skiko/skiko-awt-runtime-linux-x64/0.150.2/skiko-awt-runtime-linux-x64-0.150.2.jar.sha256",
+            "entries": [
+                {
+                    "name": "META-INF/MANIFEST.MF",
+                    "bytes": 25,
+                    "sha256": "566ad1a80220026d05099562645ce968ff0e7c36cde22634332605bb34cc3eff"
+                },
+                {
+                    "name": "libskiko-linux-x64.so",
+                    "bytes": 29640320,
+                    "sha256": "c733456df0b83210d9e79b90a581c4e005c28d2ef2c4cd17d146d74f7a60f378"
+                },
+                {
+                    "name": "libskiko-linux-x64.so.sha256",
+                    "bytes": 64,
+                    "sha256": "c725466621f266c661c59e3d57660b8eb10538f7b11f67c4d172b11cc39398d3"
+                }
+            ]
+        },
+        {
+            "target": "linux-arm64",
+            "url": "https://repo.maven.apache.org/maven2/org/jetbrains/skiko/skiko-awt-runtime-linux-arm64/0.150.2/skiko-awt-runtime-linux-arm64-0.150.2.jar",
+            "sha256": "aa124057c6e50bdea9e0deb4e85649f0c3d78ecd66e3b1b5751bcbe251dfba59",
+            "checksumSource": "https://repo.maven.apache.org/maven2/org/jetbrains/skiko/skiko-awt-runtime-linux-arm64/0.150.2/skiko-awt-runtime-linux-arm64-0.150.2.jar.sha256",
+            "entries": [
+                {
+                    "name": "META-INF/MANIFEST.MF",
+                    "bytes": 25,
+                    "sha256": "566ad1a80220026d05099562645ce968ff0e7c36cde22634332605bb34cc3eff"
+                },
+                {
+                    "name": "libskiko-linux-arm64.so",
+                    "bytes": 28650808,
+                    "sha256": "c7e4d2bbd25e1f0425927d86fd32b9105ccba1aab2bf8bebbea1edd47c97cb8b"
+                },
+                {
+                    "name": "libskiko-linux-arm64.so.sha256",
+                    "bytes": 64,
+                    "sha256": "933c59fe42267a3059c071693967d2d2b94795d019c5628c0282fa62b5e232d9"
+                }
+            ]
+        },
+        {
+            "target": "macos-x64",
+            "url": "https://repo.maven.apache.org/maven2/org/jetbrains/skiko/skiko-awt-runtime-macos-x64/0.150.2/skiko-awt-runtime-macos-x64-0.150.2.jar",
+            "sha256": "f77b1f3a76e94daba2676780e37807697d51d300e31cacc43699709f3ccdff96",
+            "checksumSource": "https://repo.maven.apache.org/maven2/org/jetbrains/skiko/skiko-awt-runtime-macos-x64/0.150.2/skiko-awt-runtime-macos-x64-0.150.2.jar.sha256",
+            "entries": [
+                {
+                    "name": "META-INF/MANIFEST.MF",
+                    "bytes": 25,
+                    "sha256": "566ad1a80220026d05099562645ce968ff0e7c36cde22634332605bb34cc3eff"
+                },
+                {
+                    "name": "libskiko-macos-arm64.dylib",
+                    "bytes": 21463520,
+                    "sha256": "508239119575a5a0f8abe219468141e20bce8ed3475539c4eaed401df07feaa4"
+                },
+                {
+                    "name": "libskiko-macos-arm64.dylib.sha256",
+                    "bytes": 64,
+                    "sha256": "0e737fff30f4ba1ce5029919da8b0ce9a181b983b4c19f8bceedc7dfb5d949ac"
+                },
+                {
+                    "name": "libskiko-macos-x64.dylib",
+                    "bytes": 22205600,
+                    "sha256": "f370f97c28e265dc4c2f5fa911b6373bb80f3ac5e2dfa20c92546c95a9692556"
+                },
+                {
+                    "name": "libskiko-macos-x64.dylib.sha256",
+                    "bytes": 64,
+                    "sha256": "c3ef1067ac7ced16e6efe4bf65e8232cb046d9bbee1d7d5deda00a83c89f38f9"
+                }
+            ]
+        },
+        {
+            "target": "macos-arm64",
+            "url": "https://repo.maven.apache.org/maven2/org/jetbrains/skiko/skiko-awt-runtime-macos-arm64/0.150.2/skiko-awt-runtime-macos-arm64-0.150.2.jar",
+            "sha256": "abea519fa519f7245412011cc3ab7a5852cb333b3dc3cac08a83f5bd806c7bec",
+            "checksumSource": "https://repo.maven.apache.org/maven2/org/jetbrains/skiko/skiko-awt-runtime-macos-arm64/0.150.2/skiko-awt-runtime-macos-arm64-0.150.2.jar.sha256",
+            "entries": [
+                {
+                    "name": "META-INF/MANIFEST.MF",
+                    "bytes": 25,
+                    "sha256": "566ad1a80220026d05099562645ce968ff0e7c36cde22634332605bb34cc3eff"
+                },
+                {
+                    "name": "libskiko-macos-arm64.dylib",
+                    "bytes": 21463520,
+                    "sha256": "680e40272519123174e97630c92549e2672a3f4deca1744f30f4a472af64b744"
+                },
+                {
+                    "name": "libskiko-macos-arm64.dylib.sha256",
+                    "bytes": 64,
+                    "sha256": "908c112e9ca1b79525a99e717a573a1396b0818a0b8e163b3845b3d674601c12"
+                },
+                {
+                    "name": "libskiko-macos-x64.dylib",
+                    "bytes": 22205600,
+                    "sha256": "c4392e16dddd1181e46ecf58cc55ec0564fe9deaeb03efa58ae778712a28d962"
+                },
+                {
+                    "name": "libskiko-macos-x64.dylib.sha256",
+                    "bytes": 64,
+                    "sha256": "029edfca73db1fcf01bdae06d917facf7c729f5cd9bf734160c1f7fde6c48689"
+                }
+            ]
+        }
+    ]
+}
