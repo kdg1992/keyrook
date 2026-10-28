@@ -66,6 +66,7 @@ internal fun Workspace(state: AppState, current: Vault, settings: SettingsStore,
                 onEmptyTrash = { operation { controller.emptyTrash() } },
                 onBulkTrash = { ids, restore -> operation { controller.trashAll(ids, restore) } },
                 onBulkTag = { ids, tag, add -> operation { controller.tagAll(ids, tag, add) } },
+                onBulkAssign = { ids, customer, project -> operation { controller.assignAll(ids, customer, project) } },
                 onFavorite = { ids, favorite -> operation { controller.setFavorite(ids, favorite) } }, toolbar = toolbar)
         }
         if (workspaceLayout(maxWidth.value) == WorkspaceLayout.LIST_DETAIL) {
@@ -107,6 +108,7 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
                       onDuplicate: (Entry) -> Unit, onTrash: (String) -> Unit, onRestore: (String) -> Unit,
                       onPurge: (String) -> Unit, onEmptyTrash: () -> Unit,
                       onBulkTrash: (Set<String>, Boolean) -> Unit, onBulkTag: (Set<String>, String, Boolean) -> Unit,
+                      onBulkAssign: (Set<String>, String?, String?) -> Unit,
                       onFavorite: (Set<String>, Boolean) -> Unit, toolbar: @Composable () -> Unit) {
     val search = view.search
     val includeHidden = view.includeHidden
@@ -126,6 +128,8 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
     var notice by remember { mutableStateOf("") }
     // Open bulk tag dialog: true adds a tag to the marked entries, false removes one.
     var bulkTag by remember { mutableStateOf<Boolean?>(null) }
+    // Open bulk customer/project assignment for the marked entries.
+    var bulkAssign by remember { mutableStateOf(false) }
     var choosingTemplate by remember { mutableStateOf(false) }
     val trashCount = remember(snapshot) { vault.entries.count { it.deletedAt != null } }
     // A new entry starts with the type, customer and project the list is filtered by.
@@ -137,7 +141,7 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         onDispose { shortcuts.newEntry = null; shortcuts.search = null }
     }
     // The list takes the focus when shown and again after its dialogs close, so arrow keys work immediately.
-    val listIdle = confirmation == null && !help && bulkTag == null && !choosingTemplate
+    val listIdle = confirmation == null && !help && bulkTag == null && !bulkAssign && !choosingTemplate
     LaunchedEffect(listIdle) { if (listIdle) runCatching { listFocus.requestFocus() } }
     val today by rememberToday()
     val entries = remember(activeFilters, snapshot, matches, today, recent) {
@@ -174,7 +178,7 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
     var searchValue by remember { mutableStateOf(TextFieldValue(search, TextRange(search.length))) }
     val searchFieldValue = if (searchValue.text == search) searchValue else TextFieldValue(search, TextRange(search.length))
     fun shortcutContext(focus: ShortcutFocus) = ShortcutContext(unlocked = true, busy = busy, editing = false,
-        modal = confirmation != null || help || bulkTag != null || choosingTemplate, focus = focus, selection = selectedEntry != null, trash = trash,
+        modal = confirmation != null || help || bulkTag != null || bulkAssign || choosingTemplate, focus = focus, selection = selectedEntry != null, trash = trash,
         textSelected = focus == ShortcutFocus.SEARCH && !searchFieldValue.selection.collapsed)
     fun handleListKey(event: KeyEvent, focus: ShortcutFocus = ShortcutFocus.LIST): Boolean {
         val action = keyboardShortcut(event, mac, shortcutContext(focus)) ?: return false
@@ -235,7 +239,8 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         searchField(Modifier.weight(1f))
         Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) { createButtons(); toolbar() }
     }
-    val filterCount = listOf(activeFilters.type != null, activeFilters.customerId != null, activeFilters.projectId != null,
+    // Customer and project stay visible in the first row, so only the other filters open the second one.
+    val filterCount = listOf(activeFilters.type != null,
         activeFilters.tag != null, activeFilters.expiry != ExpiryFilter.ALL, activeFilters.sort != EntrySort.TITLE).count { it }
     var showFilters by remember { mutableStateOf(false) }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -258,6 +263,14 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         FilterChip(includeHidden, UiText.text("filters.hiddenShort"), description = UiText.text("shell.hiddenSearch")) {
             onView(view.copy(includeHidden = it))
         }
+        if (vault.customers.isNotEmpty()) Choice(UiText.text("shell.customer"), activeFilters.customerId, vault.customers.map { it.id to it.name }) {
+            applyFilters(activeFilters.copy(customerId = it).normalized(vault))
+        }
+        val projectOptions = activeFilters.projects(vault)
+        if (projectOptions.isNotEmpty() || activeFilters.projectId != null)
+            Choice(UiText.text("shell.project"), activeFilters.projectId, projectOptions.map { it.id to it.name }) {
+                applyFilters(activeFilters.copy(projectId = it))
+            }
         val filterState = UiText.text(if (showFilters || filterCount > 0) "a11y.expanded" else "a11y.collapsed")
         TextButton(onClick = { showFilters = !showFilters }, enabled = filterCount == 0,
             modifier = Modifier.semantics { stateDescription = filterState }) {
@@ -269,12 +282,6 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
         itemVerticalAlignment = Alignment.CenterVertically) {
         Choice(UiText.text("shell.type"), activeFilters.type?.name, EntryType.entries.map { it.name to it.label }) {
             applyFilters(activeFilters.copy(type = it?.let(EntryType::valueOf)))
-        }
-        Choice(UiText.text("shell.customer"), activeFilters.customerId, vault.customers.map { it.id to it.name }) {
-            applyFilters(activeFilters.copy(customerId = it).normalized(vault))
-        }
-        Choice(UiText.text("shell.project"), activeFilters.projectId, activeFilters.projects(vault).map { it.id to it.name }) {
-            applyFilters(activeFilters.copy(projectId = it))
         }
         Choice(UiText.text("shell.tag"), activeFilters.tag, visibleTags.map { it to it }) {
             applyFilters(activeFilters.copy(tag = it))
@@ -290,6 +297,7 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
     if (entries.isNotEmpty()) BulkBar(selection, entries, trash, busy, onSelection,
         onTrash = { confirmation = ListConfirmation.TrashMarked(selection.markedIds.toSet()) },
         onRestore = { onBulkTrash(selection.markedIds.toSet(), true) }, onTag = { bulkTag = it },
+        onAssign = if (vault.customers.isEmpty() && vault.projects.isEmpty()) null else ({ bulkAssign = true }),
         onFavorite = { onFavorite(selection.markedIds.toSet(), it) })
     if (notice.isNotEmpty()) Banner(notice, BannerKind.INFO, onClose = { notice = "" })
     if (matches == null) HintText(UiText.text("shell.searching"))
@@ -348,6 +356,13 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
             onConfirm = { dismiss(); onEmptyTrash() }, onDismiss = ::dismiss)
         null -> Unit
     }
+    if (bulkAssign) {
+        val ids = selection.markedIds.toSet()
+        BulkAssignDialog(vault, vault.entries.filter { it.id in ids }, busy, onDismiss = { bulkAssign = false }) { customer, project ->
+            bulkAssign = false
+            onBulkAssign(ids, customer, project)
+        }
+    }
     bulkTag?.let { add ->
         val ids = selection.markedIds.toSet()
         BulkTagDialog(add, vault.entries.filter { it.id in ids }, busy, onDismiss = { bulkTag = null }) { tag ->
@@ -361,7 +376,7 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
 @Composable
 private fun BulkBar(selection: EntrySelection, entries: List<Entry>, trash: Boolean, busy: Boolean,
                     onSelection: (EntrySelection) -> Unit, onTrash: () -> Unit, onRestore: () -> Unit,
-                    onTag: (Boolean) -> Unit, onFavorite: (Boolean) -> Unit) {
+                    onTag: (Boolean) -> Unit, onAssign: (() -> Unit)?, onFavorite: (Boolean) -> Unit) {
     val count = selection.markedIds.size
     val anyTag = remember(SameInstance(entries), selection.marked) {
         entries.any { it.id in selection.marked && ReservedTags.visible(it.tags).isNotEmpty() }
@@ -377,6 +392,7 @@ private fun BulkBar(selection: EntrySelection, entries: List<Entry>, trash: Bool
             else TextButton(enabled = !busy, onClick = onTrash) { Text(UiText.text("bulk.trash")) }
             TextButton(enabled = !busy, onClick = { onTag(true) }) { Text(UiText.text("bulk.addTag")) }
             TextButton(enabled = !busy && anyTag, onClick = { onTag(false) }) { Text(UiText.text("bulk.removeTag")) }
+            if (!trash && onAssign != null) TextButton(enabled = !busy, onClick = onAssign) { Text(UiText.text("bulk.assign")) }
             if (!trash) {
                 TextButton(enabled = !busy, onClick = { onFavorite(true) }) { Text(UiText.text("bulk.favorite")) }
                 TextButton(enabled = !busy, onClick = { onFavorite(false) }) { Text(UiText.text("bulk.unfavorite")) }
@@ -416,6 +432,39 @@ private fun BulkTagDialog(add: Boolean, entries: List<Entry>, busy: Boolean, onD
                 Text(UiText.text(if (add) "bulk.addTag" else "bulk.removeTag"))
             }
         },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(UiText.text("common.cancel")) } },
+    )
+}
+
+/**
+ * Chooses the customer and project for the marked [entries]; "–" clears either. It starts with the values the entries
+ * share. Choosing a project of a customer selects that customer, and a customer drops a project of another customer.
+ */
+@Composable
+private fun BulkAssignDialog(vault: Vault, entries: List<Entry>, busy: Boolean, onDismiss: () -> Unit,
+                             onConfirm: (String?, String?) -> Unit) {
+    var customerId by remember { mutableStateOf(entries.map { it.customerId }.distinct().singleOrNull()) }
+    var projectId by remember { mutableStateOf(entries.map { it.projectId }.distinct().singleOrNull()) }
+    fun confirm() { if (!busy) onConfirm(customerId, projectId) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(UiText.text("bulk.assignTitle", entries.size)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Choice(UiText.text("common.customer"), customerId, vault.customers.map { it.id to it.name }, !busy,
+                    modifier = Modifier.focusRequester(rememberInitialFocus())) {
+                    customerId = it
+                    if (vault.projects.find { project -> project.id == projectId }?.customerId?.let { owner -> owner != it } == true) projectId = null
+                }
+                Choice(UiText.text("common.project"), projectId,
+                    vault.projects.filter { customerId == null || it.customerId == null || it.customerId == customerId }.map { it.id to it.name }, !busy) {
+                    projectId = it
+                    vault.projects.find { project -> project.id == it }?.customerId?.let { owner -> customerId = owner }
+                }
+                HintText(UiText.text("bulk.assignHint"))
+            }
+        },
+        confirmButton = { Button(enabled = !busy, onClick = ::confirm) { Text(UiText.text("bulk.assignConfirm")) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(UiText.text("common.cancel")) } },
     )
 }

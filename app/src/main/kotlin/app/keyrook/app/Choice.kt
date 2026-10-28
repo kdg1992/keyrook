@@ -8,13 +8,26 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
-/** A labelled drop-down: the label and the current value on one outlined button, the options in a menu. */
+/** Option lists longer than this get a search field at the top of the menu. */
+internal const val CHOICE_SEARCH_THRESHOLD = 8
+
+/** Options whose title contains every word of [query], ignoring case; a blank query keeps all. */
+internal fun filterChoices(options: List<Pair<String, String>>, query: String): List<Pair<String, String>> {
+    val words = query.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+    return options.filter { (_, title) -> words.all { title.contains(it, ignoreCase = true) } }
+}
+
+/**
+ * A labelled drop-down: the label and the current value on one outlined button, the options in a menu. Long lists
+ * ([CHOICE_SEARCH_THRESHOLD]) start with a search field that has the focus, and Enter picks the only remaining option.
+ */
 @Composable
 internal fun Choice(label: String, value: String?, options: List<Pair<String, String>>, enabled: Boolean = true,
                     nullable: Boolean = true, modifier: Modifier = Modifier, showLabel: Boolean = true, changed: (String?) -> Unit) {
@@ -34,8 +47,20 @@ internal fun Choice(label: String, value: String?, options: List<Pair<String, St
             Icon(KeyrookIcons.ChevronDown, contentDescription = null, modifier = Modifier.size(16.dp).align(Alignment.CenterVertically))
         }
         DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
-            if (nullable) DropdownMenuItem(onClick = { changed(null); expanded = false }) { Text(UiText.text("choice.none")) }
-            options.forEach { (id, title) ->
+            var query by remember { mutableStateOf("") }
+            val searchable = options.size > CHOICE_SEARCH_THRESHOLD
+            val shownOptions = if (searchable) filterChoices(options, query) else options
+            if (searchable) {
+                val focus = rememberInitialFocus()
+                OutlinedTextField(query, { if (it.length <= 64) query = it }, singleLine = true,
+                    label = { Text(UiText.text("choice.search", label)) },
+                    modifier = Modifier.padding(horizontal = 8.dp).widthIn(min = 220.dp).focusRequester(focus).submitOnEnter {
+                        shownOptions.singleOrNull()?.let { (id, _) -> changed(id); expanded = false }
+                    })
+            }
+            if (nullable && query.isBlank()) DropdownMenuItem(onClick = { changed(null); expanded = false }) { Text(UiText.text("choice.none")) }
+            if (searchable && shownOptions.isEmpty()) DropdownMenuItem(onClick = {}, enabled = false) { Text(UiText.text("choice.noMatch")) }
+            shownOptions.forEach { (id, title) ->
                 DropdownMenuItem(onClick = { changed(id); expanded = false }) {
                     Text(title, fontWeight = if (id == value) FontWeight.SemiBold else FontWeight.Normal,
                         color = if (id == value) colors.primary else colors.onSurface)
