@@ -30,7 +30,8 @@ internal fun templateName(text: String): String? = text.trim().takeIf { it.isNot
 
 /** Lists the vault's templates; choosing one starts a new entry with its layout. The first template starts focused, so Enter chooses it. */
 @Composable
-internal fun TemplateChooserDialog(vault: Vault, busy: Boolean, onDismiss: () -> Unit, onChoose: (EntryTemplate) -> Unit) {
+internal fun TemplateChooserDialog(vault: Vault, busy: Boolean, onDismiss: () -> Unit, onChoose: (EntryTemplate) -> Unit,
+                                   onChooseStarter: (StarterTemplate) -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(UiText.text("template.chooseTitle")) },
@@ -39,10 +40,19 @@ internal fun TemplateChooserDialog(vault: Vault, busy: Boolean, onDismiss: () ->
                 verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(UiText.text("template.chooseHint"))
                 val first = rememberInitialFocus()
-                sortedTemplates(vault).forEachIndexed { index, template ->
+                val templates = sortedTemplates(vault)
+                templates.forEachIndexed { index, template ->
                     TextButton(enabled = !busy, onClick = { onChoose(template) },
                         modifier = if (index == 0) Modifier.focusRequester(first) else Modifier) {
                         Text(UiText.text("template.option", template.name, template.type.entryType().label))
+                    }
+                }
+                // Starter templates follow the vault's own and are never stored in the vault.
+                Text(UiText.text("template.starters"), style = MaterialTheme.typography.subtitle2)
+                StarterTemplate.entries.forEachIndexed { index, starter ->
+                    TextButton(enabled = !busy, onClick = { onChooseStarter(starter) },
+                        modifier = if (templates.isEmpty() && index == 0) Modifier.focusRequester(first) else Modifier) {
+                        Text(UiText.text("template.option", starter.label, starter.type.label))
                     }
                 }
             }
