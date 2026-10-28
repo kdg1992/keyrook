@@ -141,7 +141,7 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
     LaunchedEffect(listIdle) { if (listIdle) runCatching { listFocus.requestFocus() } }
     val today by rememberToday()
     val entries = remember(activeFilters, snapshot, matches, today, recent) {
-        activeFilters.select(vault, matches.orEmpty(), today, recent)
+        activeFilters.select(vault, matches.orEmpty(), today, recent, ranked = search.isNotBlank())
     }
     val entryIds = remember(SameInstance(entries)) { entries.map { it.id } }
     val selection = selectionState.update(view.query(activeFilters), matches?.let { entryIds })
