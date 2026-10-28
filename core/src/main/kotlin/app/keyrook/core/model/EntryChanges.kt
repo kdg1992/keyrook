@@ -75,6 +75,28 @@ fun Vault.tagEntries(ids: Set<String>, tag: String, add: Boolean, now: Instant =
 }
 
 /**
+ * Assigns the customer [customerId] and the project [projectId] to the entries [ids]; null clears either. A project
+ * with its own customer brings that customer when [customerId] is null, and a different customer is refused, as
+ * [Vault.validate] requires. Entries already assigned keep their objects and change time; when no entry changes, this
+ * same vault is returned so the caller can skip saving.
+ */
+fun Vault.assignEntries(ids: Set<String>, customerId: String?, projectId: String?, now: Instant = Instant.now()): Vault {
+    requireEntries(ids)
+    require(customerId == null || customers.any { it.id == customerId }) { "Unknown customer" }
+    val project = projectId?.let { id -> projects.firstOrNull { it.id == id } ?: throw IllegalArgumentException("Unknown project") }
+    val customer = customerId ?: project?.customerId
+    require(project?.customerId == null || project.customerId == customer) { "Project belongs to another customer" }
+    var changed = false
+    val updated = entries.map { entry ->
+        if (entry.id !in ids || (entry.customerId == customer && entry.projectId == projectId)) entry else {
+            changed = true
+            entry.copy(customerId = customer, projectId = projectId, modifiedAt = changeTime(entry, now))
+        }
+    }
+    return if (changed) copy(entries = updated) else this
+}
+
+/**
  * Pins the entries [ids], or unpins them with [pinned] false. Entries already in that state stay the same objects
  * with their change time; when no entry changes, this same vault is returned so the caller can skip saving. The
  * result shares all objects with this vault, so the caller keeps ownership.

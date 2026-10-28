@@ -237,6 +237,14 @@ class VaultControllerTest {
             }
             assertThrows(IllegalArgumentException::class.java) { controller.tagAll(marked, "a,b", add = true) }
             assertEquals(start + 4, revision())
+            controller.addCustomer("Acme").close()
+            val customer = controller.session.snapshot().use { it.customers.single().id }
+            controller.assignAll(marked, customer, null).use { snapshot ->
+                assertEquals(start + 6, snapshot.revision)
+                assertEquals(listOf(customer, customer, null), snapshot.entries.map { it.customerId })
+            }
+            // The same assignment again saves nothing.
+            controller.assignAll(marked, customer, null).use { assertEquals(start + 6, it.revision) }
         }
     }
 
