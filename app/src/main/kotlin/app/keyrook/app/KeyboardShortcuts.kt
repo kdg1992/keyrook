@@ -187,6 +187,7 @@ internal fun ShortcutHelpTable(mac: Boolean) {
             }
         }
         Text(UiText.text("shortcuts.textRule"), style = MaterialTheme.typography.caption)
+        Text(UiText.text("shortcuts.searchPrefixes"), style = MaterialTheme.typography.caption)
     }
 }
 
