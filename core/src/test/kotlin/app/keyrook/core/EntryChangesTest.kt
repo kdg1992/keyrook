@@ -120,6 +120,34 @@ class EntryChangesTest {
         }
     }
 
+    @Test fun `assigning a customer and project changes only differing entries and keeps projects consistent`() {
+        val acme = Customer("00000000-0000-4000-8000-00000000a001", "Acme")
+        val other = Customer("00000000-0000-4000-8000-00000000a002", "Other")
+        val site = Project("00000000-0000-4000-8000-00000000b001", "Site", acme.id)
+        val shared = Project("00000000-0000-4000-8000-00000000b002", "Shared", null)
+        vault().let { it.copy(customers = it.customers + acme + other, projects = it.projects + site + shared) }.use { vault ->
+            val ids = setOf(vault.entries[0].id, vault.entries[1].id)
+            val assigned = vault.assignEntries(ids, acme.id, site.id, now)
+            assigned.validate()
+            assertEquals(listOf(acme.id, acme.id), assigned.entries.take(2).map { it.customerId })
+            assertEquals(listOf(site.id, site.id), assigned.entries.take(2).map { it.projectId })
+            assertEquals(now.toString(), assigned.entries[0].modifiedAt)
+            assertEquals(future, assigned.entries[1].modifiedAt)
+            assertSame(vault.entries[2], assigned.entries[2])
+            // A project with a customer brings it; a project without one keeps the given customer.
+            assertEquals(acme.id, vault.assignEntries(ids, null, site.id, now).entries[0].customerId)
+            assertEquals(other.id, vault.assignEntries(ids, other.id, shared.id, now).also { it.validate() }.entries[0].customerId)
+            // Clearing removes both; an unchanged assignment is no change.
+            val cleared = assigned.assignEntries(ids, null, null, now)
+            assertEquals(listOf(null, null), cleared.entries.take(2).map { it.projectId })
+            assertSame(assigned, assigned.assignEntries(ids, acme.id, site.id, now))
+            assertThrows(IllegalArgumentException::class.java) { vault.assignEntries(ids, other.id, site.id, now) }
+            assertThrows(IllegalArgumentException::class.java) { vault.assignEntries(ids, id(), null, now) }
+            assertThrows(IllegalArgumentException::class.java) { vault.assignEntries(ids, null, id(), now) }
+            assertThrows(IllegalArgumentException::class.java) { vault.assignEntries(setOf(id()), acme.id, null, now) }
+        }
+    }
+
     @Test fun `the schema 1 favorite tag is reserved, refused as a tag and converted into a pin`() {
         assertTrue(ReservedTags.isReserved(ReservedTags.LEGACY_FAVORITE))
         assertFalse(ReservedTags.isReserved("favorite"))

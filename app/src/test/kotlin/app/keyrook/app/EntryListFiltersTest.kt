@@ -111,6 +111,18 @@ class EntryListFiltersTest {
         }
     }
 
+    @Test fun `ranked search results keep their order under the title sort only`() {
+        Vault(entries = listOf(entry("a", title = "alpha"), entry("b", title = "beta"), entry("c", title = "gamma", modified = "2027-01-01T00:00:00Z"))).use { vault ->
+            val ranked = linkedSetOf("c", "a", "b")
+            assertEquals(listOf("c", "a", "b"), EntryListFilters().select(vault, ranked, today, ranked = true).map { it.id })
+            assertEquals(listOf("a", "b", "c"), EntryListFilters().select(vault, ranked, today).map { it.id })
+            // Another sort applies as chosen: newest first, then by title.
+            assertEquals(listOf("c", "a", "b"), EntryListFilters(sort = EntrySort.MODIFIED).select(vault, linkedSetOf("b", "a", "c"), today, ranked = true).map { it.id })
+            assertEquals(listOf("a", "b"), EntryListFilters(sort = EntrySort.TITLE).select(vault, linkedSetOf("b", "a"), today, ranked = false).map { it.id })
+            assertEquals(listOf("b", "a"), EntryListFilters().select(vault, linkedSetOf("b", "a"), today, ranked = true).map { it.id })
+        }
+    }
+
     @Test fun `keyed sorting keeps the order of comparing the parsed values per comparison`() {
         val titles = listOf("alpha", "Alpha", "ALPHA", "beta", "Beta", "Ärger", "zeta", "Zeta", "", "10", "9")
         val instants = listOf("2026-01-01T00:00:00Z", "2026-01-01T01:00:00+01:00", "2026-01-01T00:00:00.5Z",

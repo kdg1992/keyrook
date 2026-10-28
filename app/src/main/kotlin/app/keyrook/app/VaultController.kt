@@ -12,6 +12,7 @@ import app.keyrook.core.model.EntryTemplate
 import app.keyrook.core.model.OrganizationMetadata
 import app.keyrook.core.model.ReservedTags
 import app.keyrook.core.model.Vault
+import app.keyrook.core.model.assignEntries
 import app.keyrook.core.model.pinEntries
 import app.keyrook.core.model.tagEntries
 import app.keyrook.core.model.trashEntries
@@ -103,6 +104,11 @@ class VaultController(internal val session: VaultSession = VaultSession(),
     fun tagAll(ids: Set<String>, tag: String, add: Boolean): Vault = bulkChange { current ->
         requireUserFacing(!ReservedTags.isReserved(tag.trim()), "validation.tagReserved")
         current.tagEntries(ids, tag.trim(), add, java.time.Instant.now())
+    }
+
+    /** Assigns a customer and project (null clears either) to the entries [ids] as one save; unchanged entries save nothing. */
+    fun assignAll(ids: Set<String>, customerId: String?, projectId: String?): Vault = bulkChange { current ->
+        current.assignEntries(ids, customerId, projectId, java.time.Instant.now())
     }
 
     /** Pins the entries [ids] as favorites, or unpins them, as one save; unchanged entries save nothing. */
