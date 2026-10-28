@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.4.0](https://github.com/kdg1992/keyrook/compare/v1.3.0...v1.4.0) (2026-10-28)
+
+
+### Features
+
+* **desktop:** create customers and projects in the editor and add built-in templates ([#89](https://github.com/kdg1992/keyrook/issues/89)) ([32f6f3d](https://github.com/kdg1992/keyrook/commit/32f6f3db545cfeb0a414d2de7255a0980ed7b9b6))
+* **desktop:** rank search results and search single fields ([#87](https://github.com/kdg1992/keyrook/issues/87)) ([2e219e4](https://github.com/kdg1992/keyrook/commit/2e219e4fc7fea5dd90a71ae12a7c33299599f1d2))
+* **desktop:** show customer and project filters and assign them in bulk ([#88](https://github.com/kdg1992/keyrook/issues/88)) ([2c4dc88](https://github.com/kdg1992/keyrook/commit/2c4dc8866dd4285717d4bfb39956c0d90206d360))
+
 ## [1.3.0](https://github.com/kdg1992/keyrook/compare/v1.2.0...v1.3.0) (2026-10-27)
 
 
