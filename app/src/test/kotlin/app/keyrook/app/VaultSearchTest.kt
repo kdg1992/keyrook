@@ -69,4 +69,43 @@ class VaultSearchTest {
             assertEquals(setOf(entry.id), VaultSearch.find(favorite, "production"))
         }
     }
+
+    private fun server(title: String, host: String, user: String, customer: String? = null, pinned: Boolean = false, tags: List<String> = emptyList()): Entry {
+        val date = "2026-01-01T00:00:00Z"
+        return Entry(UUID.randomUUID().toString(), title, EntryData.Server(field(host), 22, field(user), field("synthetic-secret", true), field(""), field("")),
+            date, date, customerId = customer, tags = tags, pinned = pinned)
+    }
+
+    @Test fun `field prefixes limit a term to one field`() {
+        val miller = Customer(UUID.randomUUID().toString(), "Müller GmbH")
+        val other = Customer(UUID.randomUUID().toString(), "Schmidt AG")
+        val a = server("Webserver", "web01.example.invalid", "deploy", miller.id, tags = listOf("prod"))
+        val b = server("Mail müller", "mail.example.invalid", "admin", other.id)
+        Vault(customers = listOf(miller, other), entries = listOf(a, b)).use { vault ->
+            assertEquals(setOf(a.id, b.id), VaultSearch.find(vault, "müller"))
+            assertEquals(setOf(a.id), VaultSearch.find(vault, "kunde:müller"))
+            assertEquals(setOf(a.id), VaultSearch.find(vault, "customer:MÜLLER host:web01"))
+            assertEquals(setOf(b.id), VaultSearch.find(vault, "user:admin"))
+            assertEquals(setOf(a.id), VaultSearch.find(vault, "tag:prod"))
+            assertEquals(setOf(a.id, b.id), VaultSearch.find(vault, "typ:server", locale = Locale.GERMAN))
+            assertTrue(VaultSearch.find(vault, "host:deploy").isEmpty())
+            // Unknown prefixes and an empty value search the whole text as before.
+            assertTrue(VaultSearch.find(vault, "unknown:web01").isEmpty())
+            assertEquals(setOf(a.id), VaultSearch.find(vault, "web01.example.invalid"))
+            assertTrue(VaultSearch.find(vault, "host:").isEmpty())
+            // A field term never reaches a hidden value.
+            assertTrue(VaultSearch.find(vault, "user:synthetic-secret", includeHidden = true).isEmpty())
+        }
+    }
+
+    @Test fun `results rank title prefixes before title matches before other fields and favorites first`() {
+        val prefix = server("Web01 Hosting", "a.example.invalid", "u1")
+        val inTitle = server("Old web01 backup", "b.example.invalid", "u2")
+        val inHost = server("Zeta", "web01.example.invalid", "u3")
+        val pinnedHost = server("Omega", "web01.backup.invalid", "u4", pinned = true)
+        Vault(entries = listOf(inHost, inTitle, pinnedHost, prefix)).use { vault ->
+            assertEquals(listOf(prefix.id, inTitle.id, pinnedHost.id, inHost.id), VaultSearch.find(vault, "web01").toList())
+            assertEquals(vault.entries.map { it.id }, VaultSearch.find(vault, " ").toList())
+        }
+    }
 }

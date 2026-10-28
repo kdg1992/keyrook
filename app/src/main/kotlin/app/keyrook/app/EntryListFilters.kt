@@ -45,9 +45,11 @@ internal data class EntryListFilters(
 
     /**
      * Uses metadata only; returned entries remain owned by the supplied vault snapshot. [recentIds] are the recently
-     * used entry IDs, newest first, for the [recent] filter.
+     * used entry IDs, newest first, for the [recent] filter. With [ranked], [matches] is in relevance order (see
+     * [VaultSearch]) and the default title sort keeps that order; the other sorts and [recent] still apply.
      */
-    fun select(vault: Vault, matches: Set<String>, today: LocalDate, recentIds: List<String> = emptyList()): List<Entry> {
+    fun select(vault: Vault, matches: Set<String>, today: LocalDate, recentIds: List<String> = emptyList(),
+               ranked: Boolean = false): List<Entry> {
         val recency = recentIds.withIndex().associate { it.value to it.index }
         val owners = vault.projects.associate { it.id to it.customerId }
         val selected = vault.entries.filter { entry ->
@@ -63,7 +65,14 @@ internal data class EntryListFilters(
                     ExpiryFilter.UPCOMING -> entry.expiresOn?.let { LocalDate.parse(it) in today..today.plusDays(VaultHealth.EXPIRY_WARNING_DAYS) } == true
                 }
         }
-        return if (recent) selected.sortedBy { recency.getValue(it.id) } else sortEntries(selected, sort)
+        return when {
+            recent -> selected.sortedBy { recency.getValue(it.id) }
+            ranked && sort == EntrySort.TITLE -> {
+                val rank = matches.withIndex().associate { it.value to it.index }
+                selected.sortedBy { rank.getValue(it.id) }
+            }
+            else -> sortEntries(selected, sort)
+        }
     }
 }
 
