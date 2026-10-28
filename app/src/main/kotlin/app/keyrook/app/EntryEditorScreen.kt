@@ -31,16 +31,19 @@ import javax.swing.SwingUtilities
  */
 @Composable
 internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcuts: ShortcutActions, settings: SettingsStore? = null,
-                   template: EntryTemplate? = null, context: NewEntryContext? = null, onCancel: () -> Unit, onSave: (Entry) -> Unit) {
+                   template: EntryTemplate? = null, context: NewEntryContext? = null, onCancel: () -> Unit,
+                   onSave: (Entry, CreatedOrganization) -> Unit) {
     val preset = template?.takeIf { source == null }
     val copy = context?.copyOf?.takeIf { source == null && preset == null }
     val fresh = context?.takeIf { source == null && preset == null && copy == null }
-    val initialType = source?.data?.type() ?: copy?.data?.type() ?: preset?.type?.entryType() ?: fresh?.type ?: EntryType.WEB
+    val starter = fresh?.starter
+    val initialType = source?.data?.type() ?: copy?.data?.type() ?: preset?.type?.entryType() ?: starter?.type ?: fresh?.type ?: EntryType.WEB
     var type by remember { mutableStateOf(initialType) }
     // Values typed before a type switch, by field label, so the new type keeps what still fits.
     var carried by remember { mutableStateOf(emptyMap<String, Pair<String, Boolean>>()) }
     val initialData = remember(type) {
-        source?.data ?: copy?.data?.takeIf { it.type() == type } ?: preset?.takeIf { it.type.entryType() == type }?.newData() ?: blankData(type)
+        source?.data ?: copy?.data?.takeIf { it.type() == type } ?: preset?.takeIf { it.type.entryType() == type }?.newData()
+            ?: starter?.takeIf { it.type == type }?.newData() ?: blankData(type)
     }
     var data by remember(initialData) { mutableStateOf(initialData) }
     // The editor owns only data it created; an edited or duplicated entry's data belongs to the vault snapshot.
@@ -75,6 +78,14 @@ internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcu
     val initialProject = source?.projectId ?: (copy?.projectId ?: preset?.projectId ?: fresh?.projectId)?.takeIf { id -> vault.projects.any { it.id == id } }
     var customerId by remember { mutableStateOf(initialCustomer) }
     var projectId by remember { mutableStateOf(initialProject) }
+    // Customers and projects named here are created together with the entry when it is saved.
+    var created by remember { mutableStateOf(CreatedOrganization()) }
+    // Open name dialog: true for a new customer, false for a new project.
+    var naming by remember { mutableStateOf<Boolean?>(null) }
+    val customerOptions = vault.customers.map { it.id to it.name } + created.customers.map { it.id to it.name }
+    val projectOwners = vault.projects.associate { it.id to it.customerId } + created.projects.associate { it.id to it.customerId }
+    val projectOptions = (vault.projects.map { Triple(it.id, it.name, it.customerId) } + created.projects.map { Triple(it.id, it.name, it.customerId) })
+        .filter { customerId == null || it.third == null || it.third == customerId }.map { it.first to it.second }
     var history by remember { mutableStateOf(false) }
     var confirmRemoveTotp by remember { mutableStateOf(false) }
     var customLabel by remember { mutableStateOf("") }
@@ -95,7 +106,7 @@ internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcu
     val validation = validateEditor(title, tags, notes, expires, values, shownPorts, data.totpSlot(initialData, originalValues))
     val dirty = title != initialTitle || tags != initialTags ||
         notes != originalNotes || expires != source?.expiresOn.orEmpty() || customerId != initialCustomer ||
-        projectId != initialProject || values != originalValues || hidden != originalHidden ||
+        projectId != initialProject || created != CreatedOrganization() || values != originalValues || hidden != originalHidden ||
         data != initialData || type != initialType || customLabel.isNotEmpty() ||
         shownPorts.values.any { parsePort(it) == null }
     fun saveDraft() {
@@ -113,7 +124,7 @@ internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcu
                     else -> d
                 })))
             context.validate()
-            onSave(candidate)
+            onSave(candidate, created)
         } catch (_: Exception) { candidate?.let { Vault(entries = listOf(it)).close() }; rejected = true }
     }
     fun requestCancel() {
@@ -162,13 +173,15 @@ internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcu
                     isError = titleError != null, singleLine = true, modifier = Modifier.fillMaxWidth().focusRequester(titleFocus))
                 FieldError(titleError)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Choice(UiText.text("common.customer"), customerId, vault.customers.map { it.id to it.name }, !busy) {
+                    Choice(UiText.text("common.customer"), customerId, customerOptions + (NEW_OPTION to UiText.text("editor.newCustomer")), !busy) {
+                        if (it == NEW_OPTION) { naming = true; return@Choice }
                         customerId = it
-                        if (vault.projects.find { project -> project.id == projectId }?.customerId?.let { id -> id != it } == true) projectId = null
+                        if (projectOwners[projectId]?.let { id -> id != it } == true) projectId = null
                     }
-                    Choice(UiText.text("common.project"), projectId, vault.projects.filter { customerId == null || it.customerId == null || it.customerId == customerId }.map { it.id to it.name }, !busy) {
+                    Choice(UiText.text("common.project"), projectId, projectOptions + (NEW_OPTION to UiText.text("editor.newProject")), !busy) {
+                        if (it == NEW_OPTION) { naming = false; return@Choice }
                         projectId = it
-                        vault.projects.find { project -> project.id == it }?.customerId?.let { owner -> customerId = owner }
+                        projectOwners[it]?.let { owner -> customerId = owner }
                     }
                 }
             }
@@ -336,6 +349,20 @@ internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcu
             }
         }
     }
+    naming?.let { customer ->
+        OrganizationNameDialog(customer, busy, onDismiss = { naming = null }) { name ->
+            val id = java.util.UUID.randomUUID().toString()
+            if (customer) {
+                created = created.copy(customers = created.customers + CreatedName(id, name))
+                customerId = id
+                if (projectOwners[projectId]?.let { owner -> owner != id } == true) projectId = null
+            } else {
+                created = created.copy(projects = created.projects + CreatedName(id, name, customerId))
+                projectId = id
+            }
+            naming = null
+        }
+    }
     // Removing the TOTP secret takes effect only when the entry is saved, so it is confirmed as reversible.
     if (confirmRemoveTotp) ConfirmationDialog(UiText.text("editor.removeTotpTitle"), UiText.text("editor.removeTotpBody"),
         UiText.text("editor.removeTotp"), busy, irreversible = false,
@@ -348,4 +375,29 @@ internal fun Editor(vault: Vault, source: Entry?, externalBusy: Boolean, shortcu
         UiText.text("editor.discard"), busy, irreversible = true,
         onConfirm = { confirmDiscard = false; onCancel() }, onDismiss = { confirmDiscard = false },
         dismissLabel = UiText.text("editor.keepEditing"))
+}
+
+/** The option of a customer or project choice that opens the name dialog instead of selecting an existing one. */
+private const val NEW_OPTION = "keyrook:new"
+
+/** Asks for the name of a customer ([customer]) or project created with the entry; checked like the organization tools. */
+@Composable
+private fun OrganizationNameDialog(customer: Boolean, busy: Boolean, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    val valid = validOrganizationName(name)
+    fun confirm() { if (!busy && valid) onConfirm(name.trim()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(UiText.text(if (customer) "editor.newCustomerTitle" else "editor.newProjectTitle")) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(name, { if (it.length <= MAX_NAME_CHARS + 16) name = it }, enabled = !busy,
+                    label = { Text(UiText.text("common.name")) }, singleLine = true,
+                    modifier = Modifier.focusRequester(rememberInitialFocus()).submitOnEnter(::confirm))
+                HintText(UiText.text("editor.newOrganizationHint"))
+            }
+        },
+        confirmButton = { Button(enabled = !busy && valid, onClick = ::confirm) { Text(UiText.text("common.add")) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(UiText.text("common.cancel")) } },
+    )
 }

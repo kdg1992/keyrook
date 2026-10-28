@@ -194,7 +194,7 @@ vault close to the 64 MiB file limit needs about 1.2 GiB while it is converted,
 and Argon2 derivation needs up to 256 MiB on top; on machines with 4 GiB of memory
 the default quarter would not be enough. Vaults of typical size need far less.
 
-Entries are saved immediately through authenticated, atomic vault storage. Fields can be masked independently. Web, transfer, email, hosting-panel, server, SSH, domain and custom records have their own editors. Customers/projects can be created and assigned. Entries can be duplicated, moved to the trash, restored and permanently deleted (see below). **Duplizieren** (**Duplicate**) opens the editor for a new entry titled *… (Kopie)* with the source's type, field layout, port and protocol settings, tags, customer, project and visible values; hidden values such as passwords, private keys and TOTP secrets start empty, and notes and the expiry date are not copied. Nothing is saved until **Speichern**, and canceling an unchanged copy asks nothing. **Neuer Eintrag** (**New entry**) starts with the type, customer and project the list is filtered by; without a type filter it uses the type of the entry created last since unlocking, otherwise a web login. Switching the type of a new entry keeps the values of fields with the same label, such as the username and password. Editing retains up to 100 historical field snapshots. Search and filters narrow the visible list; history displays hidden fields masked. Canceling an edit discards that edit.
+Entries are saved immediately through authenticated, atomic vault storage. Fields can be masked independently. Web, transfer, email, hosting-panel, server, SSH, domain and custom records have their own editors. Customers/projects can be created and assigned. Entries can be duplicated, moved to the trash, restored and permanently deleted (see below). The editor's customer and project lists end with **+ Neuer Kunde…** and **+ Neues Projekt…** (**+ New customer…**, **+ New project…**): they ask for a name and select the new customer or project, which is created together with the entry when it is saved, in the same vault revision, and discarded when the entry is canceled. A new project belongs to the customer selected at that moment. **Duplizieren** (**Duplicate**) opens the editor for a new entry titled *… (Kopie)* with the source's type, field layout, port and protocol settings, tags, customer, project and visible values; hidden values such as passwords, private keys and TOTP secrets start empty, and notes and the expiry date are not copied. Nothing is saved until **Speichern**, and canceling an unchanged copy asks nothing. **Neuer Eintrag** (**New entry**) starts with the type, customer and project the list is filtered by; without a type filter it uses the type of the entry created last since unlocking, otherwise a web login. Switching the type of a new entry keeps the values of fields with the same label, such as the username and password. Editing retains up to 100 historical field snapshots. Search and filters narrow the visible list; history displays hidden fields masked. Canceling an edit discards that edit.
 
 **Kunden, Projekte und Vorlagen** above the entry list opens the section for
 adding customers and projects; **Kunden, Projekte und Vorlagen ausblenden** or
@@ -306,8 +306,15 @@ entry.
 - **Als Vorlage speichern** (*Save as template*) on an active list card or in
   the detail view asks for a name (the entry title is suggested) and saves the
   entry's layout as a new template. The entry is not changed.
-- **Aus Vorlage …** (*From template …*) next to **Neuer Eintrag** appears when
-  the vault has templates. It lists them by name with their type; choosing one
+- **Aus Vorlage …** (*From template …*) next to **Neuer Eintrag** lists the
+  vault's templates by name with their type, followed by the built-in
+  templates under **Mitgelieferte Vorlagen** (*Built-in templates*):
+  **Mailpostfach (IMAP und SMTP)** (*Mailbox (IMAP and SMTP)*), an email record
+  with IMAP on port 993 and SMTP on port 465, both TLS, and **Datenbank**
+  (*Database*), a custom record with host, port, database, username and a
+  masked password. Built-in templates hold no value, are not stored in the
+  vault and take the customer and project the list is filtered by. Choosing a
+  vault template choosing one
   opens the editor for a new entry titled *Neuer Eintrag aus Vorlage „…“* with
   the template's type, fields, tags, customer and project. All values start
   empty; ports, protocol and key type take the usual defaults. Choosing another

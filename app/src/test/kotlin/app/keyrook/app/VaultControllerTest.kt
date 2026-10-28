@@ -337,4 +337,31 @@ class VaultControllerTest {
         assertEquals(null, templateName("  "))
         assertEquals("Name", templateName(" Name "))
     }
+
+    @Test fun `customers and projects named in the editor are created with the entry in one save`() {
+        VaultController().use { controller ->
+            controller.unlock(directory.resolve("created.keyrook"), "synthetic-master-passphrase".toCharArray(), null, true,
+                app.keyrook.core.crypto.KdfParameters(iterations = 1)).close()
+            val start = controller.session.snapshot().use { it.revision }
+            val customer = CreatedName(java.util.UUID.randomUUID().toString(), "  Acme  ")
+            val project = CreatedName(java.util.UUID.randomUUID().toString(), "Shop", customer.id)
+            val data = blankData(EntryType.SERVER)
+            val entry = editedEntry(null, data, "Web01", "", "", "", listOf("web01.invalid", "deploy", "synthetic-secret", "", ""),
+                listOf(false, false, true, false, false)).copy(customerId = customer.id, projectId = project.id)
+            data.fields().forEach { it.value.close() }
+            Vault(entries = listOf(entry)).use {
+                controller.save(entry, CreatedOrganization(listOf(customer), listOf(project))).use { snapshot ->
+                    assertEquals(start + 1, snapshot.revision)
+                    assertEquals(listOf("Acme"), snapshot.customers.map { it.name })
+                    assertEquals(listOf(customer.id), snapshot.projects.map { it.customerId })
+                    assertEquals(project.id, snapshot.entries.single().projectId)
+                }
+                // A blank name is refused before anything is saved.
+                assertThrows(UserFacingException::class.java) {
+                    controller.save(entry, CreatedOrganization(listOf(CreatedName(java.util.UUID.randomUUID().toString(), " "))))
+                }
+                assertEquals(start + 1, controller.session.snapshot().use { it.revision })
+            }
+        }
+    }
 }

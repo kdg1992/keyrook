@@ -94,7 +94,33 @@ internal fun submitEditedEntry(busy: Boolean, candidate: Entry, save: (Entry) ->
  * [customerId] and [projectId] preset a blank entry, for example from the list's active filters.
  */
 internal data class NewEntryContext(val type: EntryType? = null, val customerId: String? = null, val projectId: String? = null,
-                                    val copyOf: Entry? = null)
+                                    val copyOf: Entry? = null, val starter: StarterTemplate? = null)
+
+/** A customer or project named in the editor before it exists; [customerId] links a project to a customer. */
+internal data class CreatedName(val id: String, val name: String, val customerId: String? = null)
+
+/** Customers and projects created from the editor, saved together with the entry (see [VaultController.save]). */
+internal data class CreatedOrganization(val customers: List<CreatedName> = emptyList(), val projects: List<CreatedName> = emptyList())
+
+/**
+ * Starter templates shipped with Keyrook for common hosting records: they preset a layout that the type alone does not,
+ * and like vault templates they contain no value. [newData] creates the editor's own empty fields.
+ */
+internal enum class StarterTemplate(val type: EntryType, private val key: String) {
+    MAILBOX(EntryType.EMAIL, "starter.mailbox"), DATABASE(EntryType.CUSTOM, "starter.database");
+
+    val label: String get() = UiText.text(key)
+
+    fun newData(): EntryData {
+        fun field(hidden: Boolean = false) = Field(Secret(charArrayOf()), hidden)
+        return when (this) {
+            MAILBOX -> EntryData.Email(field(), field(), field(true),
+                imap = MailEndpoint(field(), 993, MailEncryption.TLS), smtp = MailEndpoint(field(), 465, MailEncryption.TLS))
+            DATABASE -> EntryData.Custom(linkedMapOf(UiText.text("field.host") to field(), UiText.text("starter.port") to field(),
+                UiText.text("starter.databaseName") to field(), UiText.text("field.username") to field(), UiText.text("field.password") to field(true)))
+        }
+    }
+}
 
 /** The values a duplicate of [entry] starts with: hidden fields such as passwords, keys and TOTP secrets start empty. */
 internal fun duplicateValues(entry: Entry): List<String> =

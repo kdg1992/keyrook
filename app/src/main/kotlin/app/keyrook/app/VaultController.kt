@@ -63,10 +63,14 @@ class VaultController(internal val session: VaultSession = VaultSession(),
         } finally { password.fill('\u0000') }
     }
 
-    fun save(entry: Entry): Vault {
+    /** Saves [entry]; customers and projects created in the editor ([created]) are added in the same save. */
+    internal fun save(entry: Entry, created: CreatedOrganization = CreatedOrganization()): Vault {
         ensureOperationCurrent()
         session.snapshot().use { current ->
-            val candidate = current.copy(entries = current.entries.filterNot { it.id == entry.id } + entry)
+            val candidate = current.copy(
+                customers = current.customers + created.customers.map { app.keyrook.core.model.Customer(it.id, organizationName(it.name)) },
+                projects = current.projects + created.projects.map { app.keyrook.core.model.Project(it.id, organizationName(it.name), it.customerId) },
+                entries = current.entries.filterNot { it.id == entry.id } + entry)
             candidate.validate()
             session.save(candidate)
         }

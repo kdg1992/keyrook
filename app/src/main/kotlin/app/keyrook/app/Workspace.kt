@@ -226,7 +226,7 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
     }
     val createButtons: @Composable () -> Unit = {
         Button(onClick = ::create, enabled = !busy && !trash) { ButtonIcon(KeyrookIcons.Add); Text(UiText.text("shell.newEntry")) }
-        if (vault.templates.isNotEmpty()) OutlinedButton(onClick = { choosingTemplate = true }, enabled = !busy && !trash) {
+        OutlinedButton(onClick = { choosingTemplate = true }, enabled = !busy && !trash) {
             Text(UiText.text("template.new"))
         }
     }
@@ -333,10 +333,13 @@ private fun VaultList(vault: Vault, controller: VaultController, busy: Boolean, 
                 onSaveTemplate = if (trash) null else ({ onSaveTemplate(entry) }))
         }
     }
-    if (choosingTemplate) TemplateChooserDialog(vault, busy, onDismiss = { choosingTemplate = false }) { template ->
+    if (choosingTemplate) TemplateChooserDialog(vault, busy, onDismiss = { choosingTemplate = false }, onChoose = { template ->
         choosingTemplate = false
         onCreateFromTemplate(template)
-    }
+    }, onChooseStarter = { starter ->
+        choosingTemplate = false
+        onCreate(NewEntryContext(customerId = activeFilters.customerId, projectId = activeFilters.projectId, starter = starter))
+    })
     if (help) AlertDialog(onDismissRequest = { help = false }, title = { Text(UiText.text("shortcuts.title")) },
         text = { ShortcutHelpTable(mac) },
         confirmButton = { TextButton(onClick = { help = false }) { Text(UiText.text("shell.close")) } })
