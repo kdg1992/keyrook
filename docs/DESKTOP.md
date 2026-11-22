@@ -189,12 +189,19 @@ backup first. Vaults with higher derivation costs still require explicit approva
 through the core API and cannot currently be opened in the desktop interface.
 
 The installed application may use up to half of the physical memory for its Java
-heap (`-XX:MaxRAMPercentage=50`; the JVM default is a quarter). Opening a schema 1
-vault close to the 64 MiB file limit needs about 1.2 GiB while it is converted,
-and Argon2 derivation needs up to 256 MiB on top; on machines with 4 GiB of memory
-the default quarter would not be enough. Vaults of typical size need far less.
+heap (`-XX:MaxRAMPercentage=50`; the JVM default is a quarter). A vault file may
+hold up to 256 MiB, 100,000 entries, 100,000 customers and 100,000 projects (see
+[FORMAT.md](FORMAT.md#encrypted-payload)). The whole vault is decrypted into
+memory, and a save encodes and checks it again, so memory use grows with the
+vault: a vault of 100,000 web logins with a short history (about 200 MiB on
+disk) needs about 3 GiB of heap to open and save, which a machine with 8 GiB of
+memory provides. Opening a vault of an earlier release close to its 64 MiB limit
+needs about 1.2 GiB while it is converted, and Argon2 derivation needs up to
+256 MiB on top. Vaults of typical size need far less. If memory runs out, the
+operation fails and the vault file stays unchanged; open the vault on a machine
+with more memory.
 
-Entries are saved immediately through authenticated, atomic vault storage. Fields can be masked independently. Web, transfer, email, hosting-panel, server, SSH, domain and custom records have their own editors. Customers/projects can be created and assigned. Entries can be duplicated, moved to the trash, restored and permanently deleted (see below). The editor's customer and project lists end with **+ Neuer Kunde…** and **+ Neues Projekt…** (**+ New customer…**, **+ New project…**): they ask for a name and select the new customer or project, which is created together with the entry when it is saved, in the same vault revision, and discarded when the entry is canceled. A new project belongs to the customer selected at that moment. **Duplizieren** (**Duplicate**) opens the editor for a new entry titled *… (Kopie)* with the source's type, field layout, port and protocol settings, tags, customer, project and visible values; hidden values such as passwords, private keys and TOTP secrets start empty, and notes and the expiry date are not copied. Nothing is saved until **Speichern**, and canceling an unchanged copy asks nothing. **Neuer Eintrag** (**New entry**) starts with the type, customer and project the list is filtered by; without a type filter it uses the type of the entry created last since unlocking, otherwise a web login. Switching the type of a new entry keeps the values of fields with the same label, such as the username and password. Editing retains up to 100 historical field snapshots. Search and filters narrow the visible list; history displays hidden fields masked. Canceling an edit discards that edit.
+Entries are saved immediately through authenticated, atomic vault storage. Fields can be masked independently. Web, transfer, email, hosting-panel, server, SSH, domain and custom records have their own editors. Customers/projects can be created and assigned. Entries can be duplicated, moved to the trash, restored and permanently deleted (see below). The editor's customer and project lists end with **+ Neuer Kunde…** and **+ Neues Projekt…** (**+ New customer…**, **+ New project…**): they ask for a name and select the new customer or project, which is created together with the entry when it is saved, in the same vault revision, and discarded when the entry is canceled. A new project belongs to the customer selected at that moment. **Duplizieren** (**Duplicate**) opens the editor for a new entry titled *… (Kopie)* with the source's type, field layout, port and protocol settings, tags, customer, project and visible values; hidden values such as passwords, private keys and TOTP secrets start empty, and notes and the expiry date are not copied. Nothing is saved until **Speichern**, and canceling an unchanged copy asks nothing. **Neuer Eintrag** (**New entry**) starts with the type, customer and project the list is filtered by; without a type filter it uses the type of the entry created last since unlocking, otherwise a web login. Switching the type of a new entry keeps the values of fields with the same label, such as the username and password. Editing retains up to 500 historical field snapshots; when more accumulate, the oldest are dropped. Search and filters narrow the visible list; history displays hidden fields masked. Canceling an edit discards that edit.
 
 **Kunden, Projekte und Vorlagen** above the entry list opens the section for
 adding customers and projects; **Kunden, Projekte und Vorlagen ausblenden** or
@@ -486,13 +493,17 @@ Without a configured backup folder only the vault file is checked. The report sh
 
 ### Vaults of earlier releases
 
-Keyrook up to 0.7.x writes document schema 1; 0.8.0 and later write schema 2
-(with favorites as a field, customer details and templates). Vaults saved by
-0.7.x or earlier open normally; their favorite tags become
-favorites in memory, and a notice above the list says that the next save
+Keyrook up to 0.7.x writes document schema 1; 0.8.0 to 1.4.x write schema 2
+(with favorites as a field, customer details and templates); 1.5.0 and later
+write schema 3, which has the same content and raises the limits: vault files
+up to 256 MiB instead of 64 MiB, 100,000 instead of 10,000 customers, projects
+and entries each, and 500 instead of 100 history versions per entry. Vaults
+saved by an earlier release open normally; favorite tags of a schema 1 vault
+become favorites in memory, and a notice above the list says that the next save
 converts the vault. Opening changes nothing on disk. The first save afterwards
 keeps the unchanged old file next to the vault as
-`<vault file>.schema-v1-r<revision>.keyrook.bak` (shortened for very long file
+`<vault file>.schema-v<old schema>-r<revision>.keyrook.bak`, for example
+`company.keyrook.schema-v2-r41.keyrook.bak` (shortened for very long file
 names, see [FORMAT.md](FORMAT.md#compatibility-and-migrations)), whether or not a
 backup folder is configured, and then writes the new format; a notice names the
 copy once. If that copy cannot be written, nothing is saved and a message says
@@ -503,13 +514,13 @@ Delete it once the converted vault works as expected. Earlier releases cannot
 open a converted vault; they report it as invalid or unsupported and leave it
 unchanged. See [FORMAT.md](FORMAT.md#compatibility-and-migrations).
 
-A vault of an earlier release close to the 64 MiB size limit still opens, but
-because the new format adds fields, saving may report that the vault is too
-large until entries are deleted permanently or large notes are shortened.
+Because every vault of 1.4.x or earlier is converted by its first save in
+1.5.0 or later, keep using one Keyrook version on all machines that open the
+same vault file, and update them together.
 
 ## Import and plaintext export
 
-Import parses and validates first, then asks for confirmation showing the entry count. It adds records to the current vault under new IDs, with the references between imported customers, projects, entries and templates updated, so importing a vault's own export or the same file twice adds copies and never overwrites records. Enable backups before importing into a valuable vault. An import that could not be saved because the vault would exceed the 64 MiB size limit of the file format is refused with a message that says so, and nothing changes. Supported inputs:
+Import parses and validates first, then asks for confirmation showing the entry count. It adds records to the current vault under new IDs, with the references between imported customers, projects, entries and templates updated, so importing a vault's own export or the same file twice adds copies and never overwrites records. Enable backups before importing into a valuable vault. Keyrook JSON and Keyrook CSV files may be as large as a vault file (256 MiB); import files of other programs (mapped CSV, KeePass CSV, KeePass XML, Bitwarden JSON) are limited to 64 MiB. An import that could not be saved because the vault would exceed the 256 MiB size limit of the file format is refused with a message that says so, and nothing changes. Supported inputs:
 
 - Keyrook JSON: all entry types, references, metadata and history.
 - CSV: select the actual header names from dropdowns for title, URL, username, password, notes, tags and favorite. Tags are separated by commas or semicolons. The title column is required; optional fields can remain unassigned. Common German and English column names are suggested. Quoted commas, escaped quotes and multiline values are supported. Headers must be unique and nonblank, with at most 100 columns and 512 characters per name; otherwise nothing is imported and a message states these rules. A UTF-8 BOM is accepted. Keyrook's own CSV format is recognized automatically without a mapping dialog.

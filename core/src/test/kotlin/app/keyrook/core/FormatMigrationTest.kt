@@ -44,7 +44,7 @@ class FormatMigrationTest {
             }
         }
     }
-    private val testMigrations = SchemaMigrations(Vault.SCHEMA_VERSION, listOf(zeroToOne, SchemaMigrations.V1_TO_V2))
+    private val testMigrations = SchemaMigrations(Vault.SCHEMA_VERSION, listOf(zeroToOne, SchemaMigrations.V1_TO_V2, SchemaMigrations.V2_TO_V3))
     private val migratingCodec = VaultCodec(testMigrations)
     private val productionCodec = VaultCodec()
 

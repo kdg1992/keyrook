@@ -91,7 +91,7 @@
 <h1>Inhalt</h1>
 <ol>
   <li>Überblick<ol><li>Was Keyrook ist</li><li>Sicherheitsprinzipien</li><li>Was Keyrook nicht tut</li></ol></li>
-  <li>Installation<ol><li>Download und Prüfsumme</li><li>Windows</li><li>macOS</li><li>Linux (DEB, RPM)</li><li>Arch Linux, CachyOS und portables Archiv</li><li>Updates</li></ol></li>
+  <li>Installation<ol><li>Download und Prüfsumme</li><li>Windows</li><li>macOS</li><li>Linux (DEB, RPM)</li><li>Arch Linux, CachyOS und portables Archiv</li><li>Updates</li><li>Umstieg von Version 1.4 und älter</li></ol></li>
   <li>Erste Schritte<ol><li>Tresor anlegen</li><li>Schlüsseldatei</li><li>Argon2-Einstellungen</li><li>Entsperren und Sperren</li></ol></li>
   <li>Die Oberfläche<ol><li>Fensterleiste</li><li>Suchfeld, Chips und Filter</li><li>Liste und Detailansicht</li><li>Das Menü „Daten“</li></ol></li>
   <li>Einträge<ol><li>Eintragstypen</li><li>Eintrag anlegen</li><li>Der Editor</li><li>Verlauf</li><li>Schnellaktionen</li><li>Papierkorb</li></ol></li>
@@ -171,7 +171,9 @@ makepkg -si      # lädt das Archiv, prüft die SHA-256 und installiert das Pake
 
 <h2>Updates</h2>
 <p>Keyrook lädt keine Updates herunter und installiert keine. <span class="ui">Info → Nach Updates suchen</span> fragt einmal bei GitHub nach dem neuesten veröffentlichten Release und zeigt an, ob Ihre Version aktuell ist, mit den Release-Notizen als Text und einem Button zur Release-Seite. Unter <span class="ui">Einstellungen</span> kann <span class="ui">Beim Start automatisch nach Updates suchen</span> eingeschaltet werden (Standard: aus); dann erscheint beim Start ein Hinweis, falls eine neuere Version existiert.</p>
-<p>Zum Aktualisieren: Tresor sichern, Installer herunterladen, Prüfsumme vergleichen, über die bestehende Version installieren. Tresore und Einstellungen sind eigene Dateien und bleiben erhalten. Das Dateiformat ist seit 1.0.0 unverändert: ein mit dieser Version gespeicherter Tresor öffnet sich in jeder 1.x-Version.</p>
+<p>Zum Aktualisieren: Tresor sichern, Installer herunterladen, Prüfsumme vergleichen, über die bestehende Version installieren. Tresore und Einstellungen sind eigene Dateien und bleiben erhalten. Seit Version 1.5.0 schreibt Keyrook das Dokumentformat 3 mit höheren Grenzen (Abschnitt 2.7). Aktualisieren Sie deshalb alle Rechner, die denselben Tresor öffnen, gemeinsam.</p>
+<h2>Umstieg von Version 1.4 und älter</h2>
+<p>Ein Tresor aus Keyrook 1.4 oder älter öffnet sich unverändert; ein Hinweis über der Liste sagt, dass er beim nächsten Speichern umgewandelt wird. Vor diesem ersten Speichern legt Keyrook die unveränderte alte Datei im selben Ordner als <code>&lt;Tresor&gt;.schema-v2-r&lt;Revision&gt;.keyrook.bak</code> ab (bei Tresoren aus 0.7 oder älter <code>schema-v1</code>) und nennt den Namen einmal. Ältere Keyrook-Versionen können den umgewandelten Tresor nicht mehr öffnen; sie lehnen ihn ab, ohne ihn zu verändern. Der Weg zurück ist die abgelegte Kopie: in <code>.keyrook</code> umbenennen und mit der älteren Version öffnen. Änderungen nach der Umwandlung sind darin nicht enthalten. Löschen Sie die Kopie, sobald alle Rechner aktualisiert sind und der Tresor wie erwartet funktioniert.</p>
 </section>
 
 <!-- 3 -->
@@ -267,7 +269,7 @@ makepkg -si      # lädt das Archiv, prüft die SHA-256 und installiert das Pake
 <p>Der Editor prüft während der Eingabe und markiert jedes betroffene Feld mit eigener Meldung: fehlender oder zu langer Titel (höchstens 4096 Zeichen), zu viele oder zu lange Tags, zu lange Werte oder Notizen, ungültiges Ablaufdatum, leerer oder ungültiger Port, ein nicht akzeptiertes TOTP-Secret, doppelte oder zu lange eigene Feldnamen. <span class="ui">Speichern</span> mit offenen Problemen speichert nichts und zeigt eine Zusammenfassung über den Buttons.</p>
 
 <h2>Verlauf</h2>
-<p>Jede Bearbeitung behält bis zu 100 frühere Feldstände mit Zeitstempel. Der Verlauf zeigt verborgene Felder maskiert und bietet je Wert einen Kopieren-Button mit der üblichen Ablaufzeit. Tag-Änderungen, Favoriten und Papierkorbvorgänge erzeugen keine Verlaufsversionen; sie halten nur Feldwerte fest. Der Verlauf ist auch die Grundlage für die Warnung „altes Passwort“ (Kapitel 12).</p>
+<p>Jede Bearbeitung behält bis zu 500 frühere Feldstände mit Zeitstempel; kommen mehr zusammen, entfallen die ältesten. Der Verlauf zeigt verborgene Felder maskiert und bietet je Wert einen Kopieren-Button mit der üblichen Ablaufzeit. Tag-Änderungen, Favoriten und Papierkorbvorgänge erzeugen keine Verlaufsversionen; sie halten nur Feldwerte fest. Der Verlauf ist auch die Grundlage für die Warnung „altes Passwort“ (Kapitel 12).</p>
 
 <h2>Schnellaktionen</h2>
 <p>Ohne den Editor zu öffnen, kopieren die Buttons einer Karte Benutzername, Passwort (bei SSH-Schlüsseln die Passphrase), Host (Server, Transfer, erster Mailserver, Domain) sowie den SSH- oder SFTP-Befehl und öffnen die URL von Web- und Panel-Einträgen. Buttons erscheinen nur, wenn das Feld einen Wert hat; der Befehls-Button nur, wenn Host, Port und Benutzername einen gültigen Befehl ergeben. Eigene Datensätze (auch Bitwarden- und KeePass-Importe) werden über ihre Feldnamen erkannt: <i>username</i>, <i>user</i> oder <i>Benutzername</i>; <i>password</i>, <i>Passwort</i> oder <i>passphrase</i> (sonst das erste verborgene Feld); <i>url</i>, <i>url1</i>, <i>uri</i> oder <i>host</i>.</p>
@@ -394,7 +396,7 @@ makepkg -si      # lädt das Archiv, prüft die SHA-256 und installiert das Pake
 <ol>
   <li><span class="ui">Daten → Importieren</span>, Format und Datei wählen (bei CSV mit Feldzuordnung anschließend die Spalten zuordnen; der Dialog zeigt nur Spaltennamen, keine Werte).</li>
   <li>Keyrook liest und prüft die ganze Datei und zeigt die Anzahl der Einträge zur Bestätigung.</li>
-  <li>Die Einträge werden mit neuen IDs <b>hinzugefügt</b>; ein zweiter Import derselben Datei erzeugt Kopien und überschreibt nie. Überschreitet der Tresor dabei die Formatgrenze von 64 MiB, wird der Import abgelehnt und nichts geändert.</li>
+  <li>Die Einträge werden mit neuen IDs <b>hinzugefügt</b>; ein zweiter Import derselben Datei erzeugt Kopien und überschreibt nie. Überschreitet der Tresor dabei die Formatgrenze von 256 MiB, wird der Import abgelehnt und nichts geändert. Importdateien anderer Programme dürfen höchstens 64 MiB groß sein, Keyrook JSON und Keyrook CSV so groß wie ein Tresor.</li>
 </ol>
 <div class="tip"><span class="label">Empfehlung</span><p>Aktivieren Sie Backups, bevor Sie in einen wertvollen Tresor importieren. Löschen Sie die Quelldatei des anderen Programms nach erfolgreichem Import sicher; sie enthält Klartext.</p></div>
 <h2>Klartext exportieren</h2>
@@ -540,6 +542,10 @@ makepkg -si      # lädt das Archiv, prüft die SHA-256 und installiert das Pake
   <dd>Bei CSV: Kopfzeile eindeutig und nicht leer, höchstens 100 Spalten. Bei KeePass CSV: genau die erwarteten Spalten, sonst <span class="ui">CSV mit Feldzuordnung</span> verwenden. Bei KeePass XML: keine KDBX-Datei, sondern den XML-Export wählen. Ein Tresor nahe 64 MiB nimmt keinen Import mehr an.</dd>
   <dt>Alle Voreinstellungen zurücksetzen.</dt>
   <dd><code>settings.json</code> im Konfigurationsverzeichnis löschen (Anhang). Tresore sind davon nicht betroffen.</dd>
+  <dt>„Der Arbeitsspeicher dieses Rechners reicht für diesen Tresor nicht aus“.</dt>
+  <dd>Sehr große Tresore brauchen viel Arbeitsspeicher (Anhang, Grenzen des Dateiformats). Die Tresordatei bleibt unverändert. Andere Programme schließen oder den Tresor auf einem Rechner mit mehr Arbeitsspeicher öffnen.</dd>
+  <dt>Eine ältere Keyrook-Version meldet den Tresor als ungültig.</dt>
+  <dd>Der Tresor wurde von Version 1.5.0 oder neuer umgewandelt. Auf diesem Rechner Keyrook aktualisieren oder die beim Umwandeln abgelegte Kopie <code>….schema-v2-r….keyrook.bak</code> verwenden (Abschnitt 2.7).</dd>
   <dt>Ein Tresor aus Keyrook 0.7 oder älter.</dt>
   <dd>Er öffnet sich normal; beim ersten Speichern bleibt die alte Datei als <code>&lt;Tresor&gt;.schema-v1-r&lt;Revision&gt;.keyrook.bak</code> daneben liegen. Ältere Versionen können den konvertierten Tresor nicht mehr öffnen.</dd>
 </dl>
@@ -564,11 +570,15 @@ makepkg -si      # lädt das Archiv, prüft die SHA-256 und installiert das Pake
 <p>Tresordateien, Backups, Exporte und Schlüsseldateien werden mit Rechten nur für Ihr Benutzerkonto angelegt (Modus 0600 unter macOS und Linux, Besitzer-ACL unter Windows). Keyrook ersetzt beim Exportieren, Wiederherstellen und Anlegen nie eine vorhandene Datei.</p>
 <h2>Grenzen des Dateiformats</h2>
 <ul>
-  <li>Tresordatei höchstens 64 MiB</li>
-  <li>Titel, Kunden- und Projektnamen höchstens 4096 Zeichen; Tags höchstens 100 je Eintrag, je 256 Zeichen</li>
-  <li>Verlauf höchstens 100 Feldstände je Eintrag</li>
+  <li>Tresordatei höchstens 256 MiB</li>
+  <li>Je höchstens 100.000 Einträge (einschließlich Papierkorb), Kunden und Projekte; höchstens 1.000 Vorlagen</li>
+  <li>Verlauf höchstens 500 Feldstände je Eintrag</li>
+  <li>Titel, Kunden- und Projektnamen höchstens 4096 Zeichen; Tags höchstens 100 je Eintrag, je 256 Zeichen; eigene Felder höchstens 100 je Eintrag</li>
+  <li>Feldwerte und Notizen höchstens 262.144 Zeichen</li>
   <li>Suchanfragen höchstens 256 Zeichen</li>
 </ul>
+<p>Bis Version 1.4 galten 64 MiB, je 10.000 Einträge, Kunden und Projekte und 100 Feldstände. Die Grenzen schützen davor, dass eine beschädigte oder manipulierte Datei den Rechner beim Öffnen überlastet.</p>
+<div class="note"><span class="label">Arbeitsspeicher</span><p>Keyrook entschlüsselt den Tresor vollständig in den Arbeitsspeicher und darf dafür bis zur Hälfte des eingebauten Speichers nutzen. Übliche Tresore mit einigen tausend Einträgen brauchen wenige hundert Megabyte. Ein Tresor mit 100.000 Web-Logins und kurzem Verlauf ist rund 200 MiB groß und braucht zum Öffnen und Speichern etwa 3 GiB; dafür sollte der Rechner mindestens 8 GB Arbeitsspeicher haben. Jedes Speichern schreibt die ganze Datei neu und legt vorher ein Backup an; planen Sie im Backup-Ordner entsprechend Platz ein.</p></div>
 <p class="small">Dieses Handbuch beschreibt Keyrook @VERSION@. Die vollständige, laufend aktualisierte Dokumentation (Desktop-Anleitung, Sicherheitseigenschaften, Dateiformat, Paketierung) liegt im Ordner <code>docs</code> des Projekts auf GitHub.</p>
 </section>
 

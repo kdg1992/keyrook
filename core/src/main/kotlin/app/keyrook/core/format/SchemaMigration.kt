@@ -97,8 +97,18 @@ internal class SchemaMigrations(val current: Int, steps: List<SchemaMigration>) 
             } + ("templates" to JsonArray(emptyList())))
         }
 
+        /**
+         * Schema 2 to 3: the document keeps its shape and only `schemaVersion` changes. Schema 3 raises limits (file
+         * size, record counts and history length, see [Vault.MAX_RECORDS] and [Vault.MAX_HISTORY]), so every valid
+         * schema 2 document is a valid schema 3 document; the version tells schema 2 releases to refuse a vault that
+         * may exceed their limits.
+         */
+        internal val V2_TO_V3 = SchemaMigration(2, 3) { source ->
+            JsonObject(source.mapValues { (key, value) -> if (key == "schemaVersion") JsonPrimitive(3) else value })
+        }
+
         /** Every registered step up to [Vault.SCHEMA_VERSION]; schema 1 was the first format. */
-        val PRODUCTION = SchemaMigrations(Vault.SCHEMA_VERSION, listOf(V1_TO_V2))
+        val PRODUCTION = SchemaMigrations(Vault.SCHEMA_VERSION, listOf(V1_TO_V2, V2_TO_V3))
 
         internal fun schemaVersion(document: JsonObject): Int? {
             val value = document["schemaVersion"] as? JsonPrimitive ?: return null

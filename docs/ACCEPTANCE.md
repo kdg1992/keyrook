@@ -536,6 +536,29 @@ try to downgrade the system under test.
     favorite behavior; the converted vault and its conversion copy open only
     with the key file.
 
+### 9.1 Migration of a vault from 1.4.0
+
+Keyrook 0.8.0 to 1.4.x writes document schema 2; 1.5.0 and later convert it to
+schema 3 on the first save. Run this on WIN, MAC and LNX-G with the published
+release `v1.4.0`, the last release that writes schema 2.
+
+1. Install `v1.4.0`, create `keyrook-acceptance/migration-v2.keyrook` with the
+   master password, add the two entries of step 3 above and a template, and
+   quit. Record the file's SHA-256.
+2. Install the version under test over it and open the vault. Expected: all
+   records are present, and a notice says that the vault still uses document
+   format 2 and that the next save converts it.
+3. Lock and quit without a change. Expected: the SHA-256 is unchanged and no
+   `migration-v2.keyrook.schema-v2-r….keyrook.bak` exists.
+4. Open the vault, change the notes of one entry and save. Expected: the save
+   succeeds, the notice disappears, and
+   `migration-v2.keyrook.schema-v2-r<revision>.keyrook.bak` exists with the
+   SHA-256 from step 1 and owner-only permissions.
+5. With 1.4.0 on a second machine or snapshot, open a copy of that file renamed
+   to `.keyrook`. Expected: it opens in its state from step 1. Then try the
+   converted vault. Expected: 1.4.0 refuses it with its invalid-vault message
+   and leaves the copy unchanged.
+
 ## 10. Further real-system checks
 
 Use the synthetic test vault unless stated otherwise.

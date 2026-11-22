@@ -122,7 +122,7 @@ data class Vault(
     fun validate() {
         require(schemaVersion == SCHEMA_VERSION && revision >= 0) { "Invalid vault version or revision" }
         uuid(id)
-        require(customers.size <= 10_000 && projects.size <= 10_000 && entries.size <= 10_000)
+        require(customers.size <= MAX_RECORDS && projects.size <= MAX_RECORDS && entries.size <= MAX_RECORDS)
         require(templates.size <= MAX_TEMPLATES)
         val customerIds = uniqueIds(customers.map { it.id })
         val projectIds = uniqueIds(projects.map { it.id })
@@ -160,7 +160,7 @@ data class Vault(
             entry.expiresOn?.let { LocalDate.parse(it) }
             entry.deletedAt?.let { require(Instant.parse(it) >= Instant.parse(entry.createdAt)) }
             assignment(entry.customerId, entry.projectId)
-            require(entry.tags.size <= 100 && entry.history.size <= 100)
+            require(entry.tags.size <= 100 && entry.history.size <= MAX_HISTORY)
             entry.tags.forEach { text(it, 256); require(!ReservedTags.isReserved(it)) }
             entry.notes.useChars { require(it.size <= MAX_FIELD_CHARS) }
             validateData(entry.data, entryIds, serverIds)
@@ -256,7 +256,11 @@ data class Vault(
 
     companion object {
         /** Current decrypted document schema; older schemas are only accepted through registered migrations. */
-        const val SCHEMA_VERSION = 2
+        const val SCHEMA_VERSION = 3
+        /** Most customers, projects and entries (active and trashed) each; schema 2 allowed 10,000. */
+        const val MAX_RECORDS = 100_000
+        /** Most history items per entry; schema 2 allowed 100. */
+        const val MAX_HISTORY = 500
         const val MAX_FIELD_CHARS = 262_144
         const val MAX_TEMPLATES = 1_000
         private fun secrets(entry: Entry): List<Secret> = listOf(entry.notes) + entry.data.fields().map { it.value } +
@@ -275,7 +279,7 @@ data class Vault(
                 is EntryData.Server -> port(data.port)
                 is EntryData.Email -> listOfNotNull(data.imap, data.pop3, data.smtp).forEach { port(it.port) }
                 is EntryData.Ssh -> {
-                    require(data.serverIds.size <= 10_000)
+                    require(data.serverIds.size <= MAX_RECORDS)
                     data.serverIds.forEach { uuid(it); if (checkReferences) require(it in servers) }
                 }
                 is EntryData.Domain -> data.registrarLoginId?.let { uuid(it); if (checkReferences) require(it in ids) }

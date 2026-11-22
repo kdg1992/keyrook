@@ -160,7 +160,7 @@ fun editedEntry(source: Entry?, data: EntryData, title: String, tags: String, no
             field.copy(value = secret(values[i]), hidden = hidden[i])
         }
         val now = maxOf(Instant.now(), source?.modifiedAt?.let(Instant::parse) ?: Instant.MIN).toString()
-        val history = source?.history.orEmpty().takeLast(99).map {
+        val history = source?.history.orEmpty().takeLast(Vault.MAX_HISTORY - 1).map {
             it.copy(data = copyData(it.data))
         } + listOfNotNull(source?.let { HistoryItem(now, copyData(it.data)) })
         return Entry(source?.id ?: UUID.randomUUID().toString(), title, changed, source?.createdAt ?: now, now,
