@@ -448,7 +448,8 @@ jobs:
             cp "/work/$archive" "$directory/"
             chown -R builder "$directory"
             # The source URL points at the release; the archive next to the PKGBUILD is used instead of a download.
-            su builder -c "cd '$directory' && makepkg --noconfirm --nodeps"
+            # Only the package path goes to standard output; makepkg's messages go to the log.
+            su builder -c "cd '$directory' && makepkg --noconfirm --nodeps" >&2
             local package
             package="$(ls "$directory"/keyrook-bin-"$version"-*.pkg.tar.*)"
             [ "$(printf '%s\n' "$package" | wc -l)" -eq 1 ] || { echo "Expected one built package"; exit 1; }
