@@ -122,9 +122,15 @@ needs no installation.
   and later open them unchanged and convert them to schema 2 on the first save.
   Before that save, the unchanged file is kept next to the vault as
   `<vault>.schema-v1-r<revision>.keyrook.bak`.
+- Vaults from Keyrook 0.8.0 to 1.4.x use document schema 2. Keyrook 1.5.0 and
+  later open them unchanged and convert them to schema 3 on the first save,
+  keeping the unchanged file as `<vault>.schema-v2-r<revision>.keyrook.bak`.
+  Schema 3 raises the limits to 256 MiB per vault file, 100,000 customers,
+  projects and entries each and 500 history versions per entry. Update every
+  machine that opens the same vault together.
 - Older versions cannot open a converted vault; they refuse it without
   changing it. There is no downgrade path for a converted vault: to go back,
-  open the kept `.schema-v1-r<revision>.keyrook.bak` copy (renamed to
+  open the kept `.schema-v<old schema>-r<revision>.keyrook.bak` copy (renamed to
   `.keyrook`) with the older version. Changes made after the conversion are not
   in that copy. See [vaults of earlier releases](docs/DESKTOP.md#vaults-of-earlier-releases).
 

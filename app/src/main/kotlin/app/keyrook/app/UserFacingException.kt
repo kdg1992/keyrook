@@ -25,14 +25,15 @@ internal fun requireUserFacing(condition: Boolean, messageKey: String, vararg ar
 
 /**
  * The message shown for a failed operation: the specific reason of a [UserFacingException], fixed texts for a vault
- * that would exceed the file format's size limit and for a migration copy that could not be written, otherwise the
- * generic text. Other exceptions can contain paths or
+ * that would exceed the file format's size limit, for a migration copy that could not be written and for a vault too
+ * large for this machine's memory, otherwise the generic text. Other exceptions can contain paths or
  * decrypted input, so their messages are never displayed.
  */
 internal fun failureMessage(failure: Throwable?): String = when (failure) {
     is UserFacingException -> failure.text()
     is VaultTooLargeException -> UiText.text("shell.tooLarge")
     is MigrationBackupException -> UiText.text("migration.copyFailed")
+    is OutOfMemoryError -> UiText.text("shell.outOfMemory")
     else -> UiText.text("shell.failed")
 }
 

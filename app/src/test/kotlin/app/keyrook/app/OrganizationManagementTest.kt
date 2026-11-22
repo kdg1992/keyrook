@@ -225,6 +225,7 @@ class OrganizationManagementTest {
                 assertEquals(UiText.text("error.projectInUse"), failureMessage(failure))
                 assertEquals(UiText.text("error.nameTooLong", MAX_NAME_CHARS), failureMessage(UserFacingException("error.nameTooLong", MAX_NAME_CHARS)))
                 assertEquals(UiText.text("shell.failed"), failureMessage(IllegalArgumentException("/secret/path")))
+                assertEquals(UiText.text("shell.outOfMemory"), failureMessage(OutOfMemoryError("Java heap space")))
                 assertEquals(UiText.text("shell.failed"), failureMessage(null))
             } finally { UiText.select(AppLanguage.GERMAN) }
         }
