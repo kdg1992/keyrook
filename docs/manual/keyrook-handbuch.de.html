@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<!-- SPDX-FileCopyrightText: 2026 Kim Daniel Geisthardt -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- German user manual. The Release workflow replaces the version and date placeholders and prints this
+     page to the Keyrook-Handbuch-<version>.pdf release asset; see docs/PACKAGING.md. -->
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Keyrook Benutzerhandbuch</title>
+<style>
+  @page {
+    size: A4; margin: 22mm 20mm 24mm 20mm;
+    @bottom-left { content: "Keyrook Benutzerhandbuch · Version @VERSION@"; font-family: "Inter", "DejaVu Sans", sans-serif; font-size: 8pt; color: #5b6770; }
+    @bottom-right { content: counter(page) " / " counter(pages); font-family: "Inter", "DejaVu Sans", sans-serif; font-size: 8pt; color: #5b6770; }
+  }
+  @page :first { @bottom-left { content: none; } @bottom-right { content: none; } }
+  :root {
+    --ink: #1c2429; --muted: #5b6770; --accent: #1f6f78; --accent-soft: #e4f0f1;
+    --rule: #cfd8dc; --warn-bg: #fff6e0; --warn-border: #e0b84d; --note-bg: #eef5f6;
+  }
+  * { box-sizing: border-box; }
+  html { font-size: 10.5pt; }
+  body { counter-reset: chapter; font-family: "Inter", "DejaVu Sans", sans-serif; color: var(--ink); line-height: 1.45; margin: 0; }
+  h1, h2, h3, h4 { font-family: "Inter Display", "Inter", "DejaVu Sans", sans-serif; color: var(--accent); line-height: 1.2; break-after: avoid; }
+  h1 { font-size: 22pt; margin: 0 0 10mm; padding-bottom: 3mm; border-bottom: 2px solid var(--accent); counter-increment: chapter; counter-reset: section; }
+  h1::before { content: counter(chapter) "  "; color: var(--muted); font-weight: 500; }
+  h2 { font-size: 14pt; margin: 8mm 0 3mm; counter-increment: section; counter-reset: subsection; }
+  h2::before { content: counter(chapter) "." counter(section) "  "; color: var(--muted); font-weight: 500; }
+  h3 { font-size: 11.5pt; margin: 6mm 0 2mm; color: var(--ink); counter-increment: subsection; }
+  h3::before { content: counter(chapter) "." counter(section) "." counter(subsection) "  "; color: var(--muted); font-weight: 500; }
+  section.chapter { break-before: page; }
+  p { margin: 0 0 2.6mm; orphans: 3; widows: 3; }
+  ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+  li { margin-bottom: 1.2mm; }
+  li > ul { margin-top: 1mm; }
+  b, strong { font-weight: 600; }
+  kbd { font-family: "DejaVu Sans Mono", monospace; font-size: 0.86em; border: 1px solid #b7c2c7; border-bottom-width: 2px; border-radius: 3px; padding: 0 3px; background: #f7f9fa; white-space: nowrap; }
+  code { font-family: "DejaVu Sans Mono", monospace; font-size: 0.88em; background: #f3f5f6; padding: 0 2px; border-radius: 2px; }
+  pre { font-family: "DejaVu Sans Mono", monospace; font-size: 8.8pt; background: #f3f5f6; border-left: 3px solid var(--accent); padding: 2.5mm 3mm; margin: 2mm 0 3.5mm; white-space: pre-wrap; break-inside: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 2mm 0 4mm; font-size: 9.4pt; break-inside: auto; }
+  th, td { border: 1px solid var(--rule); padding: 1.4mm 2.2mm; vertical-align: top; text-align: left; }
+  th { background: var(--accent-soft); font-weight: 600; }
+  tr { break-inside: avoid; }
+  .ui { font-weight: 600; }
+  .note, .warn, .tip { border-radius: 3px; padding: 2.5mm 3.5mm; margin: 3mm 0 4mm; break-inside: avoid; }
+  .note { background: var(--note-bg); border-left: 4px solid var(--accent); }
+  .warn { background: var(--warn-bg); border-left: 4px solid var(--warn-border); }
+  .tip { background: #eef7ee; border-left: 4px solid #5a9a5a; }
+  .note p:last-child, .warn p:last-child, .tip p:last-child { margin-bottom: 0; }
+  .label { font-weight: 700; text-transform: uppercase; font-size: 8pt; letter-spacing: 0.06em; color: var(--muted); display: block; margin-bottom: 1mm; }
+  /* Title page */
+  .title { height: 240mm; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; break-after: page; }
+  .title img { width: 42mm; height: 42mm; margin-bottom: 14mm; }
+  .title .product { font-family: "Inter Display", "Inter", sans-serif; font-size: 40pt; font-weight: 700; color: var(--accent); margin: 0; line-height: 1; }
+  .title .sub { font-size: 18pt; color: var(--ink); margin: 5mm 0 14mm; font-weight: 500; }
+  .title .meta { color: var(--muted); font-size: 10.5pt; line-height: 1.7; }
+  .title .meta b { color: var(--ink); }
+  /* TOC */
+  .toc { break-after: page; }
+  .toc h1 { counter-increment: none; }
+  .toc h1::before { content: none; }
+  .toc ol { list-style: none; padding: 0; counter-reset: toc; }
+  .toc ol > li { counter-increment: toc; margin: 0 0 2.2mm; font-size: 11pt; font-weight: 600; }
+  .toc ol > li::before { content: counter(toc) "  "; color: var(--muted); font-weight: 500; display: inline-block; width: 8mm; }
+  .toc ol ol { padding-left: 8mm; margin-top: 1mm; counter-reset: tocs; }
+  .toc ol ol > li { counter-increment: tocs; font-size: 9.8pt; font-weight: 400; margin: 0 0 0.8mm; }
+  .toc ol ol > li::before { content: counter(toc) "." counter(tocs) "  "; width: 10mm; }
+  .toc a { color: inherit; text-decoration: none; }
+  .two { columns: 2; column-gap: 8mm; }
+  .small { font-size: 9pt; color: var(--muted); }
+  dl { margin: 0 0 3mm; }
+  dt { font-weight: 600; margin-top: 1.6mm; }
+  dd { margin: 0 0 1mm 5mm; }
+</style>
+</head>
+<body>
+
+<div class="title">
+  <img src="../../app/icons/keyrook.png" alt="">
+  <p class="product">Keyrook</p>
+  <p class="sub">Benutzerhandbuch</p>
+  <div class="meta">
+    <b>Offline verschlüsselter Zugangsdaten-Tresor</b> für Hoster und Systemadministratoren<br>
+    Gilt für Keyrook @VERSION@ (Windows, macOS, Linux)<br>
+    Stand: @DATE@<br>
+    <span class="small">Keyrook ist freie Software unter der GNU GPL 3.0 oder später. Quelltext und Downloads: github.com/kdg1992/keyrook</span>
+  </div>
+</div>
+
+<nav class="toc">
+<h1>Inhalt</h1>
+<ol>
+  <li>Überblick<ol><li>Was Keyrook ist</li><li>Sicherheitsprinzipien</li><li>Was Keyrook nicht tut</li></ol></li>
+  <li>Installation<ol><li>Download und Prüfsumme</li><li>Windows</li><li>macOS</li><li>Linux (DEB, RPM)</li><li>Arch Linux, CachyOS und portables Archiv</li><li>Updates</li></ol></li>
+  <li>Erste Schritte<ol><li>Tresor anlegen</li><li>Schlüsseldatei</li><li>Argon2-Einstellungen</li><li>Entsperren und Sperren</li></ol></li>
+  <li>Die Oberfläche<ol><li>Fensterleiste</li><li>Suchfeld, Chips und Filter</li><li>Liste und Detailansicht</li><li>Das Menü „Daten“</li></ol></li>
+  <li>Einträge<ol><li>Eintragstypen</li><li>Eintrag anlegen</li><li>Der Editor</li><li>Verlauf</li><li>Schnellaktionen</li><li>Papierkorb</li></ol></li>
+  <li>Suchen und Finden<ol><li>Volltextsuche und Feldsuche</li><li>Filter und Sortierung</li><li>Favoriten und zuletzt verwendet</li><li>Sammelaktionen</li></ol></li>
+  <li>Kunden, Projekte und Vorlagen<ol><li>Kunden</li><li>Projekte</li><li>Vorlagen</li></ol></li>
+  <li>Passwörter, TOTP und SSH<ol><li>Passwortgenerator</li><li>Passphrasen</li><li>TOTP-Codes</li><li>SSH-Schlüssel</li><li>SSH- und SFTP-Befehle</li><li>Links öffnen</li></ol></li>
+  <li>Backups und Export<ol><li>Automatische Backups</li><li>Backup-Status und „Jetzt sichern“</li><li>Integrität prüfen</li><li>Backup wiederherstellen</li><li>Verschlüsselt exportieren</li><li>Passwort oder Schlüsseldatei ändern</li></ol></li>
+  <li>Import und Klartext-Export<ol><li>Unterstützte Formate</li><li>Ablauf eines Imports</li><li>Klartext exportieren</li></ol></li>
+  <li>Kundenberichte<ol><li>Kundenübersicht</li><li>Übergabeblatt</li><li>Ablaufdaten exportieren</li></ol></li>
+  <li>Warnliste und Datenleck-Abgleich<ol><li>Was geprüft wird</li><li>Warnliste lesen</li><li>Abgleich mit bekannten Datenlecks</li></ol></li>
+  <li>Sperren und Einstellungen<ol><li>Sperre nach Inaktivität</li><li>Sperren bei Fensterereignissen</li><li>Zwischenablage</li><li>Darstellung, Sprache, Skalierung, Kontrast</li><li>Gespeicherte Einstellungen</li></ol></li>
+  <li>Tastenkürzel</li>
+  <li>Barrierefreiheit</li>
+  <li>Problembehebung</li>
+  <li>Anhang: Dateien und Speicherorte</li>
+</ol>
+</nav>
+
+<!-- 1 -->
+<section class="chapter">
+<h1>Überblick</h1>
+<h2>Was Keyrook ist</h2>
+<p>Keyrook verwaltet Zugangsdaten für Websites, FTP/SFTP, E-Mail-Postfächer, Hosting-Panels, Server, SSH-Schlüssel, Domains und beliebige eigene Datensätze in <b>einer verschlüsselten Datei</b> (<code>.keyrook</code>). Die Datei liegt dort, wo Sie sie speichern: auf der Festplatte, einem Netzlaufwerk oder in einem synchronisierten Ordner. Es gibt keinen Server, kein Konto und keine Cloud.</p>
+<p>Keyrook richtet sich an Menschen, die viele Kunden, Projekte und Server betreuen: Einträge lassen sich Kunden und Projekten zuordnen, mit Tags versehen, nach Ablaufdatum überwachen und per Kundenbericht übergeben. Die Oberfläche ist auf Tastaturarbeit ausgelegt: Suchen, Kopieren und Verbindungsbefehl in einem Zug.</p>
+
+<h2>Sicherheitsprinzipien</h2>
+<ul>
+  <li><b>Starke, geprüfte Kryptographie.</b> Das Masterpasswort wird mit Argon2id zu einem Schlüssel abgeleitet; der Tresor ist mit AES-256-GCM verschlüsselt und authentifiziert. Jede Veränderung der Datei wird beim Öffnen erkannt.</li>
+  <li><b>Optionaler zweiter Faktor.</b> Eine Schlüsseldatei mit 32 zufälligen Bytes kann zusätzlich zum Passwort verlangt werden.</li>
+  <li><b>Atomares Speichern.</b> Jede Änderung wird vollständig oder gar nicht geschrieben. Konflikte mit einer gleichzeitig geänderten Datei werden erkannt.</li>
+  <li><b>Sperren statt Vertrauen.</b> Keyrook sperrt nach Inaktivität, bei Bildschirmsperre und Standby des Systems, wahlweise beim Minimieren oder Fokusverlust, und jederzeit mit <kbd>Strg</kbd>+<kbd>L</kbd>.</li>
+  <li><b>Kontrollierte Zwischenablage.</b> Kopierte Werte werden nach einer einstellbaren Zeit (Standard 20 Sekunden) und beim Sperren wieder gelöscht.</li>
+  <li><b>Backups eingebaut.</b> Automatische verschlüsselte Backups mit Aufbewahrungsregeln, Wiederherstellung mit Vorschau und eine schreibgeschützte Integritätsprüfung.</li>
+</ul>
+
+<h2>Was Keyrook nicht tut</h2>
+<p>Keyrook sendet <b>keine Daten ins Netz</b>, mit zwei Ausnahmen, die beide ausdrücklich von Ihnen ausgelöst werden: die Update-Prüfung (fragt die Release-Liste auf GitHub ab) und der Abgleich mit bekannten Datenlecks (sendet die ersten 5 Zeichen eines SHA-1-Hashes je Passwort an den Dienst Have I Been Pwned, nach einer Rückfrage bei jedem Durchlauf). Keyrook lädt keine Updates herunter, installiert nichts selbst, öffnet keine SSH-Verbindungen und erhebt keine Nutzungsdaten.</p>
+<div class="warn"><span class="label">Grenzen</span>
+<p>Keyrook wurde nicht unabhängig auditiert. Die Installer sind nicht signiert. Angezeigte oder bearbeitete Werte liegen als Java-Zeichenketten im Speicher und lassen sich dort nicht zuverlässig löschen. Zwischenablage-Verläufe des Betriebssystems oder Clipboard-Manager können Kopien behalten, die Keyrook nicht entfernen kann. Auf Linux-Desktops erreichen Sperr- und Standby-Ereignisse Java meist nicht; dort greifen der Inaktivitätstimer und die Fensterregel.</p></div>
+</section>
+
+<!-- 2 -->
+<section class="chapter">
+<h1>Installation</h1>
+<h2>Download und Prüfsumme</h2>
+<p>Laden Sie Installer nur von der Release-Seite des Projekts: <code>https://github.com/kdg1992/keyrook/releases/latest</code>. Jeder Release enthält die Datei <code>SHA256SUMS.txt</code>. Vergleichen Sie vor der Installation den SHA-256-Wert der heruntergeladenen Datei mit der zugehörigen Zeile:</p>
+<pre>sha256sum --ignore-missing -c SHA256SUMS.txt        # Linux
+shasum -a 256 Keyrook-*.dmg                         # macOS, Wert manuell vergleichen
+Get-FileHash .\Keyrook-*.msi -Algorithm SHA256      # Windows PowerShell, Wert manuell vergleichen</pre>
+<p>Es gibt Pakete für Windows x64 (MSI), macOS mit Apple Silicon (DMG) und Linux x64 (DEB, RPM). Für Linux ARM64 und Intel-Macs gibt es keine Builds.</p>
+
+<h2>Windows</h2>
+<ol>
+  <li>MSI doppelklicken. Die Installation erfolgt <b>pro Benutzer</b> in <code>%LOCALAPPDATA%\Keyrook</code>, ohne Administratorrechte. Der Zielordner kann im Installer geändert werden.</li>
+  <li>Zeigt SmartScreen „Unbekannter Herausgeber“, prüfen Sie zuerst Downloadquelle und Prüfsumme. Danach erlaubt <span class="ui">Weitere Informationen → Trotzdem ausführen</span> diesen einen Installer. Deaktivieren Sie keine systemweiten Schutzfunktionen; Unternehmensrichtlinien oder Smart App Control können die Ausnahme verhindern.</li>
+  <li>Ein Update wird einfach über die bestehende Version installiert.</li>
+</ol>
+
+<h2>macOS</h2>
+<ol>
+  <li>DMG öffnen und <span class="ui">Keyrook.app</span> in den Ordner <span class="ui">Programme</span> ziehen.</li>
+  <li>Die App ist nicht notarisiert. Nach dem ersten Öffnungsversuch erlaubt <span class="ui">Systemeinstellungen → Datenschutz &amp; Sicherheit → Dennoch öffnen</span> eine Ausnahme für genau diese App. Gatekeeper nicht global abschalten.</li>
+  <li>Ein Update ersetzt die App im Programme-Ordner.</li>
+</ol>
+
+<h2>Linux (DEB, RPM)</h2>
+<pre>sudo apt install ./Keyrook-&lt;Version&gt;-linux-x64.deb      # Debian, Ubuntu und Abkömmlinge
+sudo dnf install ./Keyrook-&lt;Version&gt;-linux-x64.rpm      # Fedora, RHEL und Abkömmlinge</pre>
+<p>Die Anwendung liegt danach unter <code>/opt/keyrook/bin/Keyrook</code> und erscheint im Anwendungsmenü unter „Dienstprogramme“. Auf Systemen ohne Desktop-Menüverzeichnis (Server, Container, WSL) läuft die Installation durch; es gibt dann nur keinen Menüeintrag. Ein Update wird über die alte Version installiert; die Pakete sind nicht von einem Distributions-Repository signiert.</p>
+
+<h2>Arch Linux, CachyOS und portables Archiv</h2>
+<p>Jeder Release enthält zusätzlich das Archiv <code>Keyrook-&lt;Version&gt;-linux-x64.tar.gz</code> (das fertige Anwendungsabbild samt Java-Laufzeit) und ein <code>PKGBUILD</code> für pacman-basierte Distributionen wie Arch Linux, CachyOS, Manjaro oder EndeavourOS:</p>
+<pre>mkdir keyrook-bin &amp;&amp; cd keyrook-bin
+curl -LO https://github.com/kdg1992/keyrook/releases/latest/download/PKGBUILD
+makepkg -si      # lädt das Archiv, prüft die SHA-256 und installiert das Paket keyrook-bin</pre>
+<p>Das Paket installiert nach <code>/opt/keyrook</code>, legt <code>/usr/bin/keyrook</code> und einen Menüeintrag an und wird mit <code>pacman -Rns keyrook-bin</code> wieder entfernt. Das Archiv allein läuft auf jedem x64-Linux mit den üblichen Desktop-Bibliotheken: entpacken und <code>Keyrook/bin/Keyrook</code> starten, ohne Installation.</p>
+
+<h2>Updates</h2>
+<p>Keyrook lädt keine Updates herunter und installiert keine. <span class="ui">Info → Nach Updates suchen</span> fragt einmal bei GitHub nach dem neuesten veröffentlichten Release und zeigt an, ob Ihre Version aktuell ist, mit den Release-Notizen als Text und einem Button zur Release-Seite. Unter <span class="ui">Einstellungen</span> kann <span class="ui">Beim Start automatisch nach Updates suchen</span> eingeschaltet werden (Standard: aus); dann erscheint beim Start ein Hinweis, falls eine neuere Version existiert.</p>
+<p>Zum Aktualisieren: Tresor sichern, Installer herunterladen, Prüfsumme vergleichen, über die bestehende Version installieren. Tresore und Einstellungen sind eigene Dateien und bleiben erhalten. Das Dateiformat ist seit 1.0.0 unverändert: ein mit dieser Version gespeicherter Tresor öffnet sich in jeder 1.x-Version.</p>
+</section>
+
+<!-- 3 -->
+<section class="chapter">
+<h1>Erste Schritte</h1>
+<h2>Tresor anlegen</h2>
+<ol>
+  <li>Keyrook starten. Das Entsperrformular erscheint. Wählen Sie eine <b>neue</b> Datei mit der Endung <code>.keyrook</code>; eine vorhandene Datei wird beim Anlegen nie überschrieben.</li>
+  <li>Masterpasswort zweimal eingeben. Ein nicht übereinstimmendes zweites Passwort wird unter dem Feld angezeigt.</li>
+  <li>Optional eine Schlüsseldatei wählen (siehe unten) und die Argon2-Kosten anpassen.</li>
+  <li>Anlegen bestätigen. Der Tresor ist sofort geöffnet.</li>
+</ol>
+<div class="tip"><span class="label">Empfehlung</span><p>Verwenden Sie ein langes Masterpasswort oder eine Passphrase, die Sie nirgends sonst benutzen. Es gibt keine Wiederherstellung: Wer Passwort (und ggf. Schlüsseldatei) verliert, verliert den Tresor. Richten Sie direkt nach dem Anlegen einen Backup-Ordner ein (Kapitel 9).</p></div>
+
+<h2>Schlüsseldatei</h2>
+<p>Eine Schlüsseldatei enthält genau 32 Bytes und wird beim Entsperren zusätzlich zum Passwort benötigt. <span class="ui">Daten → Schlüsseldatei erzeugen</span> schreibt 32 kryptographisch zufällige Bytes in eine neue Datei mit privaten Rechten. Der gewählte Dateiname darf kein symbolischer Link sein. Bewahren Sie eine getrennte, sichere Kopie auf: ohne diesen Faktor ist der Tresor unwiederbringlich verloren. Das Erzeugen allein ändert keinen bestehenden Tresor; zugeordnet wird die Datei beim Anlegen oder über <span class="ui">Passwort / Schlüsseldatei ändern</span> (Abschnitt 9.6).</p>
+<p>Beim Entsperren können Sie <span class="ui">Schlüsseldatei für diesen Tresor merken</span> ankreuzen. Dann wird nur der <b>Pfad</b> der Datei in den Einstellungen gespeichert und beim nächsten Entsperren vorbelegt, niemals ihr Inhalt. Die Option ist standardmäßig aus; ein Entsperren ohne Häkchen vergisst den Pfad wieder.</p>
+
+<h2>Argon2-Einstellungen</h2>
+<p>Argon2id macht das Ausprobieren von Passwörtern teuer. Beim Anlegen und später über <span class="ui">Daten → Argon2-Einstellungen</span> wählen Sie Speicher (65536 bis 262144 KiB), Iterationen (1 bis 5) und Parallelität (1 bis 16 Lanes; der Speicher muss durch das Vierfache der Lanes teilbar sein). Eine Änderung verschlüsselt den Tresor atomar neu und legt vorher das konfigurierte Backup an. Höhere Werte verlängern jedes Entsperren und jede Integritätsprüfung; auf Rechnern mit 4 GiB Arbeitsspeicher bleibt der Standard sinnvoll.</p>
+
+<h2>Entsperren und Sperren</h2>
+<p>Das Entsperrformular ist mit dem zuletzt geöffneten Tresorpfad vorbelegt; der Fokus liegt im Passwortfeld, <kbd>Enter</kbd> entsperrt. Nach einem abgelehnten Passwort oder einer falschen Schlüsseldatei wartet Keyrook vor dem nächsten Versuch zunehmend länger (höchstens 60 Sekunden) und zeigt einen Countdown. Eine fehlende, beschädigte oder gerade belegte Tresordatei wird ohne Wartezeit gemeldet.</p>
+<p><span class="ui">Sperren</span> in der Fensterleiste oder <kbd>Strg</kbd>+<kbd>L</kbd> (macOS: <kbd>⌘</kbd>+<kbd>L</kbd>) sperrt sofort, auch während ein Vorgang läuft. Sperren verwirft ungespeicherte Eingaben, leert die Anzeige und die Zwischenablage und schließt offene Dialoge. Bereits begonnene Schreibvorgänge werden zu Ende geführt. Automatisches Sperren ist in Kapitel 13 beschrieben.</p>
+<p>Beim Schließen des Fensters während eines laufenden Vorgangs (Speichern, Backup, Integritätsprüfung, Export) fragt Keyrook nach; <span class="ui">Trotzdem beenden</span> bricht ab, <span class="ui">Abbrechen</span> lässt das Fenster offen.</p>
+</section>
+
+<!-- 4 -->
+<section class="chapter">
+<h1>Die Oberfläche</h1>
+<h2>Fensterleiste</h2>
+<p>Die Leiste in den Farben des Programmsymbols zeigt den Namen, nach dem Entsperren die <span class="ui">Warnliste</span> mit ihrer Zusammenfassung (Kapitel 12), den Wechsel zwischen heller und dunkler Darstellung, <span class="ui">Einstellungen</span>, <span class="ui">Info</span> (Version, Tastenkürzel, Update-Prüfung) und <span class="ui">Sperren</span>.</p>
+
+<h2>Suchfeld, Chips und Filter</h2>
+<p>Unter der Leiste liegt das Suchfeld (<kbd>Strg</kbd>+<kbd>F</kbd>). Daneben öffnet <span class="ui">Daten</span> das Menü für Backups, Transfer und Zugang, <span class="ui">Kunden, Projekte und Vorlagen</span> die Verwaltung dieser Stammdaten, <span class="ui">Neuer Eintrag</span> (<kbd>Strg</kbd>+<kbd>N</kbd>) und <span class="ui">Aus Vorlage …</span> legen Einträge an, <span class="ui">Tastenkürzel</span> zeigt die Übersicht.</p>
+<p>Darunter schalten <span class="ui">Aktive Einträge</span> und <span class="ui">Papierkorb</span> (mit Anzahl) die Ansicht um. Die Chips <span class="ui">Favoriten</span>, <span class="ui">Zuletzt verwendet</span> und <span class="ui">Verborgene Felder durchsuchen</span> schalten ihre Optionen. Sobald der Tresor Kunden oder Projekte hat, stehen die Auswahllisten <span class="ui">Kunde</span> und <span class="ui">Projekt</span> direkt neben den Chips; <span class="ui">Weitere Filter</span> zeigt Typ, Tag, Ablauf und Sortierung und bleibt offen, solange einer davon vom Standard abweicht. <span class="ui">Filter zurücksetzen</span> stellt die aktive Liste in Titelreihenfolge wieder her und leert die Suche.</p>
+
+<h2>Liste und Detailansicht</h2>
+<p>Jede Karte zeigt ein farbiges Typsymbol, Titel, Typ, Kunde und Projekt, sichtbaren Benutzernamen und Adresse, Ablaufdatum, Warn- und Tag-Badges und die Schnellaktionen (Abschnitt 5.5). <span class="ui">Bearbeiten</span> steht neben dem Text, weitere Aktionen (<span class="ui">Duplizieren</span>, <span class="ui">Als Vorlage speichern</span>, <span class="ui">In den Papierkorb</span>) im Menü <span class="ui">⋮</span>. Vor dem Titel steht der Favoritenstern ☆/★, links ein Kästchen für Sammelaktionen.</p>
+<p>Ist das Fenster mindestens 900 dp breit, erscheinen Liste und <b>Detailansicht</b> des ausgewählten Eintrags nebeneinander; in schmaleren Fenstern öffnen Sie Einträge über <span class="ui">Bearbeiten</span>. Die Detailansicht ist schreibgeschützt und zeigt Metadaten, Ports, Protokolle, SSH-Schlüsseltyp, zugeordnete Server, Registrar-Login einer Domain, Anzahl der Verlaufsversionen und jedes Feld mit Beschriftung, dann die Notizen:</p>
+<ul>
+  <li>Nicht maskierte Felder stehen im Klartext. Maskierte Felder und Notizen erscheinen als Punkte; <span class="ui">Anzeigen</span> zeigt einen Wert, bis <span class="ui">Verbergen</span> gedrückt wird. Angezeigte Werte werden automatisch wieder maskiert, wenn ein anderer Eintrag gewählt, der Eintrag gespeichert, der Editor geöffnet, das Layout gewechselt, das Fenster minimiert oder deaktiviert oder der Tresor gesperrt wird.</li>
+  <li><span class="ui">Kopieren</span> kopiert einen Wert, ohne ihn zu zeigen, mit Ablaufzeit der Zwischenablage. <span class="ui">Öffnen</span> öffnet URL-Felder nach Prüfung des Links.</li>
+  <li>Servereinträge bieten den SSH-Befehl, SFTP-Einträge den SFTP-Befehl; das Passwort ist nie Teil davon.</li>
+</ul>
+<p>Die Liste hat immer einen <b>ausgewählten Eintrag</b> (farbiger Rahmen, dicker bei Tastaturfokus). Eine neue Suche oder ein geänderter Filter wählt das erste Ergebnis. Verschwindet der ausgewählte Eintrag aus der Liste, springt die Auswahl auf den nächsten, sonst auf den vorigen. Suche, Filter und Auswahl bleiben über eine Bearbeitung hinweg erhalten.</p>
+
+<h2>Das Menü „Daten“</h2>
+<table>
+<tr><th>Gruppe</th><th>Aktionen</th></tr>
+<tr><td>Backups</td><td><span class="ui">Backup-Ordner</span>, <span class="ui">Backup-Status</span>, <span class="ui">Jetzt sichern</span>, <span class="ui">Backups deaktivieren</span>, <span class="ui">Integrität prüfen</span>, <span class="ui">Backup wiederherstellen</span></td></tr>
+<tr><td>Transfer</td><td><span class="ui">Verschlüsselt exportieren</span>, <span class="ui">Importieren</span>, <span class="ui">Klartext exportieren</span></td></tr>
+<tr><td>Berichte</td><td><span class="ui">Kundenübersicht</span>, <span class="ui">Übergabeblatt exportieren</span>, <span class="ui">Ablaufdaten exportieren</span></td></tr>
+<tr><td>Zugang</td><td><span class="ui">Passwort / Schlüsseldatei ändern</span>, <span class="ui">Argon2-Einstellungen</span>, <span class="ui">Schlüsseldatei erzeugen</span></td></tr>
+</table>
+<p>Das Menü ist per Tastatur bedienbar: mit <kbd>Tab</kbd> zu <span class="ui">Daten</span>, <kbd>Enter</kbd> öffnet, <kbd>↑</kbd>/<kbd>↓</kbd> wechseln, <kbd>Enter</kbd> führt aus, <kbd>Esc</kbd> schließt.</p>
+</section>
+
+<!-- 5 -->
+<section class="chapter">
+<h1>Einträge</h1>
+<h2>Eintragstypen</h2>
+<table>
+<tr><th>Typ</th><th>Typische Felder</th><th>Besonderheiten</th></tr>
+<tr><td>Web-Login</td><td>URL, Benutzername, Passwort, TOTP-Secret</td><td>URL öffnen, TOTP-Code kopieren</td></tr>
+<tr><td>Transfer (FTP/SFTP)</td><td>Host, Port, Protokoll, Benutzername, Passwort, Startverzeichnis</td><td>SFTP-Befehl kopieren</td></tr>
+<tr><td>E-Mail</td><td>Adresse, Passwort, IMAP/POP3- und SMTP-Server mit Port und Verschlüsselung</td><td>Host kopieren (erster Mailserver)</td></tr>
+<tr><td>Hosting-Panel</td><td>URL, Benutzername, Passwort, Rolle</td><td>URL öffnen</td></tr>
+<tr><td>Server</td><td>Host, Port, Benutzername, Passwort, Betriebssystem, SSH-Fingerprint</td><td>SSH-Befehl kopieren, SSH-Schlüssel zuordnen</td></tr>
+<tr><td>SSH-Schlüssel</td><td>Privater Schlüssel, Passphrase, öffentlicher Schlüssel, zugeordnete Server</td><td>Erzeugen, importieren, Public Key exportieren</td></tr>
+<tr><td>Domain</td><td>Domainname, Registrar, Registrar-Login (Verweis), DNS-Notizen</td><td>Ablaufdatum für Verlängerungen</td></tr>
+<tr><td>Eigener Datensatz</td><td>Frei benennbare Felder, je Feld „Verborgen“ und „URL-Feld“</td><td>Für Datenbanken, Lizenzen, Importe aus anderen Programmen</td></tr>
+</table>
+<p>Jeder Eintrag hat außerdem Titel, Kunde, Projekt, Tags, Notizen (verschlüsselt), ein optionales Ablaufdatum und einen Favoritenstern.</p>
+
+<h2>Eintrag anlegen</h2>
+<ul>
+  <li><span class="ui">Neuer Eintrag</span> (<kbd>Strg</kbd>+<kbd>N</kbd>) übernimmt Typ, Kunde und Projekt aus dem aktuellen Listenfilter. Ohne Typfilter wird der Typ des zuletzt angelegten Eintrags verwendet, sonst Web-Login. Ein Typwechsel im Editor behält Werte gleich benannter Felder (etwa Benutzername und Passwort).</li>
+  <li><span class="ui">Aus Vorlage …</span> listet die Vorlagen des Tresors und die mitgelieferten Vorlagen <span class="ui">Mailpostfach (IMAP und SMTP)</span> (IMAP 993, SMTP 465, TLS) und <span class="ui">Datenbank</span> (Host, Port, Datenbank, Benutzername, maskiertes Passwort). Vorlagen enthalten nie Werte (Kapitel 7.3).</li>
+  <li><span class="ui">Duplizieren</span> im Kartenmenü öffnet einen neuen Eintrag „… (Kopie)“ mit Typ, Feldaufbau, Ports, Tags, Kunde, Projekt und sichtbaren Werten. Passwörter, private Schlüssel, TOTP-Secrets, Notizen und Ablaufdatum werden nicht kopiert. Gespeichert wird erst mit <span class="ui">Speichern</span>.</li>
+</ul>
+
+<h2>Der Editor</h2>
+<p>Der Editor nutzt das ganze Fenster und beginnt mit dem Fokus im Titel. Alle Felder außer SSH-Schlüsselmaterial, DNS-Notizen und mehrzeiligen Werten sind einzeilig, sodass <kbd>Tab</kbd> zum nächsten Element springt. <kbd>Strg</kbd>+<kbd>S</kbd> speichert, <kbd>Esc</kbd> bricht ab; bei ungespeicherten Änderungen fragt Keyrook (<span class="ui">Weiter bearbeiten</span> hat den Fokus, <kbd>Enter</kbd> behält den Entwurf, <span class="ui">Verwerfen</span> verwirft ihn).</p>
+<ul>
+  <li><b>Verborgen.</b> Jedes Feld kann einzeln maskiert werden. Maskierte Werte erscheinen in Liste, Detailansicht, Berichten und Suche nie im Klartext.</li>
+  <li><b>Kunde und Projekt.</b> Die Listen enden mit <span class="ui">+ Neuer Kunde…</span> und <span class="ui">+ Neues Projekt…</span>: Sie fragen nach einem Namen und legen Kunde oder Projekt zusammen mit dem Eintrag im selben Speichervorgang an; Abbrechen verwirft beides. Die Wahl eines Projekts setzt dessen Kunden.</li>
+  <li><b>Tags.</b> Durch Komma getrennt, höchstens 100 je Eintrag, je höchstens 256 Zeichen.</li>
+  <li><b>Ablaufdatum.</b> Akzeptiert <code>2026-12-31</code>, <code>31.12.2026</code>, <code>1.2.2026</code> und <code>31.12.26</code> (zweistellige Jahre bedeuten 2000 bis 2099). Unmögliche Daten werden abgelehnt. <span class="ui">+1 Jahr</span> setzt ein Jahr nach dem eingegebenen Datum oder nach heute; <span class="ui">Löschen</span> entfernt das Datum.</li>
+  <li><b>Ports.</b> Ganze Zahlen von 1 bis 65535; für Transfer, Server und jeden aktiven Mail-Endpunkt ist ein Port Pflicht.</li>
+  <li><b>Passwort generieren.</b> Füllt das Passwortfeld mit einem Klick aus den gemerkten Generator-Einstellungen; <span class="ui">Generator-Optionen</span> öffnet Voreinstellungen, Länge, Zeichenklassen und Passphrasen (Kapitel 8).</li>
+</ul>
+<p>Der Editor prüft während der Eingabe und markiert jedes betroffene Feld mit eigener Meldung: fehlender oder zu langer Titel (höchstens 4096 Zeichen), zu viele oder zu lange Tags, zu lange Werte oder Notizen, ungültiges Ablaufdatum, leerer oder ungültiger Port, ein nicht akzeptiertes TOTP-Secret, doppelte oder zu lange eigene Feldnamen. <span class="ui">Speichern</span> mit offenen Problemen speichert nichts und zeigt eine Zusammenfassung über den Buttons.</p>
+
+<h2>Verlauf</h2>
+<p>Jede Bearbeitung behält bis zu 100 frühere Feldstände mit Zeitstempel. Der Verlauf zeigt verborgene Felder maskiert und bietet je Wert einen Kopieren-Button mit der üblichen Ablaufzeit. Tag-Änderungen, Favoriten und Papierkorbvorgänge erzeugen keine Verlaufsversionen; sie halten nur Feldwerte fest. Der Verlauf ist auch die Grundlage für die Warnung „altes Passwort“ (Kapitel 12).</p>
+
+<h2>Schnellaktionen</h2>
+<p>Ohne den Editor zu öffnen, kopieren die Buttons einer Karte Benutzername, Passwort (bei SSH-Schlüsseln die Passphrase), Host (Server, Transfer, erster Mailserver, Domain) sowie den SSH- oder SFTP-Befehl und öffnen die URL von Web- und Panel-Einträgen. Buttons erscheinen nur, wenn das Feld einen Wert hat; der Befehls-Button nur, wenn Host, Port und Benutzername einen gültigen Befehl ergeben. Eigene Datensätze (auch Bitwarden- und KeePass-Importe) werden über ihre Feldnamen erkannt: <i>username</i>, <i>user</i> oder <i>Benutzername</i>; <i>password</i>, <i>Passwort</i> oder <i>passphrase</i> (sonst das erste verborgene Feld); <i>url</i>, <i>url1</i>, <i>uri</i> oder <i>host</i>.</p>
+<p>Die gleichen Aktionen liegen auf <kbd>Strg</kbd>+<kbd>C</kbd> (Passwort), <kbd>B</kbd> (Benutzername), <kbd>T</kbd> (TOTP-Code), <kbd>U</kbd> (URL öffnen), <kbd>D</kbd> (Host) und <kbd>K</kbd> (SSH/SFTP-Befehl) und wirken auch direkt aus dem Suchfeld auf den ausgewählten Eintrag. Hat der Eintrag kein passendes Feld, erscheint ein Hinweis und nichts wird kopiert. Geheime Werte werden in der Liste nie angezeigt.</p>
+
+<h2>Papierkorb</h2>
+<p><span class="ui">In den Papierkorb</span> (auch <kbd>Entf</kbd>, macOS auch <kbd>⌫</kbd>) fragt zuerst nach. Einträge im Papierkorb lassen sich jederzeit mit <span class="ui">Wiederherstellen</span> zurückholen; sie zeigen nur Metadaten und nicht maskierte Felder. <span class="ui">Endgültig löschen</span> entfernt einen Eintrag mit seinem gesamten Verlauf, <span class="ui">Papierkorb leeren</span> alle Einträge im Papierkorb, auch die von Filtern ausgeblendeten. Beide Dialoge beginnen mit dem Fokus auf <span class="ui">Abbrechen</span>, sodass <kbd>Enter</kbd> allein nie löscht. Verweise anderer Einträge (SSH-Server-Zuordnung, Registrar-Login) auf den gelöschten Eintrag werden geleert.</p>
+<div class="warn"><span class="label">Wichtig</span><p>Nach dem endgültigen Löschen sind ältere Backups der einzige Weg zurück, und die Aufbewahrungsregeln können diese Backups mit der Zeit entfernen.</p></div>
+</section>
+
+<!-- 6 -->
+<section class="chapter">
+<h1>Suchen und Finden</h1>
+<h2>Volltextsuche und Feldsuche</h2>
+<p>Die Suche (<kbd>Strg</kbd>+<kbd>F</kbd>) durchsucht Titel, Tags, Notizen, Feldnamen, sichtbare Werte, Kunden- und Projektnamen und Ablaufdaten ohne Beachtung von Groß- und Kleinschreibung. Mehrere durch Leerzeichen getrennte Begriffe müssen alle auf denselben Eintrag passen. <span class="ui">Verborgene Felder durchsuchen</span> bezieht maskierte aktuelle Werte ein, ohne sie in den Ergebnissen zu zeigen. Der Verlauf wird nie durchsucht; Suchen laufen im Hintergrund auf einer Kopie und legen keinen Klartext-Index an.</p>
+<p>Ein Begriff der Form <code>präfix:wort</code> durchsucht nur ein Feld:</p>
+<table>
+<tr><th>Präfix</th><th>Durchsucht</th></tr>
+<tr><td><code>kunde:</code> / <code>customer:</code></td><td>Kundenname (direkt oder über das Projekt)</td></tr>
+<tr><td><code>projekt:</code> / <code>project:</code></td><td>Projektname</td></tr>
+<tr><td><code>host:</code></td><td>Host von Server, Transfer, Mailserver, Domain oder die URL</td></tr>
+<tr><td><code>user:</code> / <code>benutzer:</code></td><td>Benutzername</td></tr>
+<tr><td><code>typ:</code> / <code>type:</code></td><td>Eintragstyp</td></tr>
+<tr><td><code>tag:</code></td><td>Tags</td></tr>
+</table>
+<p>Beispiel: <code>kunde:müller host:web01</code>. Unbekannte Präfixe werden als normaler Text gesucht, und ein Feldbegriff erreicht nie einen verborgenen Wert. Bei der Standardsortierung nach Titel werden Treffer nach Relevanz geordnet: Titel, die mit dem Begriff beginnen, dann Titel, die ihn enthalten, dann Treffer in Kunde, Projekt, Tags, Host, URL oder Benutzername, zuletzt alle anderen. Favoriten stehen vor gleich relevanten Einträgen.</p>
+<div class="tip"><span class="label">Arbeitsfluss</span><p><kbd>Strg</kbd>+<kbd>F</kbd>, Teil des Titels tippen, dann direkt <kbd>Strg</kbd>+<kbd>C</kbd>, <kbd>B</kbd>, <kbd>D</kbd> oder <kbd>K</kbd>: Passwort, Benutzername, Host oder SSH-Befehl liegen in der Zwischenablage, ohne das Suchfeld zu verlassen. <kbd>↓</kbd> oder <kbd>Enter</kbd> wechseln in die Liste, <kbd>Esc</kbd> leert die Suche.</p></div>
+
+<h2>Filter und Sortierung</h2>
+<p>Filtern lässt sich nach Typ, Kunde, Projekt, Tag und Ablauf (abgelaufen; heute bis in 30 Tagen; ohne Datum). Sortiert wird nach Titel, letzter Änderung oder frühestem Ablauf; Einträge ohne Datum stehen dabei zuletzt. Die Kundenwahl begrenzt die angebotenen Projekte. Auswahllisten mit mehr als acht Optionen beginnen mit einem Suchfeld: Tippen grenzt ein, <kbd>Enter</kbd> wählt die einzig verbliebene Option.</p>
+
+<h2>Favoriten und zuletzt verwendet</h2>
+<p>Der Stern ☆/★ vor dem Titel markiert einen Eintrag als Favorit; der Chip <span class="ui">Favoriten</span> zeigt nur Favoriten. Die Markierung wird im Eintrag gespeichert, ist kein Tag und bleibt bei Backups, Exporten und Importen erhalten. <span class="ui">Zuletzt verwendet</span> zeigt die bis zu zehn Einträge, die in dieser Sitzung zuletzt bearbeitet, kopiert oder geöffnet wurden, neueste zuerst. Diese Liste existiert nur im Speicher und ist nach dem Sperren leer.</p>
+
+<h2>Sammelaktionen</h2>
+<p>Jede Karte hat ein Kästchen; <kbd>Leertaste</kbd> markiert den ausgewählten Eintrag, <kbd>Strg</kbd>+<kbd>A</kbd> alle gelisteten. Über der Liste erscheinen dann die Anzahl und diese Aktionen:</p>
+<ul>
+  <li><span class="ui">Ausgewählte in den Papierkorb</span> (aktive Liste) bzw. <span class="ui">Ausgewählte wiederherstellen</span> (Papierkorb)</li>
+  <li><span class="ui">Tag hinzufügen</span> und <span class="ui">Tag entfernen</span></li>
+  <li><span class="ui">Als Favoriten markieren</span> / <span class="ui">Favoritenmarkierung aufheben</span></li>
+  <li><span class="ui">Kunde/Projekt zuweisen</span>: setzt Kunde und Projekt aller markierten Einträge in einem Speichervorgang; „–“ hebt eine Zuordnung auf</li>
+</ul>
+<p>Jede Sammelaktion ist eine Tresorrevision und gilt für alle markierten Einträge oder, wenn einer nicht geändert werden kann, für keinen. Markierungen gehören zur aktuellen Suche: eine neue Suche oder ein geänderter Filter hebt sie auf, sodass eine Aktion nie einen Eintrag trifft, der nicht angezeigt wird.</p>
+</section>
+
+<!-- 7 -->
+<section class="chapter">
+<h1>Kunden, Projekte und Vorlagen</h1>
+<p><span class="ui">Kunden, Projekte und Vorlagen</span> neben dem Suchfeld blendet den Verwaltungsbereich über der Liste ein. Das Feld für einen neuen Kunden hat den Fokus; <kbd>Enter</kbd> legt an. Ein Eintrag gehört zu seinem eigenen Kunden oder, ohne eigenen, zum Kunden seines Projekts. Diese Regel gilt für den Kundenfilter und alle Berichte.</p>
+<h2>Kunden</h2>
+<p>Ein Kunde hat einen Namen (höchstens 4096 Zeichen) und optional <span class="ui">Ansprechpartner</span>, <span class="ui">E-Mail</span>, <span class="ui">Telefon</span>, <span class="ui">Website</span> sowie <span class="ui">Notizen (vertraulich)</span>. Die Prüfungen sind großzügig, aber begrenzt: eine E-Mail braucht ein <code>@</code> und eine Domain mit Punkt, Telefonnummern bestehen aus Ziffern, Leerzeichen und <code>+ ( ) . / -</code>, Websites haben keine Leerzeichen und nutzen <code>http://</code> oder <code>https://</code>. Kontaktdaten erscheinen in der Kundenübersicht; die vertraulichen Notizen sind verschlüsselt und tauchen in keinem Bericht auf.</p>
+<h2>Projekte</h2>
+<p>Ein Projekt hat Name, Kunde und optional eine mehrzeilige <span class="ui">Beschreibung</span> sowie vertrauliche Notizen. Wird der Kunde eines Projekts geändert, wandern alle seine Einträge (auch im Papierkorb) und die Vorlagen, die dieses Projekt voreinstellen, in einem Speichervorgang mit. <span class="ui">Löschen …</span> ist nur möglich, wenn kein Eintrag und kein Projekt mehr auf den Kunden oder das Projekt verweist; die Rückfrage beginnt mit dem Fokus auf <span class="ui">Abbrechen</span>.</p>
+<h2>Vorlagen</h2>
+<p>Eine Vorlage stellt für einen neuen Eintrag Typ, Feldaufbau (welche Felder, welche maskiert, welche eigenen Felder Links sind), Standard-Tags und optional Kunde und Projekt voreins. Sie enthält <b>niemals</b> Werte, Passwörter, Notizen, Ports oder Verweise. <span class="ui">Als Vorlage speichern</span> im Kartenmenü oder in der Detailansicht fragt nach einem Namen (vorgeschlagen wird der Titel) und lässt den Eintrag unverändert. <span class="ui">Aus Vorlage …</span> öffnet einen neuen Eintrag „Neuer Eintrag aus Vorlage ‚…‘“ mit leeren Werten. Vorlagen werden am Ende des Verwaltungsbereichs als <span class="ui">Vorlage löschen: …</span> gelistet; das Löschen ändert keine daraus erzeugten Einträge. Vorlagen liegen verschlüsselt im Tresor und sind Teil verschlüsselter und Keyrook-JSON/CSV-Exporte.</p>
+</section>
+
+<!-- 8 -->
+<section class="chapter">
+<h1>Passwörter, TOTP und SSH</h1>
+<h2>Passwortgenerator</h2>
+<p>Der Generator erzeugt 12 bis 256 Zeichen aus wählbaren Zeichenklassen; jede gewählte Klasse kommt mindestens einmal vor, alle solchen Passwörter sind gleich wahrscheinlich. Drei Voreinstellungen:</p>
+<table>
+<tr><th>Voreinstellung</th><th>Zeichen</th><th>Wofür</th></tr>
+<tr><td><span class="ui">Standard</span></td><td>Alle Sonderzeichen <code>!@#$%^&amp;*()-_=+[]{}:,.?</code>, 12 bis 256 Zeichen</td><td>Web-Logins, Panels</td></tr>
+<tr><td><span class="ui">Shell/FTP-sicher</span></td><td>Nur <code>-</code>, <code>_</code> und <code>.</code> als Sonderzeichen</td><td>Shells, URLs, FTP/SFTP-Clients, Konfigurationsdateien ohne Quoting</td></tr>
+<tr><td><span class="ui">Max. 16 Zeichen</span></td><td>Alle Sonderzeichen, 12 bis 16 Zeichen</td><td>Alte Panels, die längere Passwörter kürzen oder ablehnen</td></tr>
+</table>
+<p><span class="ui">Keine verwechselbaren Zeichen</span> lässt <code>0 O o 1 l I | 5 S 2 Z 8 B</code> weg und kombiniert sich mit jeder Voreinstellung; wählen Sie dann eine größere Länge. Die zuletzt verwendete Voreinstellung, Länge und Zeichenwahl werden in den Einstellungen gemerkt, sodass <span class="ui">Passwort generieren</span> im Editor mit einem Klick arbeitet.</p>
+<h2>Passphrasen</h2>
+<p>Passphrasen werden aus einer von Ihnen gewählten, geprüften Wortliste erzeugt (UTF-8, bis 6,5 MB, 1024 bis 65536 verschiedene Wörter aus Buchstaben mit 2 bis 32 Zeichen, eines je Zeile). Trennzeichen sind Bindestrich oder Leerzeichen. Die Wortzahl muss mindestens 60 Bit Auswahlentropie ergeben: sechs Wörter bei Listen unter 4096 Wörtern, sonst fünf. Keyrook liefert keine Wortliste mit. Nach der ersten Nutzung merkt sich Keyrook Pfad, Wortzahl und Trennzeichen (nie den Inhalt); <span class="ui">Passphrase mit gespeicherter Wortliste erzeugen</span> liest die Liste erneut, <span class="ui">Wortliste vergessen</span> entfernt den Pfad.</p>
+<h2>TOTP-Codes</h2>
+<p>Web-Logins mit TOTP-Secret erzeugen zeitbasierte Einmalcodes nach RFC 6238. Das Feld akzeptiert ein Base32-Secret, wie es Dienste unter „Schlüssel manuell eingeben“ zeigen (Groß-/Kleinschreibung, Leerzeichen und Bindestriche egal; SHA-1, 6 Stellen, 30 Sekunden), oder eine <code>otpauth://totp/…</code>-URI aus einem QR-Code mit <code>secret</code> und optional <code>algorithm</code> (SHA1, SHA256, SHA512), <code>digits</code> (6 bis 8) und <code>period</code> (15 bis 120 Sekunden). Ungültige Secrets zeigt der Editor als <span class="ui">Ungültiges TOTP-Secret</span>; ein neu eingegebenes muss korrigiert werden, ein bereits gespeichertes (etwa aus einem Import) blockiert das Speichern nicht.</p>
+<p>In der Detailansicht ist <span class="ui">TOTP-Code</span> maskiert; <span class="ui">Anzeigen</span> zeigt den aktuellen Code mit Restsekunden und Balken. <span class="ui">Kopieren</span>, die Schnellaktion <span class="ui">TOTP-Code kopieren</span> und <kbd>Strg</kbd>+<kbd>T</kbd> kopieren einen frisch berechneten Code, nie das Secret; der Hinweis nennt die verbleibende Gültigkeit. Lehnt ein Dienst Codes ab, prüfen Sie Systemzeit und Zeitzone.</p>
+<h2>SSH-Schlüssel</h2>
+<p>Keyrook erzeugt Ed25519- und RSA-4096-Schlüssel mit einer Passphrase von mindestens 12 Zeichen. Importiert werden eingefügte OpenSSH-, unterstützte PEM- und PuTTY-PPK-Schlüssel (Version 2 und 3; <code>none</code> und <code>aes256-cbc</code>, Argon2 für Version 3) und unter einer neuen Passphrase neu verschlüsselt. Bei PPK-Dateien wird vor der Verarbeitung der MAC geprüft, danach das Schlüsselpaar. Der öffentliche Schlüssel wird als geprüfte <code>authorized_keys</code>-Zeile in eine neue Datei exportiert. Für PPK-Dateien außerhalb dieser Grenzen beschreibt die Online-Dokumentation die manuelle Umwandlung mit PuTTYgen; Keyrook startet PuTTYgen nicht und übergibt ihm keine Geheimnisse. Keyrook öffnet nie eine SSH-Verbindung.</p>
+<h2>SSH- und SFTP-Befehle</h2>
+<p>Servereinträge liefern <code>ssh -p &lt;Port&gt; &lt;Benutzer&gt;@&lt;Host&gt;</code>, SFTP-Einträge den entsprechenden <code>sftp</code>-Befehl, als Text für PowerShell oder POSIX-Shells (nicht für die Windows-Eingabeaufforderung). Enthalten sind nur Host, Port und Benutzername: kein Passwort, kein Schlüssel, kein Startverzeichnis. Hosts müssen ASCII-DNS-Namen (Punycode für internationale Namen) oder IPv4/IPv6-Literale sein, Benutzernamen bis 64 ASCII-Zeichen aus Buchstaben, Ziffern, Unterstrich, Punkt und Bindestrich. Andere Formen werden abgelehnt statt in Shell-Text eingefügt. Keyrook führt den Befehl nie aus.</p>
+<h2>Links öffnen</h2>
+<p>Gespeicherte Links öffnen sich nur nach einem Klick (oder <kbd>Strg</kbd>+<kbd>U</kbd>). Akzeptiert werden nur HTTP/HTTPS-Adressen mit Host; eingebettete Benutzer/Passwörter, Steuerzeichen und ungültige Ports werden abgelehnt. Die Adresse wird dem Systembrowser übergeben; Keyrook selbst löst sie beim Prüfen nicht auf.</p>
+</section>
+
+<!-- 9 -->
+<section class="chapter">
+<h1>Backups und Export</h1>
+<h2>Automatische Backups</h2>
+<p>Wählen Sie nach dem Entsperren unter <span class="ui">Daten → Backup-Ordner</span> einen bestehenden Ordner und bestätigen Sie die Aufbewahrung: Anzahl der jüngsten Versionen (1 bis 1000, Vorgabe 30) und zusätzliche Tagesvertreter (0 bis 3660, Vorgabe 30; 0 schaltet die Tagesregel ab). Beide Regeln gelten zusammen. Ab dann sichert jeder Speichervorgang zuerst die vorherige Revision in den Ordner, bevor die Tresordatei ersetzt wird. Schlägt das Backup fehl, wird nicht gespeichert; beheben Sie den Ordnerzugriff. Ältere Backups außerhalb der Regeln werden erst nach einem geprüften neuen Backup entfernt; lässt sich eines nicht löschen, meldet Keyrook die Anzahl und versucht es beim nächsten Mal erneut.</p>
+<p>Ordner und Aufbewahrung werden je Tresordatei gemerkt und nach jedem Entsperren wieder angewendet; ein Hinweis zeigt den wiederhergestellten Ordner. Ist der Ordner nicht mehr nutzbar, öffnet sich der Tresor ohne Backups und bittet um neue Konfiguration. Backupdateien heißen <code>&lt;Tresor-ID&gt;_&lt;Zeit&gt;_&lt;Revision&gt;_&lt;UUID&gt;.keyrook.bak</code> und sind nur für Ihr Benutzerkonto lesbar.</p>
+<div class="tip"><span class="label">Empfehlung</span><p>Legen Sie den Backup-Ordner auf ein anderes Laufwerk oder in einen synchronisierten Ordner, nicht neben die Tresordatei. Backups sind mit denselben Zugangsdaten verschlüsselt wie der Tresor zum Zeitpunkt des Backups.</p></div>
+<h2>Backup-Status und „Jetzt sichern“</h2>
+<p><span class="ui">Jetzt sichern</span> kopiert den aktuell gespeicherten Tresor authentifiziert in den Backup-Ordner, mit denselben Aufbewahrungsregeln und ohne die Revision zu ändern. <span class="ui">Backup-Status</span> zeigt, ob Backups aktiv sind und welche Revision zuletzt gesichert wurde. <span class="ui">Backups deaktivieren</span> fragt nach und löscht keine vorhandenen Dateien.</p>
+<h2>Integrität prüfen</h2>
+<p><span class="ui">Integrität prüfen</span> authentifiziert die gespeicherte Tresordatei und jedes verwaltete Backup des offenen Tresors im Backup-Ordner mit den aktuellen Zugangsdaten, neueste zuerst. Die Prüfung ist strikt lesend. Jede Datei braucht eine vollständige Schlüsselableitung, daher kann sie dauern. Ergebnisse je Datei:</p>
+<dl>
+  <dt>in Ordnung</dt><dd>authentifiziert, mit Revision, Anzahl Einträge (inkl. Papierkorb) und Dateidatum</dd>
+  <dt>kann mit den aktuellen Zugangsdaten nicht authentifiziert werden</dt><dd>normal für Backups vor einer Passwort- oder Schlüsseldateiänderung, aber auch das Ergebnis einer manipulierten oder abgeschnittenen Datei. Authentifizierte Verschlüsselung kann falschen Schlüssel und veränderten Inhalt nicht unterscheiden; Keyrook rät nicht. Alte Backups prüfen Sie mit <span class="ui">Backup wiederherstellen</span> und den damaligen Zugangsdaten.</dd>
+  <dt>beschädigt</dt><dd>ungültiger Header, Größe außerhalb der Grenzen oder ungültiger authentifizierter Inhalt</dd>
+  <dt>authentisch, passt aber nicht</dt><dd>Inhalt echt, aber Tresor-ID oder Revision passen nicht zum Dateinamen, oder die Tresordatei wurde außerhalb dieser Sitzung geändert</dd>
+  <dt>nicht lesbar</dt><dd>keine reguläre Datei, ein symbolischer Link oder Lesefehler</dd>
+</dl>
+<h2>Backup wiederherstellen</h2>
+<p><span class="ui">Backup wiederherstellen</span> fragt die Zugangsdaten des Backups ab und zeigt dessen Anzahl Einträge und Revision in einer Vorschau. Nach Bestätigung wählen Sie ein neues Ziel; der offene Tresor wird nie überschrieben. Die wiederhergestellte Datei ist ein eigener Tresor mit neuer Tresor-ID und Revision 0, sodass sich ihre Backups nie mit denen des Originals vermischen. Sperren Sie und öffnen Sie die wiederhergestellte Datei getrennt.</p>
+<h2>Verschlüsselt exportieren</h2>
+<p><span class="ui">Verschlüsselt exportieren</span> erzeugt eine neue <code>.keyrook</code>-Datei mit ausdrücklich gewählten Zugangsdaten, allen Einträgen, Kunden, Projekten und Vorlagen, mit Revision 0 und neuer Tresor-ID. Dies ist das bevorzugte Format zur Weitergabe an Kollegen oder zum Umzug auf einen anderen Rechner.</p>
+<h2>Passwort oder Schlüsseldatei ändern</h2>
+<p><span class="ui">Passwort / Schlüsseldatei ändern</span> bestätigt ausdrücklich, welche Faktoren ersetzt werden: bestehende Schlüsseldatei erneut wählen, um sie zu behalten; eine andere wählen, um sie zu ersetzen; Feld leer lassen, um sie zu entfernen. Der Tresor wird atomar neu verschlüsselt, vorher wird das konfigurierte Backup angelegt. Ältere Backups benötigen weiterhin ihre ursprünglichen Zugangsdaten.</p>
+</section>
+
+<!-- 10 -->
+<section class="chapter">
+<h1>Import und Klartext-Export</h1>
+<h2>Unterstützte Formate</h2>
+<table>
+<tr><th>Quelle</th><th>Was importiert wird</th><th>Hinweise</th></tr>
+<tr><td>Keyrook JSON</td><td>Alle Typen, Verweise, Metadaten, Verlauf, Kunden, Projekte, Vorlagen</td><td>Vollständig verlustfrei</td></tr>
+<tr><td>Keyrook CSV</td><td>Wie JSON (ein JSON-Datensatz je Zeile)</td><td>Wird automatisch erkannt</td></tr>
+<tr><td>CSV mit Feldzuordnung</td><td>Titel (Pflicht), URL, Benutzername, Passwort, Notizen, Tags, Favorit</td><td>Spalten per Auswahlliste zuordnen; bis 100 Spalten, eindeutige Kopfzeile, UTF-8 (BOM erlaubt)</td></tr>
+<tr><td>KeePass CSV</td><td>Account/Title, Login Name/UserName, Password, Web Site/URL, Comments/Notes</td><td>Feste Zuordnung; zusätzliche Spalten werden abgelehnt (dann CSV mit Feldzuordnung nutzen)</td></tr>
+<tr><td>KeePass XML</td><td>Strings, Gruppenpfade, Tags, Zeitstempel, Ablauf, Verlauf; Papierkorb bleibt gelöscht</td><td>Kein KDBX, keine Anhänge, keine geschützten Binärwerte</td></tr>
+<tr><td>Bitwarden JSON (unverschlüsselt)</td><td>Logins, sichere Notizen, eigene Felder, Ordner, mehrere URLs, Passwortverlauf, Favoriten</td><td>Keine Karten, Identitäten, Organisationen, Anhänge, Passkeys</td></tr>
+</table>
+<p>Importe aus Bitwarden und KeePass werden als eigene Datensätze gespeichert, damit zusätzliche Felder erhalten bleiben; die Schnellaktionen erkennen Benutzername, Passwort und URL über die Feldnamen.</p>
+<h2>Ablauf eines Imports</h2>
+<ol>
+  <li><span class="ui">Daten → Importieren</span>, Format und Datei wählen (bei CSV mit Feldzuordnung anschließend die Spalten zuordnen; der Dialog zeigt nur Spaltennamen, keine Werte).</li>
+  <li>Keyrook liest und prüft die ganze Datei und zeigt die Anzahl der Einträge zur Bestätigung.</li>
+  <li>Die Einträge werden mit neuen IDs <b>hinzugefügt</b>; ein zweiter Import derselben Datei erzeugt Kopien und überschreibt nie. Überschreitet der Tresor dabei die Formatgrenze von 64 MiB, wird der Import abgelehnt und nichts geändert.</li>
+</ol>
+<div class="tip"><span class="label">Empfehlung</span><p>Aktivieren Sie Backups, bevor Sie in einen wertvollen Tresor importieren. Löschen Sie die Quelldatei des anderen Programms nach erfolgreichem Import sicher; sie enthält Klartext.</p></div>
+<h2>Klartext exportieren</h2>
+<p><span class="ui">Klartext exportieren</span> warnt in zwei getrennten Fragen (vor der Formatwahl und nach der Zieldatei); beide beginnen mit dem Fokus auf <span class="ui">Nein</span>. JSON ist das vollständige Keyrook-Modell, Keyrook CSV ein Container mit demselben Inhalt und nicht für Tabellenkalkulationen gedacht. Beide enthalten alle Geheimnisse, den Papierkorb und den Verlauf. Nutzen Sie, wann immer möglich, den verschlüsselten Export.</p>
+</section>
+
+<!-- 11 -->
+<section class="chapter">
+<h1>Kundenberichte</h1>
+<p>Die Berichte im Menü <span class="ui">Daten</span> gruppieren aktive Einträge nach Kunden (eigener Kunde oder Kunde des Projekts). Sie zeigen <b>nie</b> Passwörter, private Schlüssel, Passphrasen, TOTP-Secrets, Notizen, Verlauf, Werte eigener Felder oder irgendein als verborgen markiertes Feld.</p>
+<h2>Kundenübersicht</h2>
+<p><span class="ui">Kundenübersicht</span> listet jeden Kunden mit Kontaktdaten, Projekten und Beschreibungen, der Anzahl aktiver Einträge je Typ, den Domains mit Ablaufdatum und den Server- und Transfer-Einträgen mit Host und Port; zuletzt folgt <i>Ohne Kunde</i>. Ein verborgenes Feld erscheint als <i>Verborgen</i>. Die Übersicht wird schreibgeschützt angezeigt und nicht gespeichert.</p>
+<h2>Übergabeblatt</h2>
+<p><span class="ui">Übergabeblatt exportieren</span> fragt nach einem Kunden und einer neuen <code>.html</code>-Datei und schreibt dessen aktive Einträge nach Typ gruppiert: Titel, Typ, Projekt, Tags, Ablaufdatum, Ports, Protokolle, SSH-Schlüsseltyp, verknüpfte Server und Registrar-Logins sowie, wenn nicht verborgen, URLs, Hosts, Benutzernamen, E-Mail-Adressen, Mailserver, Startverzeichnisse, Rollen, Betriebssysteme, Fingerprints, Domainnamen und Registrare. Die Seite ist eine einzelne Datei ohne Links, Skripte oder externe Ressourcen und lässt sich aus dem Browser drucken. Prüfen Sie sie vor der Übergabe.</p>
+<h2>Ablaufdaten exportieren</h2>
+<p><span class="ui">Ablaufdaten exportieren</span> schreibt die Ablaufdaten aller aktiven Einträge mit Datum, Titel, Typ, Kunde, Projekt und (bei Domains) Domainname in eine neue Datei:</p>
+<ul>
+  <li><b>Kalender (ICS):</b> ein ganztägiger Termin je Eintrag mit wählbarer Erinnerung (0 bis 365 Tage vorher, Vorgabe 30). Die Termin-UIDs leiten sich aus den Eintrags-IDs ab, sodass ein erneuter Import in denselben Kalender die Termine aktualisiert statt verdoppelt.</li>
+  <li><b>CSV:</b> UTF-8, kommagetrennt, jedes Feld in Anführungszeichen; Zellen, die mit <code>=</code>, <code>+</code>, <code>-</code>, <code>@</code> beginnen, erhalten ein führendes <code>'</code>, damit Tabellenprogramme sie nicht als Formel ausführen.</li>
+</ul>
+</section>
+
+<!-- 12 -->
+<section class="chapter">
+<h1>Warnliste und Datenleck-Abgleich</h1>
+<h2>Was geprüft wird</h2>
+<p>Die Tresorprüfung läuft nach dem Entsperren, nach jeder Änderung und einmal täglich im Hintergrund auf einer Kopie, die danach gelöscht wird. Sie betrachtet aktive Einträge und meldet:</p>
+<ul>
+  <li><b>abgelaufen</b> und <b>laufen ab</b> (heute bis in 30 Tagen)</li>
+  <li><b>schwach</b>: kurze oder sich wiederholende Passwörter</li>
+  <li><b>mehrfach</b>: dasselbe Passwort in mehreren Einträgen</li>
+  <li><b>alt</b>: Passwort seit über 365 Tagen unverändert. Das Alter zählt ab der letzten Passwortänderung im Verlauf, nicht ab der letzten Titeländerung; Einträge ohne Verlauf (manche Importe) zählen ab ihrer letzten Änderung.</li>
+  <li><b>doppelt</b>: ein anderer aktiver Eintrag gleichen Typs hat denselben Host oder dieselbe URL und denselben Benutzernamen (ohne Groß-/Kleinschreibung und abschließende Schrägstriche). Port und Passwörter werden nicht verglichen.</li>
+  <li><b>geleakt</b>: Passwort in bekannten Datenlecks, nur nach einem Abgleich (unten)</li>
+</ul>
+<p>Leere Passwörter werden nicht bewertet. Die Prüfungen sind lokale Heuristiken; ein Passwort ohne Warnung ist nicht automatisch stark.</p>
+<h2>Warnliste lesen</h2>
+<p><span class="ui">Warnliste</span> in der Fensterleiste zeigt die Anzahl je Grund (zum Beispiel <i>2 abgelaufen, 1 laufen ab, 3 schwach, 2 mehrfach, 4 alt, 2 doppelt, 1 geleakt</i>, oder <i>keine</i>; <i>wird geprüft</i> während des Laufs). Karten und Detailansicht tragen Marker, die nur den Grund nennen, nie einen Teil des Passworts. Ein Klick auf die Warnliste öffnet die Übersicht mit den betroffenen Titeln; ein Klick auf einen Titel wählt den Eintrag aus und setzt dafür nötigenfalls Suche und Filter zurück.</p>
+<h2>Abgleich mit bekannten Datenlecks</h2>
+<p><span class="ui">Passwörter mit bekannten Datenlecks abgleichen …</span> oben in der Warnliste vergleicht Passwörter mit dem Dienst Pwned Passwords von Have I Been Pwned. Das geschieht nie von selbst:</p>
+<ol>
+  <li>Keyrook berechnet lokal die SHA-1-Hashes der nicht leeren Passwörter aktiver Einträge (Passwortfelder, SSH-Passphrasen, eigene Felder namens <code>password</code>, <code>passwort</code> oder <code>passphrase</code>; nicht Verlauf oder Papierkorb). Noch wird nichts gesendet.</li>
+  <li>Eine Rückfrage erklärt bei jedem Durchlauf, was gesendet wird: nur die ersten 5 Zeichen jedes Hashes an <code>api.pwnedpasswords.com</code>, wie viele Passwörter und Anfragen, dass der Dienst Ihre IP-Adresse sieht und dass nichts gespeichert wird. <span class="ui">Abbrechen</span> hat den Fokus.</li>
+  <li>Nach <span class="ui">… Anfragen senden</span> zeigt die Liste den Fortschritt; Abbrechen, eine fehlgeschlagene Anfrage oder eine ungültige Antwort beenden den Lauf ohne Ergebnis.</li>
+  <li>Betroffene Einträge erhalten den Grund <i>Passwort in bekannten Datenlecks</i> mit der Trefferzahl des Dienstes.</li>
+</ol>
+<p>Die Ergebnisse bleiben nur im Speicher und verschwinden beim Sperren; ein bearbeiteter Eintrag verliert seinen Marker bis zum nächsten Abgleich.</p>
+</section>
+
+<!-- 13 -->
+<section class="chapter">
+<h1>Sperren und Einstellungen</h1>
+<p><span class="ui">Einstellungen</span> in der Fensterleiste öffnet alle Voreinstellungen; sie wirken sofort und überleben Neustarts.</p>
+<h2>Sperre nach Inaktivität</h2>
+<p><span class="ui">Sperre nach Inaktivität</span> bietet 1, 2, 5 (Standard), 10, 15 und 30 Minuten sowie 1, 2, 4 und 8 Stunden. Nur Tastatur- und Mauseingaben in Keyrooks eigenen Fenstern zählen als Aktivität; Arbeit im Terminal oder Browser lässt die Frist ablaufen. Die langen Fristen sind für ganztägiges Arbeiten an einem persönlichen Rechner mit Bildschirmsperre gedacht: eine Sperre oder ein Standby des Betriebssystems sperrt Keyrook weiterhin sofort, wo die Plattform das Ereignis meldet. Ein Standby wird zusätzlich an der Systemuhr erkannt, sodass der Tresor nach dem Aufwachen gesperrt ist, auch ohne Benachrichtigung.</p>
+<h2>Sperren bei Fensterereignissen</h2>
+<table>
+<tr><th>Sperren, wenn das Fenster…</th><th>Sperrt bei</th><th>Geeignet für</th></tr>
+<tr><td><span class="ui">den Fokus verliert oder minimiert wird</span></td><td>Wechsel zu einer anderen Anwendung und Minimieren; Keyrooks eigene Dialoge sperren nicht</td><td>Gemeinsam genutzte oder unbeaufsichtigte Rechner</td></tr>
+<tr><td><span class="ui">minimiert wird</span> (Standard)</td><td>Nur Minimieren; Passwort kopieren, in den Browser wechseln und zurückkommen lässt den Tresor offen</td><td>Alltag am eigenen Arbeitsplatz</td></tr>
+<tr><td><span class="ui">nie</span></td><td>Weder Fokusverlust noch Minimieren</td><td>Nur mit kurzer Inaktivitätsfrist und Bildschirmsperre</td></tr>
+</table>
+<p>Unter jeder Wahl gelten die Inaktivitätsfrist, Systemereignisse und <span class="ui">Sperren</span>. Die Zwischenablage wird unabhängig davon nach der eingestellten Zeit und beim Sperren geleert.</p>
+<h2>Zwischenablage</h2>
+<p>Kopierte Werte werden nach der eingestellten Zeit (Standard 20 Sekunden) gelöscht, sofern die Zwischenablage noch Keyrooks Wert enthält, und immer beim Sperren. Der Timer schützt nicht vor einem Zwischenablage-Verlauf des Betriebssystems oder einem Clipboard-Manager; schalten Sie solche Funktionen für Passwörter ab.</p>
+<h2>Darstellung, Sprache, Skalierung, Kontrast</h2>
+<ul>
+  <li><b>Darstellung:</b> System folgen, hell oder dunkel; der Button in der Fensterleiste wechselt direkt.</li>
+  <li><b>Sprache:</b> System folgen, Deutsch oder Englisch, ohne Neustart. Nur der Dateiauswahldialog der Java-Laufzeit folgt der Systemsprache.</li>
+  <li><b>Skalierung:</b> 90 %, 100 %, 115 %, 130 % oder 150 % zusätzlich zur Skalierung des Betriebssystems. Die Mindest- und Startgröße des Fensters wachsen mit.</li>
+  <li><b>Kontrast:</b> <span class="ui">Standard</span> oder <span class="ui">Hoher Kontrast</span> (Schwarz auf Weiß bzw. Weiß auf Schwarz, mindestens 7:1 nach WCAG AAA; Standardfarben erreichen mindestens 4,5:1).</li>
+</ul>
+<h2>Gespeicherte Einstellungen</h2>
+<p>Nicht geheime Voreinstellungen liegen in <code>settings.json</code> im Konfigurationsverzeichnis (Anhang). Enthalten sind Darstellung, Kontrast, Skalierung, Sprache, Inaktivitätsfrist, Fensterregel, Zwischenablage-Zeit, Update-Option, Fenstergröße und -position, der zuletzt geöffnete Tresorpfad, je Tresor die Backup-Einstellungen, die letzten Generator-Einstellungen (inkl. Pfad einer Wortliste, nie ihr Inhalt) und gemerkte Schlüsseldatei-Pfade. Passwörter, Schlüsseldatei-Inhalte und Tresorinhalte stehen dort nie. Eine beschädigte Datei fällt auf Standardwerte zurück; löschen Sie sie, um alle Voreinstellungen zurückzusetzen.</p>
+<p>Das Hauptfenster öffnet sich mit der zuletzt verwendeten Größe, Position und Maximierung (mindestens 720 × 520 dp, erster Start 1100 × 760 dp). Ein Fenster, dessen Titelleiste auf keinem angeschlossenen Bildschirm sichtbar wäre, öffnet sich zentriert auf dem Hauptbildschirm.</p>
+</section>
+
+<!-- 14 -->
+<section class="chapter">
+<h1>Tastenkürzel</h1>
+<p><kbd>Strg</kbd> gilt für Windows und Linux, auf macOS entsprechend <kbd>⌘</kbd>. Die Liste steht in der Anwendung unter <span class="ui">Tastenkürzel</span> und im <span class="ui">Info</span>-Dialog.</p>
+<table>
+<tr><th style="width:34%">Kürzel</th><th>Aktion</th></tr>
+<tr><td><kbd>Strg</kbd>+<kbd>L</kbd></td><td>Sofort sperren, auch während ein Vorgang läuft</td></tr>
+<tr><td><kbd>Strg</kbd>+<kbd>N</kbd></td><td>Neuen Eintrag anlegen (nicht im Papierkorb oder Editor)</td></tr>
+<tr><td><kbd>Strg</kbd>+<kbd>F</kbd></td><td>Suchfeld fokussieren</td></tr>
+<tr><td><kbd>↓</kbd> oder <kbd>Enter</kbd> im Suchfeld</td><td>In die Liste wechseln</td></tr>
+<tr><td><kbd>Esc</kbd> im Suchfeld</td><td>Suche leeren</td></tr>
+<tr><td><kbd>↑</kbd> / <kbd>↓</kbd>, <kbd>Pos1</kbd> / <kbd>Ende</kbd></td><td>Vorigen/nächsten bzw. ersten/letzten Eintrag auswählen</td></tr>
+<tr><td><kbd>Enter</kbd>, <kbd>Strg</kbd>+<kbd>E</kbd></td><td>Ausgewählten Eintrag im Editor öffnen</td></tr>
+<tr><td><kbd>Strg</kbd>+<kbd>C</kbd></td><td>Passwort kopieren (im Suchfeld nur, wenn kein Text markiert ist)</td></tr>
+<tr><td><kbd>Strg</kbd>+<kbd>B</kbd></td><td>Benutzername kopieren</td></tr>
+<tr><td><kbd>Strg</kbd>+<kbd>T</kbd></td><td>Aktuellen TOTP-Code kopieren</td></tr>
+<tr><td><kbd>Strg</kbd>+<kbd>U</kbd></td><td>URL öffnen</td></tr>
+<tr><td><kbd>Strg</kbd>+<kbd>D</kbd></td><td>Host kopieren (Server, FTP/SFTP, erster Mailserver, Domainname)</td></tr>
+<tr><td><kbd>Strg</kbd>+<kbd>K</kbd></td><td>SSH-Befehl eines Servers oder SFTP-Befehl kopieren (ohne Passwort)</td></tr>
+<tr><td><kbd>Entf</kbd> (macOS auch <kbd>⌫</kbd>)</td><td>Markierte Einträge, sonst den ausgewählten, nach Rückfrage in den Papierkorb</td></tr>
+<tr><td><kbd>Leertaste</kbd></td><td>Ausgewählten Eintrag für eine Sammelaktion markieren oder Markierung aufheben</td></tr>
+<tr><td><kbd>Strg</kbd>+<kbd>A</kbd></td><td>Alle gelisteten Einträge markieren; erneut gedrückt alle Markierungen aufheben</td></tr>
+<tr><td><kbd>Strg</kbd>+<kbd>S</kbd></td><td>Editor prüfen und speichern</td></tr>
+<tr><td><kbd>Esc</kbd></td><td>Editor abbrechen (mit Rückfrage bei ungespeicherten Änderungen); Dialog schließen</td></tr>
+<tr><td><kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd></td><td>Zwischen Bedienelementen wechseln</td></tr>
+</table>
+<p>Die Eintragskürzel wirken, solange der Fokus in der Liste oder auf einer Kartenschaltfläche liegt; Kopieren und Öffnen zusätzlich aus dem Suchfeld. In anderen Textfeldern behalten die Tasten ihre normale Bedeutung. In Dialogen mit Textfeldern löst <kbd>Enter</kbd> die Hauptschaltfläche aus; Lösch- und Bestätigungsdialoge beginnen mit dem Fokus auf <span class="ui">Abbrechen</span> bzw. <span class="ui">Nein</span>.</p>
+</section>
+
+<!-- 15 -->
+<section class="chapter">
+<h1>Barrierefreiheit</h1>
+<p>Keyrook ist mit Screenreadern über die Java-Accessibility-Bridge nutzbar: Narrator oder NVDA unter Windows (Java Access Bridge aktivieren, etwa mit <code>jabswitch -enable</code>), VoiceOver unter macOS und Orca unter Linux.</p>
+<ul>
+  <li>Wiederkehrende Schaltflächen nennen ihren Wert, zum Beispiel <i>Passwort anzeigen</i>, <i>Passwort kopieren</i>, <i>URL öffnen</i>. Anzeigen/Verbergen melden, ob ein Wert <i>verborgen</i> oder <i>angezeigt</i> ist; ein maskierter Wert wird als <i>Passwort: verborgen</i> gelesen, nicht als Punkte.</li>
+  <li>Kontrollkästchen und Optionsfelder bilden mit ihrer Beschriftung ein Element; die Feldoptionen <span class="ui">Verborgen</span> und <span class="ui">URL-Feld</span> nennen ihr Feld.</li>
+  <li>Der Favoritenstern wird mit Eintragstitel und Aktion angesagt; das Kästchen einer Karte heißt <i>Auswählen</i> plus Titel, die Anzahl markierter Einträge ist ein Live-Bereich. Fehler- und Hinweismeldungen sind Live-Bereiche, wo die Plattform das unterstützt.</li>
+  <li>Jedes Textfeld hat eine sichtbare Beschriftung, die auch sein zugänglicher Name ist. Die Fokusreihenfolge folgt der sichtbaren Reihenfolge; Dialoge übernehmen den Fokus beim Öffnen.</li>
+</ul>
+<p>Skalierung (90 bis 150 %) und hoher Kontrast sind unter <span class="ui">Einstellungen</span> beschrieben (Abschnitt 13.4). Tastaturfokus und gedrückte Elemente sind im Hochkontrastmodus stärker hervorgehoben; fokussierte Textfelder behalten einen dicken, akzentfarbenen Rahmen.</p>
+</section>
+
+<!-- 16 -->
+<section class="chapter">
+<h1>Problembehebung</h1>
+<dl>
+  <dt>Das Entsperren wartet mit Countdown.</dt>
+  <dd>Nach abgelehnten Passwörtern wächst die Wartezeit bis auf 60 Sekunden. Ein erfolgreiches Entsperren oder ein Neustart setzt sie zurück. Sperren allein nicht.</dd>
+  <dt>„Schlüsseldatei hat die falsche Größe“.</dt>
+  <dd>Eine Schlüsseldatei muss genau 32 Bytes haben. Prüfen Sie, ob Sie die richtige Datei gewählt haben, und ob sie unverändert ist (etwa nicht von einem Editor mit Zeilenumbruch gespeichert).</dd>
+  <dt>Der Tresor öffnet sich ohne Backups und bittet um Konfiguration.</dt>
+  <dd>Der gemerkte Backup-Ordner ist nicht mehr erreichbar (Netzlaufwerk, Rechte, umbenannt). Ordner wieder bereitstellen oder unter <span class="ui">Daten → Backup-Ordner</span> neu wählen.</dd>
+  <dt>Speichern schlägt fehl, weil das Backup fehlschlägt.</dt>
+  <dd>Keyrook speichert nie ohne gelungenes Backup, solange Backups aktiv sind. Ordnerzugriff beheben oder Backups bewusst deaktivieren.</dd>
+  <dt>Ein Backup wird als „nicht authentifizierbar“ gemeldet.</dt>
+  <dd>Normal für Backups vor einer Passwort- oder Schlüsseldateiänderung. Prüfen Sie es mit <span class="ui">Backup wiederherstellen</span> und den damaligen Zugangsdaten. Trifft das nicht zu, behandeln Sie die Datei als beschädigt.</dd>
+  <dt>TOTP-Codes werden vom Dienst abgelehnt.</dt>
+  <dd>Systemzeit und Zeitzone synchronisieren. Prüfen Sie, ob der Dienst SHA-256, 8 Stellen oder eine andere Periode verlangt; diese Parameter stehen in der <code>otpauth://</code>-URI.</dd>
+  <dt>Der SSH-Befehl-Button fehlt.</dt>
+  <dd>Host, Port oder Benutzername sind leer oder ungültig (internationale Hostnamen als Punycode eingeben, Benutzername nur ASCII). Ein ungültiger Port zählt im Editor als ungespeicherte Änderung.</dd>
+  <dt>Keyrook sperrt mitten in der Arbeit.</dt>
+  <dd>Inaktivitätsfrist unter <span class="ui">Einstellungen</span> verlängern (bis 8 Stunden) und die Fensterregel auf <span class="ui">minimiert wird</span> oder <span class="ui">nie</span> setzen. Arbeit in anderen Programmen zählt nicht als Aktivität. Bildschirmsperre und Standby sperren weiterhin.</dd>
+  <dt>Unter Linux gibt es keinen Menüeintrag.</dt>
+  <dd>Auf Systemen ohne <code>/usr/share/desktop-directories</code> kann der Menüeintrag nicht registriert werden. Die Anwendung läuft trotzdem über <code>/opt/keyrook/bin/Keyrook</code>.</dd>
+  <dt>Ein Import wird abgelehnt.</dt>
+  <dd>Bei CSV: Kopfzeile eindeutig und nicht leer, höchstens 100 Spalten. Bei KeePass CSV: genau die erwarteten Spalten, sonst <span class="ui">CSV mit Feldzuordnung</span> verwenden. Bei KeePass XML: keine KDBX-Datei, sondern den XML-Export wählen. Ein Tresor nahe 64 MiB nimmt keinen Import mehr an.</dd>
+  <dt>Alle Voreinstellungen zurücksetzen.</dt>
+  <dd><code>settings.json</code> im Konfigurationsverzeichnis löschen (Anhang). Tresore sind davon nicht betroffen.</dd>
+  <dt>Ein Tresor aus Keyrook 0.7 oder älter.</dt>
+  <dd>Er öffnet sich normal; beim ersten Speichern bleibt die alte Datei als <code>&lt;Tresor&gt;.schema-v1-r&lt;Revision&gt;.keyrook.bak</code> daneben liegen. Ältere Versionen können den konvertierten Tresor nicht mehr öffnen.</dd>
+</dl>
+</section>
+
+<!-- 17 -->
+<section class="chapter">
+<h1>Anhang: Dateien und Speicherorte</h1>
+<table>
+<tr><th>Was</th><th>Wo</th></tr>
+<tr><td>Tresor</td><td>Die von Ihnen gewählte <code>.keyrook</code>-Datei, an beliebigem Ort</td></tr>
+<tr><td>Backups</td><td>Der gewählte Backup-Ordner, Dateien <code>&lt;Tresor-ID&gt;_&lt;Zeit&gt;_&lt;Revision&gt;_&lt;UUID&gt;.keyrook.bak</code></td></tr>
+<tr><td>Schlüsseldatei</td><td>Beliebiger Ort; 32 Bytes; Kopie getrennt vom Tresor aufbewahren</td></tr>
+<tr><td>Einstellungen (Windows)</td><td><code>%APPDATA%\Keyrook\settings.json</code></td></tr>
+<tr><td>Einstellungen (macOS)</td><td><code>~/Library/Application Support/Keyrook/settings.json</code></td></tr>
+<tr><td>Einstellungen (Linux)</td><td><code>$XDG_CONFIG_HOME/keyrook/settings.json</code> (sonst <code>~/.config/keyrook/</code>)</td></tr>
+<tr><td>Anwendung (Windows)</td><td><code>%LOCALAPPDATA%\Keyrook\Keyrook.exe</code> (Installation pro Benutzer)</td></tr>
+<tr><td>Anwendung (macOS)</td><td><code>/Applications/Keyrook.app</code></td></tr>
+<tr><td>Anwendung (Linux)</td><td><code>/opt/keyrook/bin/Keyrook</code>; Arch-Paket zusätzlich <code>/usr/bin/keyrook</code></td></tr>
+<tr><td>Lizenzen und Hinweise</td><td>Im Installationsordner unter <code>lib/app/resources</code> (Linux, Windows) bzw. im App-Bundle; außerdem als Release-Assets</td></tr>
+</table>
+<p>Tresordateien, Backups, Exporte und Schlüsseldateien werden mit Rechten nur für Ihr Benutzerkonto angelegt (Modus 0600 unter macOS und Linux, Besitzer-ACL unter Windows). Keyrook ersetzt beim Exportieren, Wiederherstellen und Anlegen nie eine vorhandene Datei.</p>
+<h2>Grenzen des Dateiformats</h2>
+<ul>
+  <li>Tresordatei höchstens 64 MiB</li>
+  <li>Titel, Kunden- und Projektnamen höchstens 4096 Zeichen; Tags höchstens 100 je Eintrag, je 256 Zeichen</li>
+  <li>Verlauf höchstens 100 Feldstände je Eintrag</li>
+  <li>Suchanfragen höchstens 256 Zeichen</li>
+</ul>
+<p class="small">Dieses Handbuch beschreibt Keyrook @VERSION@. Die vollständige, laufend aktualisierte Dokumentation (Desktop-Anleitung, Sicherheitseigenschaften, Dateiformat, Paketierung) liegt im Ordner <code>docs</code> des Projekts auf GitHub.</p>
+</section>
+
+</body>
+</html>
