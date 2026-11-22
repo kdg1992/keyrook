@@ -171,6 +171,19 @@ jobs:
           NODE
           target="$(cat build/package-target.txt)"
           tar -czf "build/release/Keyrook-notices-${target}.tar.gz" -C app/build/packagingResources/common .
+          # Linux x64 also ships the application image as a portable archive and the Arch Linux PKGBUILD
+          # that installs it. Fixed ownership, order and time stamps keep the archive reproducible.
+          if [ "$target" = linux-x64 ]; then
+            version="$(cat version.txt)"
+            archive="build/release/Keyrook-${version}-${target}.tar.gz"
+            [ -x app/build/compose/binaries/main/app/Keyrook/bin/Keyrook ] || { echo "Application image missing"; exit 1; }
+            tar --sort=name --owner=0 --group=0 --numeric-owner --mtime="@$(git log -1 --format=%ct)" \
+              -cf - -C app/build/compose/binaries/main/app Keyrook | gzip -n > "$archive"
+            digest="$(sha256sum "$archive" | cut -c1-64)"
+            sed -e "s/@VERSION@/${version}/" -e "s/@SHA256@/${digest}/" packaging/arch/PKGBUILD.in > build/release/PKGBUILD
+            ! grep -q '@[A-Z0-9]*@' build/release/PKGBUILD || { echo "PKGBUILD placeholder left"; exit 1; }
+            bash -n build/release/PKGBUILD
+          fi
           node <<'NODE'
           const fs = require('node:fs');
           const {createHash} = require('node:crypto');
@@ -395,6 +408,110 @@ jobs:
             echo "::endgroup::"
           fi
 
+      # Linux portable archive on the runner, then the Arch Linux package built from the released PKGBUILD
+      # in a fresh, digest-pinned Arch container per scenario.
+      - name: Select portable archive and PKGBUILD
+        id: archive
+        if: runner.os == 'Linux'
+        shell: bash
+        run: node scripts/installer-test.mjs prepare tar.gz
+      - name: Test portable archive and Arch Linux package
+        if: runner.os == 'Linux'
+        shell: bash
+        env:
+          ARCH_IMAGE: archlinux:base-devel@sha256:fa2d4ce3310ddd90a4208e5168be8ad367da5129af1245f38fd2d803bcbe3239
+          NEW_INSTALLER: ${{ steps.archive.outputs.new-installer }}
+          NEW_VERSION: ${{ steps.archive.outputs.new-version }}
+          NEW_PKGBUILD: ${{ steps.archive.outputs.new-pkgbuild }}
+          OLD_INSTALLER: ${{ steps.archive.outputs.old-installer }}
+          OLD_VERSION: ${{ steps.archive.outputs.old-version }}
+          OLD_PKGBUILD: ${{ steps.archive.outputs.old-pkgbuild }}
+        run: |
+          set -euo pipefail
+          echo "::group::Portable archive $NEW_INSTALLER"
+          extracted="$(mktemp -d "$RUNNER_TEMP/archive.XXXXXX")"
+          tar -xzf "$NEW_INSTALLER" -C "$extracted"
+          [ "$(ls "$extracted")" = Keyrook ] || { echo "Expected exactly one top-level Keyrook directory"; ls -la "$extracted"; exit 1; }
+          [ -x "$extracted/Keyrook/bin/Keyrook" ] || { echo "Launcher missing or not executable"; exit 1; }
+          node scripts/installer-test.mjs self-test "$extracted/Keyrook/bin/Keyrook"
+          rm -rf "$extracted"
+          echo "::endgroup::"
+
+          cat > "$RUNNER_TEMP/arch-test.sh" <<'SCRIPT'
+          set -euo pipefail
+          # makepkg refuses to run as root; the package is built by an unprivileged user and installed by root.
+          useradd --create-home builder
+          build() {
+            local pkgbuild="$1" archive="$2" version="$3" directory
+            directory="$(mktemp -d /home/builder/build.XXXXXX)"
+            cp "/work/$pkgbuild" "$directory/PKGBUILD"
+            cp "/work/$archive" "$directory/"
+            chown -R builder "$directory"
+            # The source URL points at the release; the archive next to the PKGBUILD is used instead of a download.
+            su builder -c "cd '$directory' && makepkg --noconfirm --nodeps"
+            local package
+            package="$(ls "$directory"/keyrook-bin-"$version"-*.pkg.tar.*)"
+            [ "$(printf '%s\n' "$package" | wc -l)" -eq 1 ] || { echo "Expected one built package"; exit 1; }
+            printf '%s\n' "$package"
+          }
+          expect_version() {
+            local installed
+            installed="$(pacman -Q keyrook-bin)"
+            echo "Installed: $installed"
+            [[ "$installed" =~ ^keyrook-bin\ ${1//./\\.}-[0-9]+$ ]] || { echo "Expected version $1"; exit 1; }
+            [ "$(readlink -f /usr/bin/keyrook)" = /opt/keyrook/bin/Keyrook ] || { echo "Launcher link missing"; exit 1; }
+            [ -f /usr/share/applications/keyrook.desktop ] || { echo "Menu entry missing"; exit 1; }
+          }
+          self_test() {
+            local directory report
+            directory="$(mktemp -d)"
+            report="$directory/report.txt"
+            timeout 120 /usr/bin/keyrook --self-test "$report"
+            [ "$(cat "$report"; printf x)" = "$(printf 'Keyrook runtime check passed\nx')" ] || { echo "Runtime check report mismatch"; exit 1; }
+            rm -rf "$directory"
+            echo "Installed runtime check passed: /usr/bin/keyrook"
+          }
+          remove_and_verify() {
+            pacman -Rns --noconfirm keyrook-bin
+            if pacman -Q keyrook-bin 2>/dev/null; then echo "keyrook-bin is still installed"; exit 1; fi
+            for path in /opt/keyrook /usr/bin/keyrook /usr/share/applications/keyrook.desktop; do
+              [ ! -e "$path" ] && [ ! -L "$path" ] || { echo "Remains after removal: $path"; exit 1; }
+            done
+            echo "Removed /opt/keyrook"
+          }
+          # The declared dependencies are installed by the package manager, as makepkg -s would do.
+          depends=()
+          eval "$(bash -c "source '/work/$NEW_PKGBUILD' && declare -p depends")"
+          echo "Declared dependencies: ${depends[*]}"
+          pacman -Syu --noconfirm --needed "${depends[@]}" ttf-dejavu
+          if [ "$MODE" = fresh ]; then
+            pacman -U --noconfirm "$(build "$NEW_PKGBUILD" "$NEW_INSTALLER" "$NEW_VERSION")"
+            expect_version "$NEW_VERSION"
+          else
+            pacman -U --noconfirm "$(build "$OLD_PKGBUILD" "$OLD_INSTALLER" "$OLD_VERSION")"
+            expect_version "$OLD_VERSION"
+            pacman -U --noconfirm "$(build "$NEW_PKGBUILD" "$NEW_INSTALLER" "$NEW_VERSION")"
+            expect_version "$NEW_VERSION"
+          fi
+          self_test
+          remove_and_verify
+          SCRIPT
+          run_container() {
+            docker run --rm \
+              --volume "$PWD:/work:ro" --volume "$RUNNER_TEMP/arch-test.sh:/arch-test.sh:ro" \
+              --env MODE="$1" --env NEW_INSTALLER --env NEW_VERSION --env NEW_PKGBUILD \
+              --env OLD_INSTALLER --env OLD_VERSION --env OLD_PKGBUILD \
+              "$ARCH_IMAGE" bash /arch-test.sh
+          }
+          echo "::group::Fresh Arch Linux install from $NEW_PKGBUILD"
+          run_container fresh
+          echo "::endgroup::"
+          if [ -n "$OLD_INSTALLER" ]; then
+            echo "::group::Arch Linux upgrade from $OLD_VERSION to $NEW_VERSION"
+            run_container upgrade
+            echo "::endgroup::"
+          fi
+
       # Windows MSI: silent per-user installation into the runner account.
       - name: Select MSI installers
         id: msi
@@ -591,7 +708,8 @@ jobs:
             if (names.some(name => name !== manifests[0] && !verified.has(name))) throw Error('Unverified package output');
           }
           const names = fs.readdirSync('build/release').sort();
-          if (!['msi','dmg','deb','rpm'].every(extension => names.filter(name => name.endsWith(`.${extension}`)).length === 1)) {
+          if (!['msi','dmg','deb','rpm'].every(extension => names.filter(name => name.endsWith(`.${extension}`)).length === 1) ||
+              names.filter(name => /^Keyrook-\d+\.\d+\.\d+-linux-x64\.tar\.gz$/.test(name)).length !== 1 || !names.includes('PKGBUILD')) {
             throw Error('Incomplete installer set');
           }
           for (const name of fs.readdirSync('build/jdk-source')) {

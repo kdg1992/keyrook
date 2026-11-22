@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Kim Daniel Geisthardt
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Helpers for the Release workflow's installer tests.
-//   prepare <deb|rpm|msi|dmg>  verifies this run's installer and downloads the previous release's one
+//   prepare <deb|rpm|msi|dmg|tar.gz>  verifies this run's installer and downloads the previous release's one;
+//                              for tar.gz also this run's PKGBUILD and the previous release's PKGBUILD
 //   self-test <launcher>       runs an installed launcher's runtime check against a new report file
 import {createHash} from 'node:crypto';
 import {spawnSync, execFileSync} from 'node:child_process';
@@ -37,12 +38,12 @@ const verifyChecksum = (manifest, file) => {
 };
 
 function prepare(extension) {
-    if (!['deb', 'rpm', 'msi', 'dmg'].includes(extension)) throw Error('Invalid installer extension');
+    if (!['deb', 'rpm', 'msi', 'dmg', 'tar.gz'].includes(extension)) throw Error('Invalid installer extension');
     const platform = {win32: 'windows', linux: 'linux', darwin: 'macos'}[process.platform];
     if (!platform || !['x64', 'arm64'].includes(process.arch)) throw Error('Unsupported runner');
     const target = `${platform}-${process.arch}`;
     const directory = 'build/packages';
-    const pattern = new RegExp(`^Keyrook-(\\d+\\.\\d+\\.\\d+)-${target}\\.${extension}$`);
+    const pattern = new RegExp(`^Keyrook-(\\d+\\.\\d+\\.\\d+)-${target}\\.${extension.replace(/\./g, '\\.')}$`);
     const current = readdirSync(directory).filter(name => pattern.test(name));
     if (current.length !== 1) throw Error(`Expected one ${target} ${extension} installer from this run`);
     const installer = path.join(directory, current[0]);
@@ -50,6 +51,12 @@ function prepare(extension) {
     const version = pattern.exec(current[0])[1];
     output('new-installer', posix(installer));
     output('new-version', version);
+    // The portable archive is released together with the Arch Linux PKGBUILD that installs it.
+    const companions = extension === 'tar.gz' ? ['PKGBUILD'] : [];
+    for (const name of companions) {
+        verifyChecksum(path.join(directory, `SHA256SUMS-${target}.txt`), path.join(directory, name));
+        output(`new-${name.toLowerCase()}`, posix(path.join(directory, name)));
+    }
 
     // The release this run is building is still a draft, so the upgrade source is the highest published,
     // non-prerelease version below it that ships an installer for this target.
@@ -64,22 +71,27 @@ function prepare(extension) {
         const match = /^v(\d+\.\d+\.\d+)$/.exec(release.tag);
         if (!match || !older(match[1], version)) continue;
         const asset = `Keyrook-${match[1]}-${target}.${extension}`;
-        if (!release.assets.includes(asset) || !release.assets.includes('SHA256SUMS.txt')) continue;
+        if (![asset, 'SHA256SUMS.txt', ...companions].every(name => release.assets.includes(name))) continue;
         if (!previous || older(previous.version, match[1])) previous = {tag: release.tag, version: match[1], asset};
     }
     if (!previous) {
         console.log(`::notice title=Upgrade test skipped::No published release older than ${version} has a ${target} ${extension} installer`);
         output('old-installer', '');
         output('old-version', '');
+        for (const name of companions) output(`old-${name.toLowerCase()}`, '');
         return;
     }
     const destination = `build/previous-release/${extension}`;
     rmSync(destination, {recursive: true, force: true});
     mkdirSync(destination, {recursive: true});
     execFileSync('gh', ['release', 'download', previous.tag, '--repo', repository, '--dir', destination,
-        '--pattern', previous.asset, '--pattern', 'SHA256SUMS.txt'], {stdio: 'inherit'});
+        ...[previous.asset, 'SHA256SUMS.txt', ...companions].flatMap(name => ['--pattern', name])], {stdio: 'inherit'});
     const oldInstaller = path.join(destination, previous.asset);
     verifyChecksum(path.join(destination, 'SHA256SUMS.txt'), oldInstaller);
+    for (const name of companions) {
+        verifyChecksum(path.join(destination, 'SHA256SUMS.txt'), path.join(destination, name));
+        output(`old-${name.toLowerCase()}`, posix(path.join(destination, name)));
+    }
     console.log(`::notice title=Upgrade source::${previous.tag} ${previous.asset} -> ${version}`);
     output('old-installer', posix(oldInstaller));
     output('old-version', previous.version);

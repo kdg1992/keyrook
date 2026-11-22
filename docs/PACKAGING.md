@@ -1,6 +1,8 @@
 # Native packaging
 
-Native installers are configured for Windows MSI, macOS DMG, and Linux DEB/RPM.
+Native installers are configured for Windows MSI, macOS DMG, and Linux DEB/RPM;
+Linux x64 additionally ships the application image as a portable archive with an
+Arch Linux `PKGBUILD` (see [Arch Linux and the portable archive](#arch-linux-and-the-portable-archive)).
 They are built only in the `Release` GitHub Actions workflow on the three standard
 hosted runners. A package is built for that runner's actual CPU architecture;
 this is not a universal macOS binary or cross-compilation. The filenames include
@@ -269,20 +271,23 @@ run's checksum manifest, and then, per format:
 | RPM | `fedora:44` container, pinned by digest, new container per scenario | `dnf install /…rpm`; `rpm -q` shows exactly one version | old RPM, then new RPM over it | `dnf remove keyrook`; package gone, install directory gone |
 | MSI | Windows runner account | `msiexec /i … /qn`; exactly one `Keyrook` uninstall entry with the new version | old MSI, then new MSI (same upgrade code, major upgrade) | `msiexec /x … /qn`; entry gone, launcher gone, no files left in the install directory |
 | DMG | macOS runner | attach read-only with `-nobrowse`, copy `Keyrook.app` into a temporary Applications directory, compare with the image | old bundle replaced completely by the new one, as Finder's Replace does | bundle deleted |
+| tar.gz | Ubuntu runner | extract; exactly one top-level `Keyrook` directory with an executable `bin/Keyrook` | not applicable (a portable archive is replaced by extracting the new one) | directory deleted |
+| PKGBUILD | `archlinux:base-devel` container, pinned by digest, new container per scenario | `makepkg` as an unprivileged user with this run's archive next to the PKGBUILD, `pacman -U`; `pacman -Q` shows the new version, `/usr/bin/keyrook` links to the launcher, menu entry exists | old PKGBUILD and archive, then the new ones over them | `pacman -Rns keyrook-bin`; package, `/opt/keyrook`, launcher link and menu entry gone |
 
 After each fresh install and each upgrade, the installed launcher runs
 `--self-test` against a new report file in a temporary directory and must write
 exactly `Keyrook runtime check passed`. The launcher path is taken from the
 package manager (`dpkg -L` / `rpm -ql`, normally `/opt/keyrook/bin/Keyrook`), from
 the `INSTALLDIR` property in the verbose MSI log (normally
-`%LOCALAPPDATA%\Keyrook\Keyrook.exe` for the per-user MSI), or from the copied
-bundle (`Keyrook.app/Contents/MacOS/Keyrook`). The self-test is headless and
+`%LOCALAPPDATA%\Keyrook\Keyrook.exe` for the per-user MSI), from the copied
+bundle (`Keyrook.app/Contents/MacOS/Keyrook`), from the extracted archive
+(`Keyrook/bin/Keyrook`) or from the Arch package's `/usr/bin/keyrook` link. The self-test is headless and
 renders offscreen, so no display server is needed.
 
 The upgrade source is the highest published, non-draft, non-prerelease release
 whose version is strictly lower than the package under test and which ships an
 installer for the same platform, architecture and format together with
-`SHA256SUMS.txt`. The release being built is still a draft at this point and
+`SHA256SUMS.txt` (for the archive, also its `PKGBUILD`). The release being built is still a draft at this point and
 is therefore never its own upgrade source. The old installer is downloaded with
 `gh release download` using the read-only `GITHUB_TOKEN` and checked against that
 release's `SHA256SUMS.txt`. When no such release exists, the upgrade scenario is
@@ -308,14 +313,43 @@ These tests do not cover:
   first installs a desktop library baseline (Mesa GL, X11 client libraries,
   FreeType, Fontconfig, DejaVu fonts) that a Fedora workstation normally has; the
   declared requirements are printed for review. The DEB runs on a runner image
-  that already contains many desktop libraries;
+  that already contains many desktop libraries. The Arch container installs the
+  PKGBUILD's declared dependencies and DejaVu fonts before building, so the test
+  shows that the declared set is sufficient, not that it is minimal;
+- `makepkg -s`, the AUR, `namcap` and Arch derivatives other than the pinned
+  `archlinux:base-devel` image;
 - other distributions or releases, ARM64 Linux, x64 macOS, and upgrades that skip
   more than one version;
 - migration of user vaults and settings across versions, since the self-test uses
   only synthetic in-memory data.
 
-The Fedora image digest is not updated by Dependabot; review and update it
-manually alongside other workflow pins.
+The Fedora and Arch Linux image digests are not updated by Dependabot; review and
+update them manually alongside other workflow pins.
+
+### Arch Linux and the portable archive
+
+The Linux packaging job archives the jpackage application image
+(`app/build/compose/binaries/main/app/Keyrook`, the same files the DEB and RPM
+install under `/opt/keyrook`) as `Keyrook-<version>-linux-x64.tar.gz` with fixed
+owner, order and time stamps, and renders
+[`packaging/arch/PKGBUILD.in`](../packaging/arch/PKGBUILD.in) with the version
+and the archive's SHA-256 into the `PKGBUILD` release asset. Both are part of the
+release's `SHA256SUMS.txt`, and the publish job refuses a release without them.
+
+The PKGBUILD builds the binary package `keyrook-bin` (`provides`/`conflicts`
+`keyrook`): it downloads the archive from the release, checks its digest, copies
+the image to `/opt/keyrook`, links `/usr/bin/keyrook` to the launcher, installs
+the icon, a menu entry and the license files, and declares the shared libraries
+the DEB depends on. Nothing is compiled; `options=('!strip' '!debug')` leaves the
+bundled runtime unchanged. Install with `makepkg -si` in a directory that holds
+only the PKGBUILD; `pacman -Rns keyrook-bin` removes it. The package is not in
+the AUR or any repository; the PKGBUILD is published only on the release page and
+is checked in the [installer tests](#installer-tests) in an Arch container.
+
+The archive also runs without installation: extract it and start
+`Keyrook/bin/Keyrook`. It contains the bundled Java runtime, the notices under
+`Keyrook/lib/app/resources` and no desktop integration; vaults and settings are
+stored in the same user directories as for an installed Keyrook.
 
 On `main` pushes, release-please maintains the version/changelog pull request.
 When the release PR is merged, release-please creates the `vX.Y.Z` tag at the
@@ -394,7 +428,10 @@ with `SHA256SUMS.txt` before installing.
   [Apple's instructions](https://support.apple.com/en-gb/102445); do not disable
   Gatekeeper globally.
 - Linux: use the distribution's package installer for the downloaded DEB or RPM.
-  These packages are not signed by a distribution repository.
+  These packages are not signed by a distribution repository. On Arch Linux and
+  its derivatives, `makepkg -si` with the downloaded `PKGBUILD` checks the
+  archive's SHA-256 before installing it; the portable archive itself is
+  verified with `SHA256SUMS.txt` like every other asset.
 
 Windows behavior depends on the active protection and administrator policy;
 see [Microsoft's SmartScreen documentation](https://learn.microsoft.com/windows/security/threat-protection/microsoft-defender-smartscreen/microsoft-defender-smartscreen-overview).

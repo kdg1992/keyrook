@@ -100,6 +100,21 @@ installed, upgraded and removed in the release workflow before publication
 your vault and install the new version over the old one; vaults and settings
 remain in place.
 
+Linux x64 distributions without DEB or RPM, such as Arch Linux, CachyOS,
+Manjaro or EndeavourOS, use the `PKGBUILD` and the portable archive
+`Keyrook-<version>-linux-x64.tar.gz` of the same release (see
+[Arch Linux and the portable archive](docs/PACKAGING.md#arch-linux-and-the-portable-archive)):
+
+```sh
+mkdir keyrook-bin && cd keyrook-bin
+curl -LO https://github.com/kdg1992/keyrook/releases/latest/download/PKGBUILD
+makepkg -si    # downloads the archive, checks its SHA-256 and installs keyrook-bin
+```
+
+The archive alone runs on any x64 Linux with the usual desktop libraries:
+extract it and start `Keyrook/bin/Keyrook`. It bundles the Java runtime and
+needs no installation.
+
 ### Upgrade notes
 
 - Vaults from Keyrook 0.7.x and earlier use document schema 1. Keyrook 0.8.0
