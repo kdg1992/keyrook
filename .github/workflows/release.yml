@@ -183,6 +183,16 @@ jobs:
             sed -e "s/@VERSION@/${version}/" -e "s/@SHA256@/${digest}/" packaging/arch/PKGBUILD.in > build/release/PKGBUILD
             ! grep -q '@[A-Z0-9]*@' build/release/PKGBUILD || { echo "PKGBUILD placeholder left"; exit 1; }
             bash -n build/release/PKGBUILD
+            # The German user manual is printed to PDF with the runner image's Chrome; no network access.
+            manual="build/release/Keyrook-Handbuch-${version}.pdf"
+            rendered=docs/manual/.keyrook-handbuch.rendered.html
+            sed -e "s/@VERSION@/${version}/g" -e "s/@DATE@/$(git log -1 --format=%cs)/g" \
+              docs/manual/keyrook-handbuch.de.html > "$rendered"
+            ! grep -q '@[A-Z]*@' "$rendered" || { echo "Manual placeholder left"; exit 1; }
+            google-chrome --headless --no-sandbox --disable-gpu --no-pdf-header-footer \
+              --print-to-pdf="$PWD/$manual" "file://$PWD/$rendered"
+            rm -f "$rendered"
+            [ "$(head -c 5 "$manual")" = "%PDF-" ] && [ "$(stat -c %s "$manual")" -gt 100000 ] || { echo "Manual was not rendered"; exit 1; }
           fi
           node <<'NODE'
           const fs = require('node:fs');
@@ -710,7 +720,8 @@ jobs:
           }
           const names = fs.readdirSync('build/release').sort();
           if (!['msi','dmg','deb','rpm'].every(extension => names.filter(name => name.endsWith(`.${extension}`)).length === 1) ||
-              names.filter(name => /^Keyrook-\d+\.\d+\.\d+-linux-x64\.tar\.gz$/.test(name)).length !== 1 || !names.includes('PKGBUILD')) {
+              names.filter(name => /^Keyrook-\d+\.\d+\.\d+-linux-x64\.tar\.gz$/.test(name)).length !== 1 || !names.includes('PKGBUILD') ||
+              names.filter(name => /^Keyrook-Handbuch-\d+\.\d+\.\d+\.pdf$/.test(name)).length !== 1) {
             throw Error('Incomplete installer set');
           }
           for (const name of fs.readdirSync('build/jdk-source')) {

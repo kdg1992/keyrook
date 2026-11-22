@@ -346,6 +346,17 @@ only the PKGBUILD; `pacman -Rns keyrook-bin` removes it. The package is not in
 the AUR or any repository; the PKGBUILD is published only on the release page and
 is checked in the [installer tests](#installer-tests) in an Arch container.
 
+### User manual
+
+The German user manual is maintained as one self-contained page,
+[`docs/manual/keyrook-handbuch.de.html`](manual/keyrook-handbuch.de.html). The
+Linux packaging job fills in the version and the commit date and prints it with
+the runner image's Chrome (headless, without network access) to the release
+asset `Keyrook-Handbuch-<version>.pdf`, which is part of `SHA256SUMS.txt` and
+required by the publish job. Update the page in the same pull request as a
+change to the behavior it describes; [DESKTOP.md](DESKTOP.md) remains the
+complete reference. To preview it, open the page in a browser and print it.
+
 The archive also runs without installation: extract it and start
 `Keyrook/bin/Keyrook`. It contains the bundled Java runtime, the notices under
 `Keyrook/lib/app/resources` and no desktop integration; vaults and settings are

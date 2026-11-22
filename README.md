@@ -55,7 +55,8 @@ Keyrook – Offline, encrypted credential vault for hosting providers and sysadm
   Keyrook never downloads or installs updates. Apart from these two
   user-started features it makes no network request.
 
-Details are in [desktop usage](docs/DESKTOP.md); see also
+Details are in [desktop usage](docs/DESKTOP.md). Each release also carries a
+printable German user manual, `Keyrook-Handbuch-<version>.pdf`. See also
 [security properties and limitations](docs/SECURITY.md) and the
 [readiness overview](docs/READINESS.md).
 
