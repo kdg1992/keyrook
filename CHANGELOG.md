@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.5.0](https://github.com/kdg1992/keyrook/compare/v1.4.0...v1.5.0) (2026-11-22)
+
+
+### Features
+
+* **format:** raise vault limits with document schema 3 ([#99](https://github.com/kdg1992/keyrook/issues/99)) ([9b495d9](https://github.com/kdg1992/keyrook/commit/9b495d9fb9c74fd4f8dac9aa1f6730070b07fcfb))
+* **packaging:** publish a portable Linux archive, an Arch Linux PKGBUILD and the user manual ([#97](https://github.com/kdg1992/keyrook/issues/97)) ([db88d5a](https://github.com/kdg1992/keyrook/commit/db88d5a2aa3106e683b2d066e924c76a01bdc8e0))
+
+
+### Bug Fixes
+
+* **deps:** update Bouncy Castle, SSHD, kotlinx.serialization, Kotest and Gradle ([#96](https://github.com/kdg1992/keyrook/issues/96)) ([06abe1f](https://github.com/kdg1992/keyrook/commit/06abe1f63f729e029108629d3e215b5bc4cb74fc))
+
 ## [1.4.0](https://github.com/kdg1992/keyrook/compare/v1.3.0...v1.4.0) (2026-10-28)
 
 
