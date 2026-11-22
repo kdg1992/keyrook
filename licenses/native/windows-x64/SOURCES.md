@@ -3,7 +3,7 @@
 Reviewed on 2026-11-22 by the Keyrook copyright holder for release packaging
 with Eclipse Temurin `25.0.5+8-LTS`, Compose Multiplatform 1.12.2 and
 Gradle 9.9.1. The evidence comes from the
-[CI collection run](https://github.com/kdg1992/keyrook/actions/runs/RUN_ID_PLACEHOLDER)
+[CI collection run](https://github.com/kdg1992/keyrook/actions/runs/45033725079)
 retained in [ci-2026-11-22](../../native-evidence/ci-2026-11-22/README.md).
 This record is bound by hash in `inventory.properties`. Any change of a runtime
 artifact, of the JDK or of its legal files requires a new review.

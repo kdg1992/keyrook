@@ -13,6 +13,9 @@ inventories after the Compose 1.12.2 and Skiko 0.150.2 update; the JDK and its
 legal files are unchanged.
 [CI evidence for Temurin 25.0.5+8](ci-2026-10-27-temurin-25.0.5/README.md)
 records the same inventories packaged with the October 2026 JDK security update.
+[CI evidence from 2026-11-22](ci-2026-11-22/README.md) records the runtime
+inventories after the Bouncy Castle 1.87, Apache MINA SSHD 2.20.1 and
+kotlinx.serialization 1.13.0 update; the JDK and its legal files are unchanged.
 
 ## Skiko 0.150.2
 

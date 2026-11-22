@@ -1,0 +1,57 @@
+{
+  "status": "verified-evidence-not-redistribution-approval",
+  "runUrl": "https://github.com/kdg1992/keyrook/actions/runs/45033725079",
+  "commit": "342ea03ef441ce680944673432699781c88b6ef0",
+  "applicationVersion": "1.4.0",
+  "composeVersion": "1.12.2",
+  "gradleVersion": "9.9.1",
+  "temurinEvidence": "../temurin-25.0.5+8/provenance.json",
+  "jdkNotices": "../ci-2026-09-23/jdk-notices/",
+  "platforms": [
+    {
+      "target": "windows-x64",
+      "runtimeArtifacts": 52,
+      "jdkVersion": "25.0.5+8-LTS",
+      "jdkLegalFiles": 253,
+      "jdkLegalSha256": "dd182ea73c5e9fc7228dd9f8e3e60389b330ecc2ec7a4d836461b9b81e5f81a8",
+      "jdkLegalManifestIdenticalTo": "../ci-2026-10-27-temurin-25.0.5/windows-x64/jdk-legal.sha256",
+      "artifactId": 14758333230,
+      "artifactSha256": "sha256:fe8d2095d063788c6a30327e99e0f0282643f8e41382122863c683b7334b1061",
+      "files": {
+        "candidate.properties": "f76633c85c1f04fede8b2c68277e118964dc3030023f659422a93a36f142284e",
+        "runtime-artifacts.tsv": "438c7eeebacc8d13cc84159810f6a14b404110b49bb8122a23c35ccff832b2fa",
+        "jdk-legal.sha256": "dd182ea73c5e9fc7228dd9f8e3e60389b330ecc2ec7a4d836461b9b81e5f81a8"
+      }
+    },
+    {
+      "target": "linux-x64",
+      "runtimeArtifacts": 52,
+      "jdkVersion": "25.0.5+8-LTS",
+      "jdkLegalFiles": 254,
+      "jdkLegalSha256": "9eba21c82a3dc3e4cf47ff555e398221afd2721939d9dcfe5838a11679304a8b",
+      "jdkLegalManifestIdenticalTo": "../ci-2026-10-27-temurin-25.0.5/linux-x64/jdk-legal.sha256",
+      "artifactId": 14757919307,
+      "artifactSha256": "sha256:032930525415f5569c4410612591adf63683807b607c97e1ef5ba8c33e97fdf9",
+      "files": {
+        "candidate.properties": "2e1ac15f443d42b0888818f4c1050ec8b60cb14ec676d67c0d07d8e467fa291e",
+        "runtime-artifacts.tsv": "ef0a2959173260239c7142fe383689f73072d7059ee4534a990a870d62f89eea",
+        "jdk-legal.sha256": "9eba21c82a3dc3e4cf47ff555e398221afd2721939d9dcfe5838a11679304a8b"
+      }
+    },
+    {
+      "target": "macos-arm64",
+      "runtimeArtifacts": 52,
+      "jdkVersion": "25.0.5+8-LTS",
+      "jdkLegalFiles": 252,
+      "jdkLegalSha256": "9188e404dd6f50775105e9d84550915c189c3d4c3791de455de48765d4c50599",
+      "jdkLegalManifestIdenticalTo": "../ci-2026-10-27-temurin-25.0.5/macos-arm64/jdk-legal.sha256",
+      "artifactId": 14758344609,
+      "artifactSha256": "sha256:bfad162d7370887adaa9b489fbc64ef9c7b1d08c0069dcc746eb487e7e28e189",
+      "files": {
+        "candidate.properties": "4f8b1fd904e422b5b5f1179e998230b78f83f3aedd382a6b1b438c2e82a97819",
+        "runtime-artifacts.tsv": "354e8f8a4433b849a6ea923d7650b2a3504730e8b5ae0f4fd6476ae69302952c",
+        "jdk-legal.sha256": "9188e404dd6f50775105e9d84550915c189c3d4c3791de455de48765d4c50599"
+      }
+    }
+  ]
+}
