@@ -2,12 +2,13 @@
 
 GitHub metadata did not recognize the following exact package versions. Their publisher POMs were checked directly; these version-specific exceptions do not exempt vulnerability checks or approve native redistribution. New versions require a fresh review.
 
-Bouncy Castle bcpkix/bcutil 1.86 also contain the MIT-style Bouncy Castle license in META-INF/LICENSE.md. See [the license text](Bouncy-Castle.md). AndroidX and Kotlin entries below declare Apache-2.0.
+Bouncy Castle bcpkix/bcprov/bcutil 1.87 also contain the MIT-style Bouncy Castle license in META-INF/LICENSE.md. See [the license text](Bouncy-Castle.md). AndroidX and Kotlin entries below declare Apache-2.0.
 
 | Package | Verified license | Publisher metadata |
 | --- | --- | --- |
-| `pkg:maven/org.bouncycastle/bcpkix-jdk18on@1.86` | MIT (Bouncy Castle) | [POM](https://repo.maven.apache.org/maven2/org/bouncycastle/bcpkix-jdk18on/1.86/bcpkix-jdk18on-1.86.pom) |
-| `pkg:maven/org.bouncycastle/bcutil-jdk18on@1.86` | MIT (Bouncy Castle) | [POM](https://repo.maven.apache.org/maven2/org/bouncycastle/bcutil-jdk18on/1.86/bcutil-jdk18on-1.86.pom) |
+| `pkg:maven/org.bouncycastle/bcpkix-jdk18on@1.87` | MIT (Bouncy Castle) | [POM](https://repo.maven.apache.org/maven2/org/bouncycastle/bcpkix-jdk18on/1.87/bcpkix-jdk18on-1.87.pom) |
+| `pkg:maven/org.bouncycastle/bcprov-jdk18on@1.87` | MIT (Bouncy Castle) | [POM](https://repo.maven.apache.org/maven2/org/bouncycastle/bcprov-jdk18on/1.87/bcprov-jdk18on-1.87.pom) |
+| `pkg:maven/org.bouncycastle/bcutil-jdk18on@1.87` | MIT (Bouncy Castle) | [POM](https://repo.maven.apache.org/maven2/org/bouncycastle/bcutil-jdk18on/1.87/bcutil-jdk18on-1.87.pom) |
 | `pkg:maven/androidx.compose.runtime/runtime-retain@1.12.1` | Apache-2.0 | [POM](https://dl.google.com/dl/android/maven2/androidx/compose/runtime/runtime-retain/1.12.1/runtime-retain-1.12.1.pom) |
 | `pkg:maven/androidx.compose.runtime/runtime-retain-desktop@1.12.1` | Apache-2.0 | [POM](https://dl.google.com/dl/android/maven2/androidx/compose/runtime/runtime-retain-desktop/1.12.1/runtime-retain-desktop-1.12.1.pom) |
 | `pkg:maven/androidx.lifecycle/lifecycle-runtime-compose-desktop@2.11.0` | Apache-2.0 | [POM](https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-compose-desktop/2.11.0/lifecycle-runtime-compose-desktop-2.11.0.pom) |
