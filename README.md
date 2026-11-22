@@ -55,7 +55,8 @@ Keyrook – Offline, encrypted credential vault for hosting providers and sysadm
   Keyrook never downloads or installs updates. Apart from these two
   user-started features it makes no network request.
 
-Details are in [desktop usage](docs/DESKTOP.md); see also
+Details are in [desktop usage](docs/DESKTOP.md). Each release also carries a
+printable German user manual, `Keyrook-Handbuch-<version>.pdf`. See also
 [security properties and limitations](docs/SECURITY.md) and the
 [readiness overview](docs/READINESS.md).
 
@@ -99,6 +100,21 @@ installed, upgraded and removed in the release workflow before publication
 (see [installer tests](docs/PACKAGING.md#installer-tests)). To upgrade, back up
 your vault and install the new version over the old one; vaults and settings
 remain in place.
+
+Linux x64 distributions without DEB or RPM, such as Arch Linux, CachyOS,
+Manjaro or EndeavourOS, use the `PKGBUILD` and the portable archive
+`Keyrook-<version>-linux-x64.tar.gz` of the same release (see
+[Arch Linux and the portable archive](docs/PACKAGING.md#arch-linux-and-the-portable-archive)):
+
+```sh
+mkdir keyrook-bin && cd keyrook-bin
+curl -LO https://github.com/kdg1992/keyrook/releases/latest/download/PKGBUILD
+makepkg -si    # downloads the archive, checks its SHA-256 and installs keyrook-bin
+```
+
+The archive alone runs on any x64 Linux with the usual desktop libraries:
+extract it and start `Keyrook/bin/Keyrook`. It bundles the Java runtime and
+needs no installation.
 
 ### Upgrade notes
 

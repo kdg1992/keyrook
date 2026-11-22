@@ -1,0 +1,44 @@
+# SPDX-FileCopyrightText: 2026 Kim Daniel Geisthardt
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Arch Linux package of the released Keyrook application image. The Release workflow fills in the
+# version and the archive digest and publishes the result as the PKGBUILD release asset.
+# Build and install with: makepkg -si  (in a directory holding only this file)
+pkgname=keyrook-bin
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc='Local encrypted credential vault'
+arch=('x86_64')
+url='https://github.com/kdg1992/keyrook'
+license=('GPL-3.0-or-later')
+# The bundled runtime covers Java; the shared libraries below match the DEB's declared dependencies.
+depends=('glibc' 'gcc-libs' 'zlib' 'libx11' 'libxext' 'libxi' 'libxrender' 'libxtst' 'libxau' 'libxcb'
+         'libxdmcp' 'freetype2' 'fontconfig' 'libpng' 'brotli' 'bzip2' 'expat' 'libgl' 'libglvnd' 'alsa-lib')
+optdepends=('ttf-dejavu: fonts for the application window when no other font is installed'
+            'xdg-utils: open links and the vault folder in the desktop environment')
+provides=('keyrook')
+conflicts=('keyrook')
+# The archive holds a prebuilt jlink runtime; stripping or debug extraction must not alter it.
+options=('!strip' '!debug')
+source=("https://github.com/kdg1992/keyrook/releases/download/v${pkgver}/Keyrook-${pkgver}-linux-x64.tar.gz")
+sha256sums=('@SHA256@')
+
+package() {
+    install -dm755 "$pkgdir/opt" "$pkgdir/usr/bin" "$pkgdir/usr/share/applications" \
+        "$pkgdir/usr/share/icons/hicolor/512x512/apps" "$pkgdir/usr/share/licenses/$pkgname"
+    cp -a "$srcdir/Keyrook" "$pkgdir/opt/keyrook"
+    chmod 755 "$pkgdir/opt/keyrook/bin/Keyrook"
+    ln -s /opt/keyrook/bin/Keyrook "$pkgdir/usr/bin/keyrook"
+    install -m644 "$srcdir/Keyrook/lib/Keyrook.png" "$pkgdir/usr/share/icons/hicolor/512x512/apps/keyrook.png"
+    install -m644 "$srcdir/Keyrook/lib/app/resources/LICENSE" \
+        "$srcdir/Keyrook/lib/app/resources/THIRD-PARTY-NOTICES" "$pkgdir/usr/share/licenses/$pkgname/"
+    cat > "$pkgdir/usr/share/applications/keyrook.desktop" <<'DESKTOP'
+[Desktop Entry]
+Name=Keyrook
+Comment=Local encrypted credential vault
+Exec=/opt/keyrook/bin/Keyrook
+Icon=keyrook
+Terminal=false
+Type=Application
+Categories=Utility;
+DESKTOP
+}
