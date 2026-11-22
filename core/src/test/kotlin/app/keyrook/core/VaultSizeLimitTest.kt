@@ -21,16 +21,19 @@ import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 
 /**
- * A vault at every model maximum at once does not fit into [VaultCodec.MAX_FILE_BYTES]: 10,000 entries with 100
- * history items each would already need more. These tests build the largest document that fits, with every count
- * maximum the file allows and history filling the rest, and show that the file size, not the JSON guard's separator
- * bound, is the binding limit on saving, opening and migrating.
+ * A vault at every model maximum at once does not fit into [VaultCodec.MAX_FILE_BYTES]: 100,000 entries with 500
+ * history items each would need far more. These tests build a document that fills the file exactly, with every
+ * record count at its maximum and notes filling the rest, and show that the file size, not the JSON guard's
+ * separator bound, is the binding limit on saving and opening. A schema 1 document that fills the 64 MiB file of
+ * its release still opens through both migration steps and can be saved again.
  */
 @OptIn(ExperimentalSerializationApi::class)
 class VaultSizeLimitTest {
     private val codec = VaultCodec()
     private val json = Json { encodeDefaults = true; classDiscriminator = "type" }
     private val maxDocument = VaultCodec.MAX_FILE_BYTES - VaultHeader.SIZE - 16
+    /** The largest decrypted document of schemas 1 and 2, whose files were limited to 64 MiB. */
+    private val legacyMaxDocument = 64 * 1024 * 1024 - VaultHeader.SIZE - 16
     // Shared empty values keep the source model small; decoding creates independent objects.
     private val empty = Secret(charArrayOf())
     private val created = "2026-01-01T00:00:00Z"
@@ -39,25 +42,34 @@ class VaultSizeLimitTest {
         EntryData.Custom(mapOf("password" to Field(Secret("old-password-0001".toCharArray())))))
     private val tags = List(100) { "t%02d".format(it) }
     private val customFields = (0 until 100).associate { "f%02d".format(it) to Field(empty) }
+    /** The longest possible notes: every character needs a six-byte JSON escape. */
+    private val longestNotes = Secret(CharArray(Vault.MAX_FIELD_CHARS) { '\u0001' })
     private fun uuid(kind: Int, index: Int) = "%08x-0000-4000-8000-%012x".format(kind, index)
 
     private fun field(hidden: Boolean = true) = Field(empty, hidden)
 
-    /** Model maximums for everything but history: 10,000 customers, projects and entries, 1,000 full templates. */
-    private fun baseVault(templates: Boolean): Vault {
-        val customers = List(10_000) { Customer(uuid(1, it), "Customer %05d".format(it)) }
-        val projects = List(10_000) { Project(uuid(2, it), "Project %05d".format(it), customers[it].id) }
-        val servers = (1..9_000).map { uuid(3, it) }
-        val entries = List(10_000) { index ->
-            val data = when (index) {
-                0 -> EntryData.Ssh(SshKeyType.ED25519, field(), field(false), field(), field(false), servers)
-                in 1..9_000 -> EntryData.Server(field(false), 22, field(false), field(), field(false), field(false))
-                else -> EntryData.Custom(customFields)
+    /**
+     * [records] customers, projects and entries: one SSH key assigned to nine tenths of the entries, which are
+     * servers, and custom entries with 100 fields and 100 tags for the rest, up to 1,000. The last [fullHistories]
+     * entries carry [historyPerEntry] history items each. With [templates], 1,000 templates of 100 fields and tags.
+     */
+    private fun baseVault(records: Int, templates: Boolean, fullHistories: Int, historyPerEntry: Int): Vault {
+        val customers = List(records) { Customer(uuid(1, it), "Customer %06d".format(it)) }
+        val projects = List(records) { Project(uuid(2, it), "Project %06d".format(it), customers[it].id) }
+        val serverCount = records / 10 * 9
+        val servers = (1..serverCount).map { uuid(3, it) }
+        val history = List(historyPerEntry) { historyItem }
+        val entries = List(records) { index ->
+            val data = when {
+                index == 0 -> EntryData.Ssh(SshKeyType.ED25519, field(), field(false), field(), field(false), servers)
+                index <= serverCount -> EntryData.Server(field(false), 22, field(false), field(), field(false), field(false))
+                index <= serverCount + 1_000 -> EntryData.Custom(customFields)
+                else -> EntryData.Custom(emptyMap())
             }
-            // The longest possible notes: every character needs a six-byte JSON escape.
-            val notes = if (index == 9_999) Secret(CharArray(Vault.MAX_FIELD_CHARS) { '\u0001' }) else empty
-            Entry(uuid(3, index), "Entry %05d".format(index), data, created, modified, customers[index].id,
-                projects[index].id, tags, notes, expiresOn = "2027-01-01")
+            val full = index in serverCount + 1..serverCount + 1_000
+            Entry(uuid(3, index), "Entry %06d".format(index), data, created, modified, customers[index].id,
+                projects[index].id, if (full) tags else emptyList(), empty, expiresOn = "2027-01-01",
+                history = if (index >= records - fullHistories) history else emptyList())
         }
         val templateList = if (!templates) emptyList() else List(Vault.MAX_TEMPLATES) { index ->
             EntryTemplate(uuid(4, index), "Template %04d".format(index), TemplateType.CUSTOM,
@@ -67,11 +79,24 @@ class VaultSizeLimitTest {
             templates = templateList)
     }
 
-    /** [total] history items, 100 per entry from the second entry on. */
-    private fun withHistory(vault: Vault, total: Int): Vault = vault.copy(entries = vault.entries.mapIndexed { index, entry ->
-        val count = (total - (index - 1) * 100).coerceIn(0, 100)
-        if (index == 0 || count == 0) entry else entry.copy(history = List(count) { historyItem })
-    })
+    /**
+     * Adds exactly [bytes] to the encoded document through notes, from the second entry on: the longest notes
+     * first, then one with the remaining escaped characters and up to five single-byte characters.
+     */
+    private fun withNotes(vault: Vault, bytes: Long): Vault {
+        val perNote = Vault.MAX_FIELD_CHARS * 6L
+        val whole = (bytes / perNote).toInt()
+        val rest = (bytes % perNote).toInt()
+        val last = Secret(CharArray(rest / 6 + rest % 6) { if (it < rest / 6) '\u0001' else 'a' })
+        check(whole + 2 <= vault.entries.size)
+        return vault.copy(entries = vault.entries.mapIndexed { index, entry ->
+            when {
+                index in 1..whole -> entry.copy(notes = longestNotes)
+                index == whole + 1 -> entry.copy(notes = last)
+                else -> entry
+            }
+        })
+    }
 
     /** Bytes and structural separators of what [write] produces, without keeping the document. */
     private class Measure : OutputStream() {
@@ -91,12 +116,13 @@ class VaultSizeLimitTest {
                 ',', ':' -> separators++
             }
         }
+        override fun write(b: ByteArray, off: Int, len: Int) { for (i in off until off + len) write(b[i].toInt()) }
     }
 
     private fun measure(write: (OutputStream) -> Unit): Measure = Measure().also(write)
-    private fun v2(vault: Vault): (OutputStream) -> Unit = { json.encodeToStream(vault, it) }
+    private fun current(vault: Vault): (OutputStream) -> Unit = { json.encodeToStream(vault, it) }
 
-    /** Schema 1 as the previous release wrote it: plain customers and projects, no templates, no pinned flag. */
+    /** Schema 1 as its releases wrote it: plain customers and projects, no templates, no pinned flag. */
     private fun v1(vault: Vault): (OutputStream) -> Unit = { out ->
         fun text(value: String) = out.write(value.toByteArray(Charsets.UTF_8))
         text("{\"schemaVersion\":1,\"id\":\"${vault.id}\",\"revision\":${vault.revision},\"customers\":[")
@@ -114,17 +140,6 @@ class VaultSizeLimitTest {
         text("]}")
     }
 
-    /** The largest history total whose document still fits [maxDocument]; every item adds the same bytes. */
-    private fun fill(base: Vault, write: (Vault) -> (OutputStream) -> Unit): Int {
-        val start = measure(write(base)).bytes
-        val item = measure(write(withHistory(base, 1))).bytes - start
-        val next = measure(write(withHistory(base, 2))).bytes - start - item
-        var total = ((maxDocument - start - item) / next + 1).toInt()
-        while (measure(write(withHistory(base, total))).bytes > maxDocument) total--
-        while (measure(write(withHistory(base, total + 1))).bytes <= maxDocument) total++
-        return total
-    }
-
     private fun encryptPlain(bytes: ByteArray, credentials: Credentials): ByteArray {
         val header = VaultHeader(testKdf, false, VaultCrypto.randomBytes(32), VaultCrypto.randomBytes(12))
         val aad = header.encode()
@@ -132,58 +147,62 @@ class VaultSizeLimitTest {
         return try { aad + VaultCrypto.aesGcm(true, key, header.nonce, aad, bytes) } finally { key.fill(0) }
     }
 
-    @Test fun `the largest vault that fits the file saves and opens and the file size is the binding limit`() {
-        val base = baseVault(templates = true)
-        val total = fill(base, ::v2)
-        val largest = withHistory(base, total)
-        val size = measure(v2(largest))
-        assertTrue(size.bytes > maxDocument - 200) { "document should fill the file: ${size.bytes}" }
-        // Hundreds of entries with a full history: far beyond the former fixed separator bound.
-        assertTrue(total > 250_000) { "history items: $total" }
-        // Separators stay well below the guard's bound, even with every count at its maximum.
+    @Test fun `a vault that fills the file exactly saves and opens and the file size is the binding limit`() {
+        val base = baseVault(Vault.MAX_RECORDS, templates = true, fullHistories = 200, historyPerEntry = Vault.MAX_HISTORY)
+        val start = measure(current(base))
+        val fill = maxDocument - start.bytes
+        assertTrue(fill > 0) { "base document already exceeds the file: ${start.bytes}" }
+        val largest = withNotes(base, fill)
+        val size = measure(current(largest))
+        size.bytes shouldBe maxDocument.toLong()
+        // Separators stay well below the guard's bound, even with every record count at its maximum.
         assertTrue(size.separators > 5_000_000 && size.separators * 3 < maxDocument) { "separators: ${size.separators}" }
         credentials().use { c ->
             val bytes = codec.encrypt(largest, c, testKdf)
-            bytes.size shouldBe (size.bytes + VaultHeader.SIZE + 16).toInt()
+            bytes.size shouldBe VaultCodec.MAX_FILE_BYTES
             codec.decrypt(bytes, c).use { opened ->
-                opened.entries.size shouldBe 10_000
-                opened.customers.size shouldBe 10_000
-                opened.projects.size shouldBe 10_000
+                opened.entries.size shouldBe Vault.MAX_RECORDS
+                opened.customers.size shouldBe Vault.MAX_RECORDS
+                opened.projects.size shouldBe Vault.MAX_RECORDS
                 opened.templates.size shouldBe Vault.MAX_TEMPLATES
-                opened.entries.sumOf { it.history.size } shouldBe total
-                opened.entries[1].history.size shouldBe 100
-                (opened.entries[0].data as EntryData.Ssh).serverIds.size shouldBe 9_000
-                opened.entries[9_999].notes.useChars { it.size } shouldBe Vault.MAX_FIELD_CHARS
+                opened.entries.sumOf { it.history.size } shouldBe 200 * Vault.MAX_HISTORY
+                opened.entries.last().history.size shouldBe Vault.MAX_HISTORY
+                (opened.entries[0].data as EntryData.Ssh).serverIds.size shouldBe 90_000
+                opened.entries[1].notes.useChars { it.size } shouldBe Vault.MAX_FIELD_CHARS
+                opened.entries.sumOf { entry -> entry.notes.useChars { it.size.toLong() } } shouldBe
+                    largest.entries.sumOf { entry -> entry.notes.useChars { it.size.toLong() } }
             }
-            // One more history item exceeds the file size: a specific, content-free error.
-            val error = assertThrows(VaultTooLargeException::class.java) { codec.encrypt(withHistory(base, total + 1), c, testKdf) }
+            // One more byte exceeds the file size: a specific, content-free error.
+            val error = assertThrows(VaultTooLargeException::class.java) { codec.encrypt(withNotes(base, fill + 1), c, testKdf) }
             error.message shouldBe "Vault exceeds the size limits of the file format"
             error.cause shouldBe null
         }
         // Validation, not size, rejects counts beyond the model maximums.
-        val overfull = largest.entries[1].copy(history = List(101) { historyItem })
+        val overfull = base.entries.last().copy(history = List(Vault.MAX_HISTORY + 1) { historyItem })
         assertThrows(InvalidVaultException::class.java) {
-            credentials().use { codec.encrypt(largest.copy(entries = listOf(overfull)), it, testKdf) }
+            credentials().use { codec.encrypt(Vault(entries = listOf(overfull.copy(customerId = null, projectId = null))), it, testKdf) }
         }
     }
 
-    @Test fun `a schema 1 vault that fills the file still opens although migration adds fields`() {
-        val base = baseVault(templates = false)
-        val total = fill(base) { v1(it) }
-        val plaintext = ByteArrayOutputStream(maxDocument).also { v1(withHistory(base, total))(it) }.toByteArray()
-        assertTrue(plaintext.size > maxDocument - 200) { "document should fill the file: ${plaintext.size}" }
+    @Test fun `a schema 1 vault that fills the 64 MiB file of its release opens and can be saved again`() {
+        // The maximums of schemas 1 and 2: 10,000 records and 100 history items per entry.
+        val base = baseVault(10_000, templates = false, fullHistories = 1_000, historyPerEntry = 100)
+        val fill = legacyMaxDocument - measure(v1(base)).bytes
+        assertTrue(fill > 0)
+        val plaintext = ByteArrayOutputStream(legacyMaxDocument).also { v1(withNotes(base, fill))(it) }.toByteArray()
+        plaintext.size shouldBe legacyMaxDocument
         credentials().use { c ->
             val file = encryptPlain(plaintext, c)
             plaintext.fill(0)
-            assertTrue(file.size <= VaultCodec.MAX_FILE_BYTES)
+            file.size shouldBe 64 * 1024 * 1024
             codec.decrypt(file, c).use { migrated ->
                 migrated.schemaVersion shouldBe Vault.SCHEMA_VERSION
                 migrated.entries.size shouldBe 10_000
-                migrated.entries.sumOf { it.history.size } shouldBe total
-                // Schema 2 adds default fields, so this vault is now too large to save until something is removed.
-                assertThrows(VaultTooLargeException::class.java) { codec.encrypt(migrated, c, testKdf) }
-                val trimmed = migrated.copy(entries = migrated.entries.map { it.copy(history = it.history.take(90)) })
-                codec.decrypt(codec.encrypt(trimmed, c, testKdf), c).use { it.entries.size shouldBe 10_000 }
+                migrated.entries.sumOf { it.history.size } shouldBe 100_000
+                // Migration adds default fields; the schema 3 file has room for them.
+                val saved = codec.encrypt(migrated, c, testKdf)
+                assertTrue(saved.size > file.size && saved.size < file.size + VaultCodec.MIGRATION_GROWTH_BYTES)
+                codec.decrypt(saved, c).use { it.entries.size shouldBe 10_000 }
             }
         }
     }

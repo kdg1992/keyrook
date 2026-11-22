@@ -69,7 +69,7 @@ class VaultTransfer {
      * opened vault file. Entries that still carry the schema 1 favorite tag are pinned instead, and templates drop it.
      */
     fun importJson(bytes: ByteArray): Vault = guarded {
-        VaultCodec.checkJsonLimits(bounded(bytes))
+        VaultCodec.checkJsonLimits(bounded(bytes, VaultCodec.MAX_FILE_BYTES))
         val tree = json.parseToJsonElement(bytes.toString(Charsets.UTF_8)).jsonObject
         val version = SchemaMigrations.schemaVersion(tree)
         val document = if (version != null && version < Vault.SCHEMA_VERSION) SchemaMigrations.PRODUCTION.migrate(tree) else tree
@@ -92,7 +92,9 @@ class VaultTransfer {
     }
 
     fun importCsv(bytes: ByteArray, mapping: CsvMapping? = null): Vault = guarded {
-        val rows = csv(bounded(bytes).toString(Charsets.UTF_8).removePrefix("\uFEFF"))
+        // Only Keyrook's own CSV, which carries a whole vault, may be as large as a vault file.
+        val limit = if (isKeyrookCsv(bytes)) VaultCodec.MAX_FILE_BYTES else MAX_FOREIGN_BYTES
+        val rows = csv(bounded(bytes, limit).toString(Charsets.UTF_8).removePrefix("\uFEFF"))
         require(rows.isNotEmpty())
         if (rows[0] == listOf("keyrook-json")) {
             require(rows.size == 2 && rows[1].size == 1)
@@ -158,7 +160,8 @@ class VaultTransfer {
 
     /** Only column names are returned; data rows are not retained for the mapping dialog. */
     fun csvColumns(bytes: ByteArray): List<String> = guarded {
-        val header = csv(bounded(bytes).toString(Charsets.UTF_8).removePrefix("\uFEFF"), headerOnly = true).first()
+        val limit = if (isKeyrookCsv(bytes)) VaultCodec.MAX_FILE_BYTES else MAX_FOREIGN_BYTES
+        val header = csv(bounded(bytes, limit).toString(Charsets.UTF_8).removePrefix("\uFEFF"), headerOnly = true).first()
         validateCsvHeader(header)
         header.toList()
     }
@@ -177,10 +180,10 @@ class VaultTransfer {
         val root = json.parseToJsonElement(bytes.toString(Charsets.UTF_8)).jsonObject
         require(root["encrypted"]?.jsonPrimitive?.booleanOrNull != true)
         val items = root.getValue("items").jsonArray
-        require(items.size <= 10_000)
+        require(items.size <= Vault.MAX_RECORDS)
         val projects = linkedMapOf<String, Project>()
         root["folders"]?.takeUnless { it == JsonNull }?.jsonArray?.let { folders ->
-            require(folders.size <= 10_000)
+            require(folders.size <= Vault.MAX_RECORDS)
             for (folder in folders) {
                 val value = folder.jsonObject
                 val id = value["id"].text()
@@ -223,7 +226,7 @@ class VaultTransfer {
                         add(custom["name"].text(), custom["value"].text(), custom["type"]?.jsonPrimitive?.int == 1)
                     }
                     val prior = item["passwordHistory"]?.takeUnless { it == JsonNull }?.jsonArray
-                    require(prior == null || prior.size <= 100)
+                    require(prior == null || prior.size <= Vault.MAX_HISTORY)
                     prior?.forEach {
                         val old = it.jsonObject
                         val changed = Instant.parse(old["lastUsedDate"].text()).toString()
@@ -302,7 +305,7 @@ class VaultTransfer {
         }
         val nodes = document.getElementsByTagName("Entry")
         val current = (0 until nodes.length).map { nodes.item(it) as Element }.filter { it.parentNode.nodeName != "History" }
-        require(current.size <= 10_000)
+        require(current.size <= Vault.MAX_RECORDS)
         val projects = linkedMapOf<Element, Project>()
         current.forEach { entry ->
             val group = entry.parentNode as? Element ?: throw InvalidImportException()
@@ -330,7 +333,7 @@ class VaultTransfer {
                     val histories = node.children("History")
                     require(histories.size <= 1)
                     val previous = histories.singleOrNull()?.children("Entry").orEmpty()
-                    require(previous.size <= 100)
+                    require(previous.size <= Vault.MAX_HISTORY)
                     previous.forEach { old ->
                         require(old.children("History").isEmpty())
                         val oldValues = keepassStrings(old)
@@ -368,9 +371,21 @@ class VaultTransfer {
         }
     }
 
-    private companion object {
+    companion object {
         /** KeePass standard strings that are not secret. */
-        val KEEPASS_VISIBLE = setOf("UserName", "URL")
+        private val KEEPASS_VISIBLE = setOf("UserName", "URL")
+        /**
+         * Largest import file of another program (Bitwarden JSON, KeePass XML or CSV, mapped CSV). These are parsed
+         * into complete strings or a document tree, so they keep the 64 MiB bound that vault files had up to schema 2.
+         */
+        const val MAX_FOREIGN_BYTES = 64 * 1024 * 1024
+        private val KEYROOK_CSV_HEADER = "keyrook-json".toByteArray(Charsets.US_ASCII)
+        /** Whether [bytes] start with the header line of Keyrook's own CSV, after an optional UTF-8 byte order mark. */
+        internal fun isKeyrookCsv(bytes: ByteArray): Boolean {
+            val start = if (bytes.size >= 3 && bytes[0] == 0xEF.toByte() && bytes[1] == 0xBB.toByte() && bytes[2] == 0xBF.toByte()) 3 else 0
+            return bytes.size >= start + KEYROOK_CSV_HEADER.size &&
+                KEYROOK_CSV_HEADER.indices.all { bytes[start + it] == KEYROOK_CSV_HEADER[it] }
+        }
     }
 
     private fun Element.children(name: String): List<Element> = (0 until childNodes.length)
@@ -419,8 +434,8 @@ class VaultTransfer {
     }
     private fun field(value: String, hidden: Boolean = true) = Field(secret(value), hidden)
     private fun JsonElement?.text(): String = if (this == null || this == JsonNull) "" else jsonPrimitive.content
-    private fun bounded(bytes: ByteArray): ByteArray {
-        require(bytes.size <= VaultCodec.MAX_FILE_BYTES)
+    private fun bounded(bytes: ByteArray, limit: Int = MAX_FOREIGN_BYTES): ByteArray {
+        require(bytes.size <= limit)
         // Strict UTF-8; parser exceptions are deliberately replaced with a content-free error.
         val characters = CharArray(bytes.size)
         try {

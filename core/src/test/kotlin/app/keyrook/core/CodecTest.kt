@@ -25,7 +25,7 @@ class CodecTest {
         } }
     }
 
-    @Test fun `frozen schema 2 fixture with key file decodes to its complete content without migration`() {
+    @Test fun `frozen schema 2 fixture with key file decodes to its complete content through the schema 3 step`() {
         val bytes = frozenV2Fixture()
         val header = VaultHeader.parse(bytes, false)
         header.kdf shouldBe KdfParameters(iterations = 1)
@@ -34,7 +34,7 @@ class CodecTest {
             val document = codec.decryptDocument(bytes, c)
             document.vault.use { document.storedSchemaVersion shouldBe 2 }
             codec.decrypt(bytes, c).use { vault ->
-                vault.schemaVersion shouldBe 2
+                vault.schemaVersion shouldBe Vault.SCHEMA_VERSION
                 vault.id shouldBe "22222222-3333-4444-8555-666666666666"
                 vault.revision shouldBe 3L
                 val (customer, minimal) = vault.customers
@@ -112,7 +112,7 @@ class CodecTest {
             VaultCodec.checkJsonLimits("{\"a\":1,\"\\u0061\":2}".toByteArray())
         }
         assertThrows(InvalidVaultException::class.java) {
-            VaultCodec.checkJsonLimits(("[" + List(10_001) { "0" }.joinToString(",") + "]").toByteArray())
+            VaultCodec.checkJsonLimits(("[" + List(Vault.MAX_RECORDS + 1) { "0" }.joinToString(",") + "]").toByteArray())
         }
         assertThrows(Exception::class.java) { VaultCodec.checkJsonLimits(byteArrayOf(34, 0xc0.toByte(), 0x80.toByte(), 34)) }
     }
@@ -249,7 +249,7 @@ class CodecTest {
 
     @Test fun `invalid authenticated schema is rejected without leaking parser details`() {
         credentials().use { c ->
-            listOf("{\"schemaVersion\":2}", "{\"schemaVersion\":3}", "{\"private-value-SENTINEL\":42}", "{\"id\":\"private-value-SENTINEL\"}",
+            listOf("{\"schemaVersion\":2}", "{\"schemaVersion\":3}", "{\"schemaVersion\":4}", "{\"private-value-SENTINEL\":42}", "{\"id\":\"private-value-SENTINEL\"}",
                 "[".repeat(33) + "]".repeat(33), "{} {}", "{}", "{\"schemaVersion\":1,\"schemaVersion\":1}").forEach { payload ->
                 val header = VaultHeader(testKdf, false, ByteArray(32), ByteArray(12))
                 val key = c.derive(header.salt, testKdf)
@@ -266,7 +266,7 @@ class CodecTest {
         sampleVault().use { valid ->
             val web = valid.entries.first()
             listOf(valid.copy(entries = valid.entries + web), valid.copy(entries = listOf(web.copy(projectId = id()))),
-                valid.copy(schemaVersion = 3), valid.copy(schemaVersion = 1), valid.copy(revision = -1),
+                valid.copy(schemaVersion = 4), valid.copy(schemaVersion = 2), valid.copy(schemaVersion = 1), valid.copy(revision = -1),
                 valid.copy(entries = listOf(web.copy(tags = listOf(ReservedTags.LEGACY_FAVORITE)))),
                 valid.copy(customers = listOf(valid.customers[0].copy(contactEmail = "no-address"))),
                 valid.copy(customers = listOf(valid.customers[0].copy(website = "javascript://x"))),

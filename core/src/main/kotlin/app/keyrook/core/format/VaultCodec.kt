@@ -136,14 +136,16 @@ class VaultCodec internal constructor(private val migrations: SchemaMigrations) 
     }
 
     companion object {
-        const val MAX_FILE_BYTES = 64 * 1024 * 1024
+        /** Largest vault file, 256 MiB; schemas 1 and 2 allowed 64 MiB. */
+        const val MAX_FILE_BYTES = 256 * 1024 * 1024
         /** Largest decrypted document: the file without header and authentication tag. */
         private const val MAX_DOCUMENT_BYTES = MAX_FILE_BYTES - VaultHeader.SIZE - 16
 
         /**
          * Growth allowed when an older schema is re-encoded in memory. Schema 1 to 2 adds at most 75 bytes per
          * customer (`,"contactName":null,"contactEmail":null,"phone":null,"website":null,"notes":""`), 32 per project,
-         * 15 per entry (`,"pinned":false`) and 15 for `,"templates":[]`: about 1.2 MB for 10,000 of each.
+         * 15 per entry (`,"pinned":false`) and 15 for `,"templates":[]`: about 1.2 MB for the 10,000 of each that
+         * schema 1 allowed. Schema 2 to 3 adds nothing.
          */
         internal const val MIGRATION_GROWTH_BYTES = 4 * 1024 * 1024
 
@@ -153,7 +155,7 @@ class VaultCodec internal constructor(private val migrations: SchemaMigrations) 
          * `"key":value,` spends at least seven bytes on its two separators (field names have at least two
          * characters; custom field labels may be empty, but then the value is a whole field object), and each further
          * list element spends at least three bytes on its comma (`"",` for an empty tag). Model maximums allow far
-         * more separators than fit (10,000 entries of 100 history items with 100 fields each), so the file size is
+         * more separators than fit (100,000 entries of 500 history items with 100 fields each), so the file size is
          * the binding limit: a valid vault never reaches the bound, and a hostile document still needs three bytes
          * for each tree node the parser would create.
          */
@@ -212,7 +214,7 @@ class VaultCodec internal constructor(private val migrations: SchemaMigrations) 
                         if (++members > maxSeparators) throw InvalidVaultException()
                         if (c == ',') {
                             val frame = stack.lastOrNull() ?: throw InvalidVaultException()
-                            if (++frame.commas >= 10_000) throw InvalidVaultException()
+                            if (++frame.commas >= Vault.MAX_RECORDS) throw InvalidVaultException()
                         }
                     }
                 }

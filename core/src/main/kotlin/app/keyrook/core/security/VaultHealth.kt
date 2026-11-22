@@ -27,7 +27,7 @@ data class EntryHealth(val entryId: String, val issues: Set<HealthIssue>)
  * Empty passwords are not checked for strength, reuse or age. [HealthIssue.OLD_PASSWORD] dates the current passwords
  * from the latest history item whose passwords differ from them, because a history item holds the data that was
  * replaced at its time. Without such an item they date from entry creation, or from the oldest retained item when the
- * history is full; an entry without any history dates from its last edit. [HealthIssue.DUPLICATE_ENTRY] marks active
+ * history may have been trimmed (100 items or more); an entry without any history dates from its last edit. [HealthIssue.DUPLICATE_ENTRY] marks active
  * entries of the same type with the same host or URL and the same user name, compared case-insensitively without
  * surrounding blanks and trailing slashes, independent of their passwords.
  */
@@ -81,7 +81,7 @@ class VaultHealth(private val clock: Clock = Clock.systemDefaultZone()) {
             .maxOfOrNull { Instant.parse(it.changedAt) }
         return changed ?: when {
             entry.history.isEmpty() -> Instant.parse(entry.modifiedAt)
-            entry.history.size >= MAX_HISTORY -> entry.history.minOf { Instant.parse(it.changedAt) }
+            entry.history.size >= POSSIBLY_TRIMMED_HISTORY -> entry.history.minOf { Instant.parse(it.changedAt) }
             else -> Instant.parse(entry.createdAt)
         }
     }
@@ -131,8 +131,11 @@ class VaultHealth(private val clock: Clock = Clock.systemDefaultZone()) {
         const val EXPIRY_WARNING_DAYS = 30L
         /** Days after which an unchanged password counts as [HealthIssue.OLD_PASSWORD] by default. */
         const val PASSWORD_MAX_AGE_DAYS = 365L
-        /** History items the editor retains per entry; a full history may have lost its oldest items. */
-        private const val MAX_HISTORY = 100
+        /**
+         * A history of at least this many items may have lost its oldest ones: schema 2 kept 100 per entry, schema 3
+         * keeps [Vault.MAX_HISTORY], and a vault written by a schema 2 release was trimmed at 100.
+         */
+        private const val POSSIBLY_TRIMMED_HISTORY = 100
     }
 
     private class Digest(private val bytes: ByteArray) {

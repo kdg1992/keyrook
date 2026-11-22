@@ -113,7 +113,7 @@ class SchemaV2MigrationTest {
     }
 
     private fun assertMigrated(vault: Vault) {
-        vault.schemaVersion shouldBe 2
+        vault.schemaVersion shouldBe Vault.SCHEMA_VERSION
         vault.id shouldBe vaultId
         vault.revision shouldBe 12L
         vault.templates shouldBe emptyList()
@@ -147,8 +147,9 @@ class SchemaV2MigrationTest {
     @Test fun `the step is deterministic and a migrated document needs no further step`() {
         val first = SchemaMigrations.PRODUCTION.migrate(schemaOne())
         first shouldBe SchemaMigrations.PRODUCTION.migrate(schemaOne())
-        first["schemaVersion"] shouldBe JsonPrimitive(2)
-        SchemaMigrations.PRODUCTION.chain(2) shouldBe emptyList()
+        first["schemaVersion"] shouldBe JsonPrimitive(Vault.SCHEMA_VERSION)
+        SchemaMigrations.V1_TO_V2.apply(schemaOne())["schemaVersion"] shouldBe JsonPrimitive(2)
+        SchemaMigrations.PRODUCTION.chain(Vault.SCHEMA_VERSION) shouldBe emptyList()
         SchemaMigrations.PRODUCTION.migrate(first) shouldBe first
         credentials().use { c ->
             codec.decrypt(encrypt(schemaOne().toString(), c), c).use { migrated ->
@@ -161,7 +162,7 @@ class SchemaV2MigrationTest {
         }
     }
 
-    @Test fun `schema 2 documents round trip with metadata, pins and templates`() {
+    @Test fun `current documents round trip with metadata, pins and templates`() {
         credentials().use { c ->
             sampleVault().use { vault ->
                 vault.validate()
@@ -182,7 +183,7 @@ class SchemaV2MigrationTest {
         credentials().use { c ->
             val current = sampleVault().use { json.encodeToString(Vault.serializer(), it) }
             listOf(
-                current.replaceFirst("\"schemaVersion\":2", "\"schemaVersion\":3"),
+                current.replaceFirst("\"schemaVersion\":${Vault.SCHEMA_VERSION}", "\"schemaVersion\":${Vault.SCHEMA_VERSION + 1}"),
                 current.replaceFirst("\"templates\":", "\"unknown\":1,\"templates\":"),
                 current.replaceFirst("\"pinned\":", "\"starred\":true,\"pinned\":"),
                 current.replaceFirst("\"contactName\":", "\"fax\":\"1\",\"contactName\":"),
@@ -311,7 +312,7 @@ class SchemaV2MigrationTest {
             val managed = Files.list(backupFolder).use { files -> files.filter { it.toString().endsWith(".keyrook.bak") }.toList() }
             assertTrue(managed.any { original.contentEquals(Files.readAllBytes(it)) })
             VaultStore().load(path, c).use { loaded ->
-                loaded.storedSchemaVersion shouldBe 2
+                loaded.storedSchemaVersion shouldBe Vault.SCHEMA_VERSION
                 loaded.vault.revision shouldBe 14L
                 assertMigrated(loaded.vault.copy(revision = 12))
             }
@@ -344,7 +345,7 @@ class SchemaV2MigrationTest {
             val exported = transfer.exportJson(vault, PlaintextConsent(true, true))
             try {
                 exported.toString(Charsets.UTF_8).let { text ->
-                    assertTrue(text.contains("\"schemaVersion\":2") && text.contains("\"templates\":[") && text.contains("\"pinned\":true"))
+                    assertTrue(text.contains("\"schemaVersion\":${Vault.SCHEMA_VERSION}") && text.contains("\"templates\":[") && text.contains("\"pinned\":true"))
                 }
             } finally { exported.fill(0) }
         }
