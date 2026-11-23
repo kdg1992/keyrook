@@ -75,7 +75,7 @@ jobs:
       - name: Download verified packaging JDK
         id: packaging-jdk
         run: node scripts/collect-jdk-archive.mjs runtime
-      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: jdkfile
           # Cache label only; the exact Temurin 25.0.5+8 archive is hash-pinned above.
